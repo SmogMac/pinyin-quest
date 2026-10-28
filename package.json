@@ -1,0 +1,25 @@
+{
+  "name": "pinyin-quest",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Mandarin learning app with an integrated roguelike autobattler",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "vocab": "node tools/build-vocab.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "test": "node --test \"tests/*.test.js\"",
+    "art": "node tools/process-art.mjs"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.3.4",
+    "sharp": "^0.33.5",
+    "vite": "5.4.11"
+  }
+}
