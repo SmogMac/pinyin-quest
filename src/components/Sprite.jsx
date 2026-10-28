@@ -57,7 +57,7 @@ export default function Sprite({ id, state = 'idle', scale = 1, flip = false, cl
     body = <C />;
   }
   return (
-    <div className={`sprite sprite-${id} st-${state} ${def.flying ? 'flying' : ''} ${flip ? 'flip' : ''} ${className}`} style={style}>
+    <div className={`sprite sprite-${id} st-${state} ${def.flying ? 'flying' : ''} ${def.hop ? 'hopping' : ''} ${flip ? 'flip' : ''} ${className}`} style={style}>
       {body}
       {def.fx && (
         <img className={`sprite-fx fx-${def.fx.kind}`} src={asset(def.fx.src)} alt="" width={w} height={h} draggable="false" style={{ transformOrigin: def.fx.origin }} />

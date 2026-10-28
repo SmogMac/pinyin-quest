@@ -3,7 +3,7 @@
 // WebP into public/assets. Effect layers (e.g. Huojin's flame) are cropped with their character.
 //
 // Usage: npm run art
-// Add new art to tools/art-source/ and list it in JOBS below.
+// Add new art to tools/art-source/ and list it in JOBS below (heroes and enemies).
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +20,10 @@ const JOBS = [
     src: 'tools/art-source/huojin.webp', out: 'public/assets/characters/huojin.webp', height: 420,
     layers: [{ src: 'tools/art-source/huojin-fire.webp', out: 'public/assets/characters/huojin-fire.webp' }],
   },
+  // Enemies (supply ~2x their on-stage size)
+  { src: 'tools/art-source/inkdragon.webp', out: 'public/assets/enemies/inkdragon.webp', height: 440 },
+  { src: 'tools/art-source/zombie.webp', out: 'public/assets/enemies/zombie.webp', height: 280 },
+  { src: 'tools/art-source/crab.webp', out: 'public/assets/enemies/crab.webp', height: 200 },
 ];
 
 /** Flood-fills near-white pixels connected to the image border and makes them transparent. */

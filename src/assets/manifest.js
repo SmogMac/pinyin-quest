@@ -11,8 +11,8 @@
 //                                                                 sprite sheet: one row per animation state
 // w/h are the on-stage display size in CSS pixels (before the stage's responsive scale).
 import Companion from './characters/Companion.jsx';
-import { Slime, Sporecap, Bat, Goblin, Golem, Wisp, Knight, Wyrm } from './enemies/Enemies.jsx';
-import { Panda, Kite, Crab, Turtle, Snowman, Thunderbird, ShadowSprite, Lantern, Wraith, WordEater, Rabbit } from './enemies/EnemiesExtra.jsx';
+import { Slime, Sporecap, Bat, Goblin, Golem, Wisp, Knight } from './enemies/Enemies.jsx';
+import { Panda, Kite, Turtle, Snowman, Thunderbird, ShadowSprite, Lantern, Wraith, WordEater, Rabbit } from './enemies/EnemiesExtra.jsx';
 
 export const SPRITES = {
   // Playable heroes (see src/game/data/heroes.js). Image art is prepared by `npm run art`.
@@ -29,10 +29,11 @@ export const SPRITES = {
   golem: { component: Golem, w: 130, h: 130 },
   wisp: { component: Wisp, w: 112, h: 122, flying: true },
   knight: { component: Knight, w: 124, h: 134 },
-  wyrm: { component: Wyrm, w: 230, h: 196 },
+  wyrm: { src: 'assets/enemies/inkdragon.webp', w: 170, h: 230 },
   panda: { component: Panda, w: 110, h: 110 },
   kite: { component: Kite, w: 84, h: 92, flying: true },
-  crab: { component: Crab, w: 120, h: 90 },
+  crab: { src: 'assets/enemies/crab.webp', w: 124, h: 80 },
+  zombie: { src: 'assets/enemies/zombie.webp', w: 78, h: 128, hop: true },
   turtle: { component: Turtle, w: 120, h: 90 },
   snowman: { component: Snowman, w: 96, h: 115 },
   thunderbird: { component: Thunderbird, w: 112, h: 94, flying: true },

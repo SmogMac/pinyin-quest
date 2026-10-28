@@ -34,7 +34,7 @@ export const BIOMES = {
     terrain: ['unstable'],
     elementMods: { earth: 1.2 },
     pools: {
-      battle: [['golem'], ['bat', 'bat'], ['turtle', 'bat'], ['golem', 'goblin'], ['goblin', 'goblin'], ['sporecap', 'bat']],
+      battle: [['golem'], ['bat', 'bat'], ['turtle', 'bat'], ['golem', 'goblin'], ['goblin', 'goblin'], ['sporecap', 'bat'], ['zombie', 'bat']],
       elite: [['knight'], ['wisp']],
     },
     guardian: 'stone_king',
@@ -69,7 +69,7 @@ export const BIOMES = {
     events: [{ kind: 'mist', every: 12, text: 'mí wù · Mist' }],
     elementMods: { dark: 1.15 },
     pools: {
-      battle: [['shadow'], ['shadow', 'bat'], ['sporecap', 'shadow'], ['sporecap', 'sporecap'], ['shadow', 'goblin']],
+      battle: [['shadow'], ['shadow', 'bat'], ['sporecap', 'shadow'], ['zombie', 'zombie'], ['shadow', 'goblin'], ['zombie', 'sporecap']],
       elite: [['wisp', 'shadow'], ['knight', 'shadow']],
     },
     guardian: 'bog_witch',
@@ -81,7 +81,7 @@ export const BIOMES = {
     reflect: 0.2,
     elementMods: { light: 1.1 },
     pools: {
-      battle: [['lantern'], ['lantern', 'turtle'], ['lantern', 'lantern'], ['sporecap', 'lantern'], ['goblin', 'lantern']],
+      battle: [['lantern'], ['lantern', 'turtle'], ['lantern', 'lantern'], ['zombie', 'lantern'], ['goblin', 'lantern']],
       elite: [['knight', 'lantern'], ['wisp']],
     },
     guardian: 'lantern_king',
@@ -91,7 +91,7 @@ export const BIOMES = {
     desc: 'Ink rains down and Curses you. The dragon waits at the end.',
     events: [{ kind: 'inkrain', every: 9, text: 'mò yǔ · Ink rain' }],
     pools: {
-      battle: [['goblin', 'bat'], ['wisp', 'goblin'], ['golem', 'goblin', 'bat'], ['shadow', 'goblin']],
+      battle: [['goblin', 'bat'], ['wisp', 'goblin'], ['golem', 'goblin', 'bat'], ['shadow', 'goblin'], ['zombie', 'zombie', 'bat']],
       elite: [['wisp', 'knight']],
     },
     boss: 'wyrm',

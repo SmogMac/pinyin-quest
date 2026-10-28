@@ -55,27 +55,6 @@ export function Kite() {
   );
 }
 
-export function Crab() {
-  return (
-    <svg viewBox="0 0 120 90" className="sprite-svg" aria-hidden="true">
-      <Shadow cx={60} cy={86} rx={44} />
-      <path d="M26 74 L12 84 M34 78 L24 88 M94 74 L108 84 M86 78 L96 88" stroke="#b83b2e" strokeWidth="4" strokeLinecap="round" />
-      <ellipse cx="60" cy="60" rx="40" ry="24" fill="#e5543f" stroke={Ink} strokeWidth="2.5" />
-      <path d="M30 56 Q60 40 90 56" stroke="#ff9a7a" strokeWidth="4" fill="none" opacity=".7" />
-      <path d="M24 50 Q6 40 10 22 Q22 26 22 36 Q28 28 34 34 Q30 42 32 50Z" fill="#e5543f" stroke={Ink} strokeWidth="2.5" />
-      <path d="M96 50 Q112 42 110 26 Q100 28 98 38" fill="none" stroke={Ink} strokeWidth="2.5" />
-      <path d="M48 40 L46 24 M68 40 L70 24" stroke={Ink} strokeWidth="2.5" />
-      <circle cx="46" cy="22" r="6" fill="#fff" stroke={Ink} strokeWidth="2" />
-      <circle cx="70" cy="22" r="6" fill="#fff" stroke={Ink} strokeWidth="2" />
-      <g className="enemy-eyes">
-        <circle cx="45" cy="22" r="3" fill={Ink} />
-        <circle cx="69" cy="22" r="3" fill={Ink} />
-      </g>
-      <path d="M52 64 Q58 68 64 64" stroke={Ink} strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function Turtle() {
   return (
     <svg viewBox="0 0 120 90" className="sprite-svg" aria-hidden="true">

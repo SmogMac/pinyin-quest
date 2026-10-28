@@ -1625,6 +1625,15 @@ kbd {
 .flying.st-walk {
   animation: fly-bob 1.1s ease-in-out infinite;
 }
+/* jiāng shī hop: feet together, little bounces */
+.hopping.st-idle,
+.hopping.st-walk {
+  animation: hop 0.7s ease-in-out infinite;
+}
+@keyframes hop {
+  0%, 100% { transform: translateY(0) scale(1.03, 0.96); }
+  45% { transform: translateY(-14%) scale(0.97, 1.04); }
+}
 @keyframes idle-bob {
   50% {
     transform: scale(1.03, 0.97);
@@ -3251,4 +3260,9 @@ kbd {
   .fx-flame {
     animation: none;
   }
+}
+
+/* The ink dragon is near-black art: a faint pale rim keeps it readable on the dark lair */
+.sprite-wyrm img {
+  filter: drop-shadow(0 0 3px rgba(214, 205, 255, 0.55)) drop-shadow(0 0 10px rgba(160, 140, 255, 0.25));
 }

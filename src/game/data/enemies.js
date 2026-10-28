@@ -12,6 +12,7 @@
 //   shell {every, dur, dr} · corrupt {every} (corrupts one of your spells) · devour {every} (eats your shield)
 //   regen {every, pct, terrain?} · nuke {every, mult, element, status}
 //   onSpellHit: 'shield' | 'enrage' (reacts to your spells)
+//   rise {pct, text} (gets back up once with pct HP unless Burning or finished by fire/light)
 // phases: [{at: hp fraction, text, ai, aspd, terrain, shield, summon}] — boss phase changes
 
 export const ENEMIES = {
@@ -106,6 +107,14 @@ export const ENEMIES = {
     ai: { range: 34, hex: { every: 7, status: 'dazzle', dur: 3 } },
     affinity: { light: 'resist', dark: 'weak', water: 'weak' },
     blurb: 'Dazzles you so your attacks miss.',
+  },
+  zombie: {
+    py: 'jiāng shī', zh: '僵尸', name: 'Hopping Zombie', sprite: 'zombie', element: 'dark',
+    stats: { maxHp: 70, atk: 7, aspd: 0.8 },
+    ai: { speed: 9, rise: { pct: 0.5, text: 'Rises again!' } },
+    onHitStatus: { id: 'curse', dur: 2 },
+    affinity: { fire: 'weak', light: 'weak', dark: 'resist', ice: 'resist' },
+    blurb: 'Hops after you and gets back up once. Burn it or finish it with fire or light to keep it down.',
   },
   wraith: {
     py: 'zì líng', zh: '字灵', name: 'Word Wraith', sprite: 'wraith', element: 'dark', flying: true,

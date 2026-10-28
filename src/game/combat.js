@@ -319,6 +319,7 @@ export class Battle {
       }
     }
     tgt.hp = Math.max(0, tgt.hp - dmg);
+    tgt.lastElement = element;
     const total = dmg + absorbed;
     this.emit({
       type: 'hit', src: src?.id, tgt: tgt.id, amount: dmg, absorbed, crit: ctx.crit, element, kind, eff,
@@ -508,6 +509,16 @@ export class Battle {
 
   kill(u, src) {
     if (!u.alive) return;
+    // undead get back up once unless burned or finished with fire/light
+    const rise = u.side === 1 && u.edef?.ai?.rise;
+    if (rise && !u.risen && !u.statuses.burn && u.lastElement !== 'fire' && u.lastElement !== 'light') {
+      u.risen = true;
+      u.hp = Math.round(u.maxHp * rise.pct);
+      u.statuses = {};
+      this.emit({ type: 'revive', tgt: u.id, hp: u.hp });
+      this.label(u, rise.text, 'enemy');
+      return;
+    }
     u.alive = false;
     const statuses = { ...u.statuses };
     this.emit({ type: 'death', tgt: u.id });

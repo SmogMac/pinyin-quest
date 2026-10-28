@@ -30,7 +30,7 @@ slime: {
 - `states` maps each state to `[row, frameCount]`. Any missing state falls back to `idle`.
 - Feet should touch the **bottom edge** of the frame; units stand on the ground line.
 - Facing: the **hero faces right**, **enemies face left**. Add `flip` in `Sprite` if your art faces the other way.
-- `flying: true` adds a hover bob (used for the bat and the wisp).
+- `flying: true` adds a hover bob (used for the bat and the wisp). `hop: true` adds a hopping bounce (the jiāng shī).
 
 ### Animation states
 
@@ -48,7 +48,7 @@ Built-in vector sprites also get CSS motion (lunge, shake, fade), keyed by the `
 
 ### Hero art pipeline
 
-Put the original (transparent PNG/WebP, or a plain white background) in `tools/art-source/`, add a job to `JOBS` in `tools/process-art.mjs`, and run `npm run art`. The script removes a plain white background if there's no transparency, trims empty margins, resizes to 420px tall and writes WebP to `public/assets/characters/`. Then add a manifest entry with the same aspect ratio, e.g. `mei: { src: 'assets/characters/mei.webp', w: 96, h: 142 }`, and reference that key from the hero's `sprite` in `src/game/data/heroes.js`. Heroes should face the viewer or to the right, with feet at the bottom edge.
+Put the original (transparent PNG/WebP, or a plain white background) in `tools/art-source/`, add a job to `JOBS` in `tools/process-art.mjs`, and run `npm run art`. Enemy art goes through the same script into `public/assets/enemies/`. The script removes a plain white background if there's no transparency, trims empty margins, resizes to 420px tall and writes WebP to `public/assets/characters/`. Then add a manifest entry with the same aspect ratio, e.g. `mei: { src: 'assets/characters/mei.webp', w: 96, h: 142 }`, and reference that key from the hero's `sprite` in `src/game/data/heroes.js`. Heroes should face the viewer or to the right, with feet at the bottom edge.
 
 ### Current keys and recommended sizes (display size, supply 2×)
 
@@ -62,7 +62,9 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 | `companion` | Fox Spirit ally | 64×56 |
 | `slime`, `sporecap`, `bat`, `goblin`, `golem` | normal enemies | ~90–130 square |
 | `wisp`, `knight` | elites | ~115×125 |
-| `wyrm` | boss | 230×196 |
+| `crab` | páng xiè (image) | 124×80 |
+| `zombie` | jiāng shī (image, `hop: true` bounces it) | 78×128 |
+| `wyrm` | mò lóng, the Ink Dragon (image) | 170×230 |
 
 Enemy definitions in `src/game/data/enemies.js` reference sprites through their `sprite` field, so a new enemy just needs a new manifest key.
 

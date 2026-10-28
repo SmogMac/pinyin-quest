@@ -220,3 +220,16 @@ test('hero passives and sprites load into battle', () => {
   const ev = run(m, 1);
   assert.ok(ev.some((e) => e.type === 'cast' && e.spell === 'iaido'));
 });
+
+test('jiāng shī rises once unless finished with fire', () => {
+  const b = new Battle({ hero: hero(), enemies: ['zombie'], seed: 1 });
+  const z = b.foes()[0];
+  b.damage(b.hero, z, 9999, { element: 'physical', kind: 'proc' });
+  assert.ok(z.alive && z.risen && z.hp === Math.round(z.maxHp * 0.5), 'gets back up at half HP');
+  b.damage(b.hero, z, 9999, { element: 'physical', kind: 'proc' });
+  assert.ok(!z.alive, 'stays down the second time');
+  const f = new Battle({ hero: hero(), enemies: ['zombie'], seed: 1 });
+  const z2 = f.foes()[0];
+  f.damage(f.hero, z2, 9999, { element: 'fire', kind: 'proc' });
+  assert.ok(!z2.alive, 'fire keeps it down');
+});

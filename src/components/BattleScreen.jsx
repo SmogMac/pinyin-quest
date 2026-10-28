@@ -146,7 +146,9 @@ export default function BattleScreen({ run, accountLevel, worldColor = 1, onEnd,
           play('die');
           break;
         case 'revive':
-          v.banner = { text: 'zhǐ fèng · Reborn!', until: now() + 1800 };
+          // the reviving effect labels itself (phoenix, lucky streak, rising zombie)
+          delete v.dead[e.tgt];
+          unitState(e.tgt, 'cast', 380);
           break;
         case 'end':
           setEnded(e.result);
