@@ -16,6 +16,7 @@ export const SPRITES = {
   // Playable heroes (see src/game/data/heroes.js). Image art is prepared by `npm run art`.
   xinyi: { src: 'assets/characters/xinyi.webp', w: 112, h: 142 },
   mei: { src: 'assets/characters/mei.webp', w: 96, h: 142 },
+  ruizhe: { src: 'assets/characters/ruizhe.webp', w: 87, h: 142 },
   hero: { component: Hero, w: 120, h: 150, anchor: 'bottom' }, // Huo Huo (vector, recoloured by robes)
   companion: { component: Companion, w: 64, h: 56, anchor: 'bottom' },
   slime: { component: Slime, w: 92, h: 83 },
@@ -32,6 +33,7 @@ export const SPRITES = {
 // Replace with { src: 'assets/icons/fireball.png' } to use a custom image.
 export const ABILITY_ICONS = {
   fireball: { glyph: 'flame' },
+  scroll: { glyph: 'book' },
   ember_blade: { glyph: 'sword' },
   water_shield: { glyph: 'shield' },
   healing_spring: { glyph: 'drop' },

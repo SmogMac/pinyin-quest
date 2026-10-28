@@ -124,6 +124,7 @@ export default function BattleView({ sim, floor, upgrades = [], blessings = [], 
         if (ev.ability === 'iaido') addFloat('hero', 'bá dāo!', 'synergy', all);
         if (ev.ability === 'plum_cut') addFloat('hero', 'méi huā!', 'synergy', all);
         if (ev.ability === 'kindling') addFloat('hero', 'diǎn huǒ!', 'synergy', all);
+        if (ev.ability === 'panic') addFloat('hero', 'jǐn zhāng!!', 'enrage', all);
         if (ev.ability === 'inkfire') addFloat(ev.src, 'mò huǒ!', 'enrage', all);
         break;
       }

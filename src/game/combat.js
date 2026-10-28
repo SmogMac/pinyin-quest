@@ -41,15 +41,23 @@ export function buildHero({ heroId = DEFAULT_HERO, upgrades = [], accountLevel =
     dr: 0, lifesteal: 0, healMult: 1, shieldMult: 1, cdPct: 0, doubleStrike: 0, berserk: 0, lowHpHeal: 0,
     echo: 0, startShield: 0, aspdPct: 0, burnOnHit: null, ally: null, abilities: [], allyDmg: 0, healPct: 0,
   };
+  if (def.abilities) applyMods(u, { abilities: def.abilities });
   for (const { id, level } of upgrades) {
-    const def = UPGRADES[id];
-    if (def) applyMods(u, def.mods(level));
+    const up = UPGRADES[id];
+    if (up) applyMods(u, up.mods(level));
   }
   // Kindling (Huo Huo): fire-word blessings count twice
   const allBlessings = def.passive.id === 'kindling' ? blessings.flatMap((el) => (el === 'fire' ? [el, el] : [el])) : blessings;
   for (const el of allBlessings) applyMods(u, BLESSINGS[el || 'none']?.mods || BLESSINGS.none.mods);
   u.synergies = activeSynergies(upgrades);
   for (const s of u.synergies) SYNERGIES[s].patch(u);
+  // Nervous Genius (Ruizhe): abilities scale with the number of different upgrade elements
+  if (def.passive.id === 'nervous_genius') {
+    const elements = new Set(upgrades.map((x) => UPGRADES[x.id]?.element).filter(Boolean));
+    u.abilityPower = 1 + def.passive.perElement * elements.size;
+    u.abilities = u.abilities.map((a) => ({ ...a, amount: Math.round(a.amount * u.abilityPower) }));
+    u.startShield = Math.round(u.startShield * u.abilityPower);
+  }
   u.aspd *= 1 + u.aspdPct;
   if (u.ally) u.ally.dmg += u.allyDmg;
   else if (u.allyDmg) u.atk += u.allyDmg;
@@ -161,6 +169,12 @@ export function simulateBattle({ hero, heroHp, enemies, floor = 1, seed = 1, emp
       }
     }
     // reactive triggers
+    if (tgt === H && H.hp > 0 && P.id === 'nervous_genius' && !H.panicked && H.hp < H.maxHp * P.panicBelow) {
+      H.panicked = true; // Panic: every ability at once, then faster attacks
+      emit({ type: 'cast', src: 'hero', ability: 'panic', element: 'arcane', targets: ['hero'] });
+      for (const a of H.abilities) if (alive().length) castHero(a);
+      H.aspd *= 1 + P.panicAspd;
+    }
     if (tgt === H && H.hp > 0 && H.lowHpHeal && !H.lowHealUsed && H.hp < H.maxHp * 0.4) {
       H.lowHealUsed = true;
       emit({ type: 'cast', src: 'hero', ability: 'radiant_heal', element: 'light', targets: ['hero'] });

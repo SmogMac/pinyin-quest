@@ -12,6 +12,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const JOBS = [
   { src: 'tools/art-source/xinyi.webp', out: 'public/assets/characters/xinyi.webp', height: 420 },
   { src: 'tools/art-source/mei.webp', out: 'public/assets/characters/mei.webp', height: 420 },
+  { src: 'tools/art-source/ruizhe.webp', out: 'public/assets/characters/ruizhe.webp', height: 420 },
 ];
 
 /** Flood-fills near-white pixels connected to the image border and makes them transparent. */

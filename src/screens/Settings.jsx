@@ -71,6 +71,12 @@ export default function Settings({ go }) {
       <section className="card">
         <h3 className="sum-sub">Learning</h3>
         <Toggle label="Hide Hanzi" desc="Show only pinyin and English. Characters are never required." value={st.hideHanzi} onChange={(v) => set('hideHanzi', v)} />
+        <Toggle
+          label="Auto-continue"
+          desc="After a correct answer, move to the next card automatically instead of waiting for Continue."
+          value={st.autoContinue}
+          onChange={(v) => set('autoContinue', v)}
+        />
         <Choice label="Daily XP goal" value={st.dailyGoal} options={[[50, 'Chill 50'], [100, 'Steady 100'], [150, 'Keen 150'], [250, 'Intense 250']]} onChange={(v) => set('dailyGoal', v)} />
         <Choice label="New words per day" value={st.newPerDay} options={[[5, '5'], [10, '10'], [15, '15'], [25, '25'], [40, '40']]} onChange={(v) => set('newPerDay', v)} />
         <Toggle

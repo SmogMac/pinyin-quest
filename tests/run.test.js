@@ -60,7 +60,7 @@ test('runs finish and balance is in a sensible band', () => {
 
 test('every hero is viable at 80% accuracy', () => {
   const report = {};
-  for (const heroId of ['xinyi', 'mei', 'huohuo']) {
+  for (const heroId of ['xinyi', 'mei', 'ruizhe', 'huohuo']) {
     let wins = 0;
     const N = 200;
     for (let s = 1; s <= N; s++) if (playRun(s * 17, 0.8, 3, heroId).run.phase === 'victory') wins++;

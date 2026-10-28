@@ -6,7 +6,7 @@ Learn to **speak and understand** Mandarin with flashcards, spaced repetition an
 - Mandarin audio on every card (normal and slow) via the browser's zh-CN voice, with a slot for recorded clips.
 - Five study modes: teaching card, flashcard (Again/Hard/Good/Easy), multiple choice, **listening**, recall (English → pinyin), plus optional speaking practice.
 - SM-2-style spaced repetition, tracked **separately** for recognition, listening, recall and speaking.
-- Roguelike adventure: a 10-floor run with battles, elites, campfires, treasure, teacher challenges and a boss. It has 3 heroes with signature passives, 20 upgrades, 8 synergies, 7 enemies and the 墨龙 mò lóng (Ink Dragon) boss.
+- Roguelike adventure: a 10-floor run with battles, elites, campfires, treasure, teacher challenges and a boss. It has 4 heroes with signature passives, 20 upgrades, 8 synergies, 7 enemies and the 墨龙 mò lóng (Ink Dragon) boss.
 - Passive learning in the game: every enemy, upgrade, synergy, map node and element is named in pinyin first (e.g. 石头人 shí tou rén, "stone person"), with Hanzi and English beside it. Tap a name to hear it; picking an upgrade speaks its name.
 - Installable PWA that works offline. All progress stays on the device, with JSON export and import.
 
@@ -137,9 +137,10 @@ Heroes are defined in `src/game/data/heroes.js` (stats, passive numbers, unlock 
 | --- | --- | --- |
 | **Xīn Yí** 欣怡, Cheerful Wanderer | from the start | **kāi xīn 开心 (Good Cheer):** each correct answer heals 4% HP; a quiz with no mistakes gives +1 bonus spark. Simple, and it rewards learning directly. |
 | **Méi** 梅, Silent Blade | account level 3 | **méi huā 梅花 (Plum Blossom):** opens each battle with a sword draw (bá dāo) for 200% damage. Each ability she casts makes her next attack a guaranteed crit that also cuts every other enemy for 50%. Synergises with abilities (huǒ qiú, tài yáng), cooldown and echo upgrades, crit damage, and dì yù huǒ (crit burns). Lower HP, higher attack and crit. |
-| **Huǒ Huǒ** 火火, Ember Apprentice | account level 6 | **diǎn huǒ 点火 (Kindling):** every 4th attack is a burning fire bolt for double damage, and fire-word blessings count twice. Wears the unlockable robes. |
+| **Ruì Zhé** 睿哲, Nervous Scholar | account level 5 | **jǐn zhāng 紧张 (Nervous Genius):** throws a scroll every 4s from the start. Each *different* element among his upgrades makes all his abilities 10% stronger. The first time he drops below half HP in a battle, he panics: casts every ability at once and attacks 30% faster. Rewards varied, ability-heavy builds. |
+| **Huǒ Huǒ** 火火, Ember Apprentice | account level 8 | **diǎn huǒ 点火 (Kindling):** every 4th attack is a burning fire bolt for double damage, and fire-word blessings count twice. Wears the unlockable robes. |
 
-Passives are implemented by id: battle effects in `combat.js` (`plum_blossom`, `kindling`) and quiz effects in `run.js` (`good_cheer`). To add a hero, add an entry to `HEROES`, add its sprite to the manifest, and, if the passive is new, handle its id in one of those two files. `tests/heroes.test.js` covers each passive, and `tests/run.test.js` checks every hero's win rate stays in a fair band. Currently all three heroes win 64–72% of simulated runs at 80% answer accuracy.
+Passives are implemented by id: battle effects in `combat.js` (`plum_blossom`, `kindling`) and quiz effects in `run.js` (`good_cheer`); `nervous_genius` uses both `combat.js` and the hero's innate `abilities` list in `heroes.js`. To add a hero, add an entry to `HEROES`, add its sprite to the manifest, and, if the passive is new, handle its id in one of those two files. `tests/heroes.test.js` covers each passive, and `tests/run.test.js` checks every hero's win rate stays in a fair band. Currently all four heroes win 64–76% of simulated runs at 80% answer accuracy.
 
 ### Changing battle balance
 

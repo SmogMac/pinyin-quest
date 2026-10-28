@@ -36,6 +36,19 @@ test('Mei (Plum Blossom): opens with a sword draw; abilities empower a splashing
   assert.ok(!sim('xinyi', [], ['slime']).events.some((e) => e.ability === 'iaido'));
 });
 
+test('Ruizhe (Nervous Genius): innate scroll, element-scaled abilities, one panic per battle', () => {
+  const plain = buildHero({ heroId: 'ruizhe' });
+  assert.equal(plain.abilities.find((a) => a.id === 'scroll').amount, 12);
+  const varied = buildHero({ heroId: 'ruizhe', upgrades: [{ id: 'fireball', level: 1 }, { id: 'mountain_armor', level: 1 }, { id: 'keen_eye', level: 1 }] });
+  assert.equal(varied.abilities.find((a) => a.id === 'scroll').amount, Math.round(12 * 1.3), '3 elements = +30%');
+  assert.equal(varied.abilities.find((a) => a.id === 'fireball').amount, Math.round(16 * 1.3));
+  const r = sim('ruizhe', [{ id: 'fireball', level: 1 }], ['golem', 'goblin'], 6);
+  const panics = r.events.filter((e) => e.type === 'cast' && e.ability === 'panic');
+  assert.equal(panics.length, 1, 'panics exactly once');
+  const after = r.events.filter((e) => e.type === 'cast' && e.t === panics[0].t && e.ability !== 'panic').map((e) => e.ability);
+  assert.deepEqual(after.sort(), ['fireball', 'scroll'], 'casts every ability at once');
+});
+
 test('Huo Huo (Kindling): every 4th attack is a burning fire bolt; fire blessings count twice', () => {
   const r = sim('huohuo', [], ['golem'], 2);
   const bolts = r.events.filter((e) => e.type === 'cast' && e.ability === 'kindling');

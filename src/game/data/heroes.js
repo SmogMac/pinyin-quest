@@ -25,6 +25,19 @@ export const HEROES = {
     },
     unlock: { level: 3, text: 'Reach account level 3' },
   },
+  ruizhe: {
+    py: 'Ruì Zhé', zh: '睿哲', en: 'Ruizhe', title: 'Nervous Scholar', sprite: 'ruizhe',
+    blurb: 'Has read every book and is terrified of all of them. Fights with scrolls, and panics brilliantly.',
+    stats: { maxHp: 105, atk: 8, def: 2, aspd: 0.9, crit: 0.05, critDmg: 1.5, dodge: 0 },
+    // Innate ability: every hero def may list abilities it always has (same shape as upgrade abilities)
+    abilities: [{ id: 'scroll', kind: 'damage', cd: 4, amount: 12, target: 'front', element: 'arcane' }],
+    passive: {
+      id: 'nervous_genius', py: 'jǐn zhāng', zh: '紧张', en: 'Nervous Genius',
+      desc: 'Throws a scroll every 4s (12 damage). Well-read: each different element among his upgrades makes all his abilities 10% stronger. Panic: the first time he drops below half HP in a battle, he casts every ability at once and attacks 30% faster.',
+      perElement: 0.1, panicBelow: 0.5, panicAspd: 0.3,
+    },
+    unlock: { level: 5, text: 'Reach account level 5' },
+  },
   huohuo: {
     py: 'Huǒ Huǒ', zh: '火火', en: 'Huo Huo', title: 'Ember Apprentice', sprite: 'hero', usesRobes: true,
     blurb: 'A tiny pyromancer with a very big hat. Loves anything that burns.',
@@ -34,7 +47,7 @@ export const HEROES = {
       desc: 'Every 4th attack is a fire bolt for double damage that sets the target burning. Blessings from fire words count twice.',
       every: 4, mult: 2, burn: { dps: 3, dur: 3 },
     },
-    unlock: { level: 6, text: 'Reach account level 6' },
+    unlock: { level: 8, text: 'Reach account level 8' },
   },
 };
 

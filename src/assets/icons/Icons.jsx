@@ -77,6 +77,7 @@ const P = {
   star: <path d="M12 2l3 6.5 7 1-5 5 1.2 7L12 18l-6.2 3.5L7 14.5l-5-5 7-1z" />,
   bolt: <path d="M13 2L4 14h7l-1 8 9-12h-7z" />,
   home: <path d="M3 11l9-8 9 8v10h-6v-6H9v6H3z" />,
+  menu: <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />,
   chart: <path d="M3 21V3h2v16h16v2zM7 17v-6h3v6zm5 0V7h3v10zm5 0v-8h3v8z" />,
   gear: (
     <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm9 5.5v-3l-2.4-.6-.7-1.6 1.3-2.1-2.1-2.1-2.1 1.3-1.6-.7L13 2h-3l-.6 2.4-1.6.7-2.1-1.3-2.1 2.1 1.3 2.1-.7 1.6L2 10.5v3l2.4.6.7 1.6-1.3 2.1 2.1 2.1 2.1-1.3 1.6.7.4 2.7h3l.6-2.4 1.6-.7 2.1 1.3 2.1-2.1-1.3-2.1.7-1.6z" />

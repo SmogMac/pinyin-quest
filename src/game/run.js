@@ -193,7 +193,7 @@ export function upgradeChoices(run, accountLevel, { rareBoost = false } = {}) {
   const inspCount = {};
   for (const i of run.inspirations) if (i.element) inspCount[i.element] = (inspCount[i.element] || 0) + 1;
   const ownedIds = new Set(Object.keys(owned));
-  const hasAbility = run.upgrades.some((o) => UPGRADES[o.id]?.mods(1).abilities?.length);
+  const hasAbility = Boolean(heroDef(run.heroId).abilities?.length) || run.upgrades.some((o) => UPGRADES[o.id]?.mods(1).abilities?.length);
   const eligible = Object.entries(UPGRADES).filter(
     ([id, u]) => (u.unlockLevel || 1) <= accountLevel && (owned[id] || 0) < u.maxLevel && (!u.needsAbility || hasAbility),
   );

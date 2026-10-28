@@ -25,6 +25,7 @@ export function defaultSave() {
     settings: {
       hideHanzi: false,
       autoplay: true,
+      autoContinue: false,
       speechVol: 1,
       sfxVol: 0.6,
       musicVol: 0.35,

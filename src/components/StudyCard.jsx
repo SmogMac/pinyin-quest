@@ -1,6 +1,7 @@
 // One study interaction (teaching card, flashcard, multiple choice, listening, recall, speaking).
 // Records the answer in the SRS, awards XP, then calls onComplete(result).
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getWord } from '../learn/vocab.js';
 import { makeQuestion } from '../learn/questions.js';
 import { previewInterval, newCard, MASTERY } from '../learn/srs.js';
@@ -34,6 +35,17 @@ export default function StudyCard({ task, repeat = 0, onComplete, showElement = 
       )}
       {task.mode === 'speak' && <SpeakCard word={word} repeat={repeat} onComplete={onComplete} />}
     </div>
+  );
+}
+
+/** Buttons pinned to the bottom of the screen so they're always reachable on phones. */
+// Rendered into <body> so animated (transformed) ancestors can't shift a position:fixed bar.
+function ActionBar({ children, tone = '' }) {
+  return createPortal(
+    <div className={`action-bar ${tone}`}>
+      <div className="action-bar-inner">{children}</div>
+    </div>,
+    document.body,
   );
 }
 
@@ -122,9 +134,11 @@ function IntroCard({ word, onComplete, showElement }) {
         <p className="gloss-lg">{word.gloss}</p>
       </div>
       <WordDetails word={word} showPinyin={false} />
-      <Button className="wide" onClick={finish}>
-        Got it <kbd>Space</kbd>
-      </Button>
+      <ActionBar>
+        <Button className="wide" onClick={finish}>
+          Got it <kbd>Space</kbd>
+        </Button>
+      </ActionBar>
     </div>
   );
 }
@@ -177,6 +191,7 @@ function FlashCard({ word, repeat, onComplete }) {
       {flipped && (
         <>
           <WordDetails word={word} showPinyin={false} />
+          <ActionBar>
           <div className="grade-row">
             {[
               [1, 'Again', 'again'],
@@ -190,19 +205,22 @@ function FlashCard({ word, repeat, onComplete }) {
               </button>
             ))}
           </div>
+          </ActionBar>
         </>
       )}
       {!flipped && (
-        <Button
-          className="wide"
-          variant="secondary"
-          onClick={() => {
-            play('flip');
-            setFlipped(true);
-          }}
-        >
-          Reveal <kbd>Space</kbd>
-        </Button>
+        <ActionBar>
+          <Button
+            className="wide"
+            variant="secondary"
+            onClick={() => {
+              play('flip');
+              setFlipped(true);
+            }}
+          >
+            Reveal <kbd>Space</kbd>
+          </Button>
+        </ActionBar>
       )}
     </div>
   );
@@ -243,7 +261,7 @@ function ChoiceCard({ word, mode, repeat, onComplete, showElement }) {
     play(correct ? 'correct' : 'wrong');
     speak(word.hanzi);
     result.current = { correct, xp, levelUp: r.levelUp, wordId: word.id, ms, ...res };
-    if (correct) autoTimer.current = setTimeout(finish, mode === 'listen' ? 1700 : 1300);
+    if (correct && getState().settings.autoContinue) autoTimer.current = setTimeout(finish, mode === 'listen' ? 1700 : 1300);
   };
 
   useKeys((e) => {
@@ -325,13 +343,19 @@ function ChoiceCard({ word, mode, repeat, onComplete, showElement }) {
           );
         })}
       </div>
+      {revealed && !correct && (
+        <div className="feedback bad slide-up">
+          <WordDetails word={word} />
+        </div>
+      )}
+      {revealed && correct && mode !== 'mc' && <p className="wd-meaning small reveal-in">{word.pinyin} = {word.gloss}</p>}
       {revealed && (
-        <div className={`feedback ${correct ? 'good' : 'bad'} slide-up`}>
+        <ActionBar tone={correct ? 'good' : 'bad'}>
           <div className="feedback-head">
             {correct ? (
               <strong>Correct! {result.current?.xp ? <span className="xp-pop">+{result.current.xp} XP</span> : null}</strong>
             ) : (
-              <strong>Not quite. This word will come back soon.</strong>
+              <strong>Not quite. It will come back soon.</strong>
             )}
             {result.current && result.current.masteryAfter > result.current.masteryBefore && (
               <span className="mastery-up" style={{ color: MASTERY[result.current.masteryAfter].color }}>
@@ -339,12 +363,10 @@ function ChoiceCard({ word, mode, repeat, onComplete, showElement }) {
               </span>
             )}
           </div>
-          {!correct && <WordDetails word={word} />}
-          {correct && mode !== 'mc' && <p className="wd-meaning small">{word.pinyin} = {word.gloss}</p>}
           <Button className="wide" variant={correct ? 'primary' : 'secondary'} onClick={finish}>
             Continue <kbd>Space</kbd>
           </Button>
-        </div>
+        </ActionBar>
       )}
     </div>
   );
@@ -427,6 +449,7 @@ function SpeakCard({ word, repeat, onComplete }) {
         )}
       </div>
       {phase === 'revealed' && (
+        <ActionBar>
         <div className="grade-row two">
           <button type="button" className="grade-btn again" onClick={() => grade(false)}>
             <span>Missed it</span>
@@ -437,6 +460,7 @@ function SpeakCard({ word, repeat, onComplete }) {
             <small>2</small>
           </button>
         </div>
+        </ActionBar>
       )}
     </div>
   );

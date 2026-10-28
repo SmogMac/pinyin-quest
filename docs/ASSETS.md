@@ -56,6 +56,7 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 | --- | --- | --- |
 | `xinyi` | Xīn Yí (image) | 112×142 |
 | `mei` | Méi (image) | 96×142 |
+| `ruizhe` | Ruì Zhé (image) | 87×142 |
 | `hero` | Huǒ Huǒ (vector, recoloured by robes) | 120×150 |
 | `companion` | Fox Spirit ally | 64×56 |
 | `slime`, `sporecap`, `bat`, `goblin`, `golem` | normal enemies | ~90–130 square |

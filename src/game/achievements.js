@@ -29,7 +29,8 @@ export const ACHIEVEMENTS = [
   { id: 'boss', name: 'Dragon Slayer', desc: 'Defeat mò lóng, the Ink Dragon.', test: (s) => s.adventure.bosses >= 1 },
   { id: 'level_10', name: 'Seasoned Scholar', desc: 'Reach account level 10.', test: (s) => levelInfo(s.profile.xp).level >= 10 },
   { id: 'hero_mei', name: 'Méi joins you!', desc: 'Unlock Mei, the Silent Blade (level 3).', test: (s) => heroUnlocked('mei', s) },
-  { id: 'hero_huohuo', name: 'Huǒ Huǒ joins you!', desc: 'Unlock Huo Huo, the Ember Apprentice (level 6).', test: (s) => heroUnlocked('huohuo', s) },
+  { id: 'hero_ruizhe', name: 'Ruì Zhé joins you!', desc: 'Unlock Ruizhe, the Nervous Scholar (level 5).', test: (s) => heroUnlocked('ruizhe', s) },
+  { id: 'hero_huohuo', name: 'Huǒ Huǒ joins you!', desc: 'Unlock Huo Huo, the Ember Apprentice (level 8).', test: (s) => heroUnlocked('huohuo', s) },
 ];
 
 export function heroUnlocked(id, s = getState()) {
