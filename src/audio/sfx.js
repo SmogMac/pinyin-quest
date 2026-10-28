@@ -14,7 +14,7 @@ export function audioCtx() {
 
 function vol() {
   const s = getState().settings;
-  return s.muted ? 0 : s.sfxVol;
+  return s.muted || s.soundless ? 0 : s.sfxVol;
 }
 
 function tone({ freq = 440, to = null, type = 'sine', dur = 0.12, gain = 0.25, delay = 0, attack = 0.005 }) {

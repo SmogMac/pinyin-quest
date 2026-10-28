@@ -24,7 +24,10 @@ const MODE_LABEL = {
   speak: 'Speak',
 };
 
-export default function StudyCard({ task, repeat = 0, onComplete, showElement = false }) {
+export default function StudyCard({ task: rawTask, repeat = 0, onComplete, showElement = false }) {
+  const soundless = useStore().settings.soundless;
+  // Soundless Mode swaps listening cards for recognition, live (also if toggled mid-card)
+  const task = soundless && rawTask.mode === 'listen' ? { ...rawTask, mode: 'mc' } : rawTask;
   const word = getWord(task.id);
   return (
     <div className="study-card-wrap" key={`${task.id}-${task.mode}`}>

@@ -1,317 +1,356 @@
-// Roguelike run state machine. Pure functions that mutate a plain, JSON-serialisable run
-// object (saved after every step, so a run can be resumed after closing the app).
+// Roguelike run state machine (v2). Pure functions that mutate a plain, JSON-serialisable run
+// object, saved after every step so a run can be resumed between encounters.
 //
-// phases: map -> quiz -> (pick)* -> battle -> reward -> map ... -> boss -> victory | defeat
-//         map -> rest | treasure | quiz(lesson) -> (pick) -> map
+// Structure: Act 1 (choose a biome) → Act 2 (choose a biome; some need vocabulary) →
+//            Act 3 Ink Dragon's Lair → [Act 4 The Forgotten Beyond, after 3 dragon victories]
+// Each act is a branching scroll map of rows; the last row is the act's guardian / boss.
+// phases: biome → map → battle → reward → map … → victory | defeat
+//         map → rest | treasure | shrine | merchant | lesson | event → map
 import { RUN, SCORE } from './data/balance.js';
-import { UPGRADES, SYNERGIES, RARITY_WEIGHT, activeSynergies } from './data/upgrades.js';
-import { GROUPS } from './data/enemies.js';
-import { makeRng, buildHero } from './combat.js';
+import { ITEMS, RARITY_WEIGHT } from './data/items.js';
+import { SPELLS, SPELL_SLOTS, SIGNATURE_LOCKED } from './data/spells.js';
+import { BIOMES, ACT_BIOMES } from './data/biomes.js';
+import { synergiesCompletedBy, activeSynergies } from './data/synergies.js';
 import { heroDef, DEFAULT_HERO } from './data/heroes.js';
+import { makeRng, buildHero } from './combat.js';
+
+export const RUN_VERSION = 2;
 
 export const NODE_INFO = {
-  battle: { py: 'zhàn dòu', zh: '战斗', name: 'Battle', desc: 'Answer 3 questions, then fight.' },
-  elite: { py: 'jīng yīng', zh: '精英', name: 'Elite', desc: 'Tougher foe, rare treasure.' },
-  rest: { py: 'gōu huǒ', zh: '篝火', name: 'Campfire', desc: 'Heal, or meditate on words for power.' },
-  treasure: { py: 'bǎo xiāng', zh: '宝箱', name: 'Treasure', desc: 'A free upgrade, rarer finds.' },
-  lesson: { py: 'lǎo shī', zh: '老师', name: 'Teacher', desc: '5 questions: heal and gain sparks.' },
-  boss: { py: 'dà wáng', zh: '大王', name: 'Boss', desc: 'The ink dragon awaits.' },
+  battle: { py: 'zhàn dòu', zh: '战斗', name: 'Battle', desc: 'A fight. Win a passive item or spell.' },
+  elite: { py: 'jīng yīng', zh: '精英', name: 'Elite', desc: 'Dangerous foe, rare rewards.' },
+  rest: { py: 'gōu huǒ', zh: '篝火', name: 'Campfire', desc: 'Heal, or study words for ink.' },
+  treasure: { py: 'bǎo xiāng', zh: '宝箱', name: 'Treasure', desc: 'Choose a rare item.' },
+  shrine: { py: 'shén miào', zh: '神庙', name: 'Shrine', desc: 'An elemental blessing.' },
+  merchant: { py: 'shāng rén', zh: '商人', name: 'Merchant', desc: 'Spend ink on items and spells.' },
+  lesson: { py: 'lǎo shī', zh: '老师', name: 'Teacher', desc: '5 questions: heal and earn ink.' },
+  event: { py: 'qí yù', zh: '奇遇', name: 'Encounter', desc: 'Something strange happens…' },
+  secret: { py: 'mì mì', zh: '秘密', name: 'Secret', desc: 'A hidden place, revealed by a word you know.' },
+  guardian: { py: 'shǒu wèi', zh: '守卫', name: 'Guardian', desc: 'The biome’s guardian. Leads to the next act.' },
+  boss: { py: 'dà wáng', zh: '大王', name: 'Boss', desc: 'The final battle of this path.' },
+  secretboss: { py: 'yù tù', zh: '玉兔', name: 'Moon Gate', desc: 'Something shines behind the moon…' },
 };
 
-/** A fresh RNG for each random decision, derived from the run seed and a counter. */
+const NODE_WEIGHTS = { battle: 44, elite: 12, rest: 9, treasure: 8, shrine: 7, merchant: 6, lesson: 8, event: 9 };
+
 function rng(run) {
   run.rngN = (run.rngN || 0) + 1;
   return makeRng(run.seed * 7919 + run.rngN * 104729);
 }
-
-function weighted(r, items, weightOf) {
-  const total = items.reduce((s, x) => s + weightOf(x), 0);
+function weighted(r, items, w) {
+  const total = items.reduce((s, x) => s + w(x), 0);
   let roll = r() * total;
   for (const x of items) {
-    roll -= weightOf(x);
+    roll -= w(x);
     if (roll <= 0) return x;
   }
   return items[items.length - 1];
 }
 
-export function generateMap(seed) {
+// ------------------------------------------------------------------ map generation
+/** Branching map: 3 random walks across 4 columns, merged. Last row = guardian/boss. */
+export function generateActMap(seed, act, biome, { secrets = [] } = {}) {
   const r = makeRng(seed);
-  const floors = [];
-  for (let f = 1; f < RUN.floors; f++) {
-    const types = Object.keys(RUN.nodeWeights).filter(
-      (t) => !(t === 'elite' && f < RUN.eliteFromFloor) && !(t === 'rest' && f < RUN.restFromFloor),
-    );
-    const count = f === 1 ? 2 : r() < 0.45 ? 2 : 3;
-    const opts = [];
-    while (opts.length < count) {
-      const t = weighted(r, types, (x) => RUN.nodeWeights[x]);
-      if (opts.filter((o) => o === t).length < (t === 'battle' ? 2 : 1)) opts.push(t);
+  const rows = RUN.actRows[act];
+  const COLS = 4;
+  const nodes = {};
+  const key = (row, col) => `${row}-${col}`;
+  const ensure = (row, col) => (nodes[key(row, col)] ||= { id: key(row, col), row, col, next: [], type: null });
+  const fightRows = rows - 1;
+  for (let p = 0; p < 3; p++) {
+    let col = p === 0 ? 0 : p === 1 ? COLS - 1 : Math.floor(r() * COLS);
+    for (let row = 0; row < fightRows; row++) {
+      const n = ensure(row, col);
+      if (row < fightRows - 1) {
+        const nextCol = Math.max(0, Math.min(COLS - 1, col + Math.floor(r() * 3) - 1));
+        const nn = ensure(row + 1, nextCol);
+        if (!n.next.includes(nn.id)) n.next.push(nn.id);
+        col = nextCol;
+      }
     }
-    if (!opts.some((t) => t === 'battle' || t === 'elite')) opts[0] = 'battle';
-    if (f === 1) opts.splice(0, 2, 'battle', 'lesson');
-    floors.push(opts);
   }
-  floors.push(['boss']);
-  return floors;
+  const finalId = `${fightRows}-final`;
+  nodes[finalId] = { id: finalId, row: fightRows, col: 1.5, next: [], type: act >= 3 ? 'boss' : 'guardian' };
+  for (const n of Object.values(nodes)) if (n.row === fightRows - 1) n.next = [finalId];
+
+  // node types
+  for (const n of Object.values(nodes)) {
+    if (n.type) continue;
+    if (n.row === 0) n.type = 'battle';
+    else if (n.row === fightRows - 1 && fightRows > 2) n.type = r() < 0.6 ? 'rest' : 'battle';
+    else {
+      const types = Object.keys(NODE_WEIGHTS).filter((t) => !(t === 'elite' && n.row < 2) && !(t === 'merchant' && n.row < 1));
+      n.type = weighted(r, types, (t) => NODE_WEIGHTS[t]);
+    }
+  }
+  // the row before the guardian always offers at least one campfire
+  const pre = Object.values(nodes).filter((n) => n.row === fightRows - 1);
+  if (fightRows > 2 && pre.length && !pre.some((n) => n.type === 'rest')) pre[0].type = 'rest';
+
+  // secret nodes appear only when their condition is met
+  const middle = Object.values(nodes).filter((n) => n.row >= 1 && n.row < fightRows - 1);
+  for (const s of secrets) {
+    const n = middle.splice(Math.floor(r() * middle.length), 1)[0];
+    if (n) {
+      n.type = s.type;
+      n.secret = s.id;
+    }
+  }
+  return { act, biome, rows, nodes };
 }
 
-export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId = DEFAULT_HERO } = {}) {
+// ------------------------------------------------------------------ run lifecycle
+export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId = DEFAULT_HERO, beyondUnlocked = false } = {}) {
+  const def = heroDef(heroId);
   const hero = buildHero({ heroId, accountLevel });
   return {
+    v: RUN_VERSION,
     seed,
     heroId,
     startedAt: Date.now(),
-    floor: 1,
+    act: 1,
+    biome: null,
+    map: null,
+    pos: null,
+    floor: 0,
     hp: hero.maxHp,
-    upgrades: [],
-    sparks: 0,
-    map: generateMap(seed),
-    phase: 'map',
+    items: [],
+    spells: [def.signature],
+    ink: 0,
+    bonus: { spellPower: 0, maxHp: 0 },
+    phase: 'biome',
     node: null,
-    quiz: null,
-    choices: null,
-    afterPick: null,
     battle: null,
     reward: null,
-    bonusPick: false,
-    inspirations: [], // [{wordId, element}] from correct answers since the last pick
-    stats: { correct: 0, wrong: 0, kills: 0, dealt: 0, battles: 0, xp: 0, words: [] },
-    synergiesSeen: [],
+    shop: null,
+    quiz: null,
+    beyondUnlocked,
+    runState: { phoenixUsed: false },
+    stats: { kills: 0, casts: 0, fizzles: 0, correct: 0, wrong: 0, battles: 0, words: [], guardians: 0, inkEarned: 0 },
+    newlyFound: [],
   };
 }
 
-export function heroFor(run, accountLevel, blessings = []) {
-  return buildHero({ heroId: run.heroId || DEFAULT_HERO, upgrades: run.upgrades, accountLevel, blessings });
+export function heroFor(run, accountLevel) {
+  const h = buildHero({ heroId: run.heroId, items: run.items, spells: run.spells, accountLevel });
+  h.maxHp += run.bonus?.maxHp || 0;
+  h.spellPower += run.bonus?.spellPower || 0;
+  return h;
 }
+export const maxHpOf = (run, accountLevel) => heroFor(run, accountLevel).maxHp;
+export const healRun = (run, accountLevel, pct) => {
+  const max = maxHpOf(run, accountLevel);
+  run.hp = Math.min(max, run.hp + Math.round(max * pct));
+};
 
-export function maxHpOf(run, accountLevel) {
-  return heroFor(run, accountLevel).maxHp;
-}
-
-export function enemiesFor(type, floor, r) {
-  const band = GROUPS[type].find((g) => floor >= g.floors[0] && floor <= g.floors[1]) || GROUPS[type][GROUPS[type].length - 1];
-  return band.sets[Math.floor(r() * band.sets.length)];
-}
-
-// ---- transitions ---------------------------------------------------------------------
-
-export function chooseNode(run, index) {
-  const type = run.map[run.floor - 1][index];
-  run.node = { type, index };
-  if (type === 'rest') run.phase = 'rest';
-  else if (type === 'treasure') run.phase = 'treasure';
-  else run.phase = 'prequiz'; // UI generates questions (needs the learner's save) then calls startQuiz
-  return type;
-}
-
-/** tasks: [{id, kind:'intro'|'quiz', mode}] chosen by learn/adventurePicker.js */
-export function startQuiz(run, kind, tasks) {
-  run.quiz = { kind, tasks, i: 0, results: [] };
-  run.phase = 'quiz';
-}
-
-/** Returns { healed } (HP restored by passives, if any). */
-export function answerQuiz(run, { wordId, element, correct }, accountLevel = 1) {
-  const q = run.quiz;
-  q.results.push({ wordId, element, correct });
-  let healed = 0;
-  const passive = heroDef(run.heroId).passive;
-  if (correct && passive.id === 'good_cheer') {
-    const maxHp = maxHpOf(run, accountLevel);
-    healed = Math.min(maxHp - run.hp, Math.round(maxHp * passive.healPct));
-    run.hp += healed;
-  }
-  if (!run.stats.words.includes(wordId)) run.stats.words.push(wordId);
-  if (correct) {
-    run.sparks += 1;
-    run.stats.correct += 1;
-    run.inspirations.push({ wordId, element });
-    if (run.inspirations.length > 8) run.inspirations.shift();
-  } else run.stats.wrong += 1;
-  return { healed };
-}
-
-export function nextQuizTask(run) {
-  run.quiz.i += 1;
-}
-
-export function finishQuiz(run, accountLevel) {
-  const q = run.quiz;
-  const correct = q.results.filter((x) => x.correct);
-  const wrong = q.results.length - correct.length;
-  const passive = heroDef(run.heroId).passive;
-  if (passive.perfectSparks && wrong === 0 && q.results.length) {
-    run.sparks += passive.perfectSparks;
-    q.perfectBonus = passive.perfectSparks;
-  }
-  if (q.kind === 'lesson') {
-    const maxHp = maxHpOf(run, accountLevel);
-    run.hp = Math.min(maxHp, run.hp + Math.round(maxHp * RUN.lessonHealPct * correct.length));
-    if (wrong === 0 && q.results.length) run.sparks += 2;
-    return goPickOr(run, 'map', accountLevel);
-  }
-  if (q.kind === 'rest') return goPickOr(run, 'map', accountLevel);
-  // battle / elite / boss
-  const r = rng(run);
-  run.battle = {
-    type: q.kind,
-    enemies: enemiesFor(q.kind, run.floor, r),
-    seed: Math.floor(r() * 1e9),
-    empower: wrong * RUN.wrongAnswerEnemyBuff,
-    blessings: correct.map((x) => x.element || 'none'),
-  };
-  return goPickOr(run, 'battle', accountLevel);
-}
-
-function goPickOr(run, after, accountLevel) {
-  run.quiz = null;
-  if (run.sparks >= RUN.sparksPerUpgrade) {
-    run.choices = upgradeChoices(run, accountLevel);
-    run.choicesFree = false;
-    run.afterPick = after;
-    run.phase = 'pick';
-  } else enterPhase(run, after);
-}
-
-function enterPhase(run, phase) {
-  if (phase === 'map') advanceFloor(run);
-  else run.phase = phase;
-}
-
-function advanceFloor(run) {
-  run.floor += 1;
-  run.node = null;
-  run.battle = null;
-  run.reward = null;
+/** Enter an act after choosing its biome. `secrets` are hidden nodes unlocked by vocabulary. */
+export function chooseBiome(run, biomeId, secrets = []) {
+  run.biome = biomeId;
+  run.map = generateActMap(run.seed * 13 + run.act * 101, run.act, biomeId, { secrets });
+  run.pos = null;
   run.phase = 'map';
 }
 
-/** Weighted draft of 3 upgrades, biased toward the elements of words just answered. */
-export function upgradeChoices(run, accountLevel, { rareBoost = false } = {}) {
+export function reachableNodes(run) {
+  if (!run.map) return [];
+  const nodes = run.map.nodes;
+  if (!run.pos) return Object.values(nodes).filter((n) => n.row === 0);
+  return (nodes[run.pos]?.next || []).map((id) => nodes[id]);
+}
+
+export function chooseNode(run, nodeId) {
+  if (run.phase !== 'map' || !reachableNodes(run).some((n) => n.id === nodeId)) return null;
+  const node = run.map.nodes[nodeId];
+  run.pos = nodeId;
+  node.visited = true;
+  run.floor += 1;
+  run.node = { id: nodeId, type: node.type, secret: node.secret || null };
   const r = rng(run);
-  const owned = Object.fromEntries(run.upgrades.map((u) => [u.id, u.level]));
-  const inspCount = {};
-  for (const i of run.inspirations) if (i.element) inspCount[i.element] = (inspCount[i.element] || 0) + 1;
-  const ownedIds = new Set(Object.keys(owned));
-  const hasAbility = Boolean(heroDef(run.heroId).abilities?.length) || run.upgrades.some((o) => UPGRADES[o.id]?.mods(1).abilities?.length);
-  const eligible = Object.entries(UPGRADES).filter(
-    ([id, u]) => (u.unlockLevel || 1) <= accountLevel && (owned[id] || 0) < u.maxLevel && (!u.needsAbility || hasAbility),
-  );
-  const weightOf = ([id, u]) => {
-    let w = RARITY_WEIGHT[u.rarity];
-    if (rareBoost && u.rarity !== 'common') w *= 2.2;
-    if (owned[id]) w *= 1.3;
-    w *= 1 + 2.5 * (inspCount[u.element] || 0);
-    const completes = Object.values(SYNERGIES).some(
-      (s) => s.requires.includes(id) && s.requires.every((q) => q === id || ownedIds.has(q)),
-    );
-    if (completes) w *= 1.8;
-    return w;
+  const biome = BIOMES[run.biome];
+  const t = node.type;
+  if (['battle', 'elite', 'guardian', 'boss', 'secretboss'].includes(t)) {
+    let enemies;
+    if (t === 'guardian') enemies = [biome.guardian];
+    else if (t === 'boss') enemies = [biome.boss];
+    else if (t === 'secretboss') enemies = ['jade_rabbit'];
+    else {
+      const pool = biome.pools[t === 'elite' ? 'elite' : 'battle'];
+      enemies = pool[Math.floor(r() * pool.length)];
+    }
+    run.battle = { type: t, enemies, seed: Math.floor(r() * 1e9), biome: run.biome };
+    run.phase = 'battle';
+  } else if (t === 'rest') run.phase = 'rest';
+  else if (t === 'treasure') run.phase = 'treasure';
+  else if (t === 'shrine') run.phase = 'shrine';
+  else if (t === 'merchant' || (t === 'secret' && node.secret === 'merchant')) run.phase = 'merchant';
+  else if (t === 'lesson') run.phase = 'lesson';
+  else run.phase = 'event';
+  return t;
+}
+
+export function leaveNode(run) {
+  run.node = null;
+  run.battle = null;
+  run.reward = null;
+  run.shop = null;
+  run.quiz = null;
+  run.phase = 'map';
+}
+
+// ------------------------------------------------------------------ rewards
+/** Weighted draft of passive items, biased toward completing synergies and the biome's element. */
+export function draftItems(run, pool, n = 3, { minRarity = null, r = rng(run) } = {}) {
+  const owned = new Set(run.items);
+  const def = heroDef(run.heroId);
+  const biomeEl = Object.keys(BIOMES[run.biome]?.elementMods || {});
+  let candidates = pool.filter((id) => !owned.has(id) && ITEMS[id]);
+  if (minRarity === 'rare') candidates = candidates.filter((id) => ITEMS[id].rarity !== 'common');
+  if (!candidates.length) candidates = pool.filter((id) => !owned.has(id));
+  const w = (id) => {
+    const it = ITEMS[id];
+    let x = RARITY_WEIGHT[it.rarity] || 5;
+    if (def.poolBias?.[it.element]) x *= def.poolBias[it.element];
+    if (biomeEl.includes(it.element)) x *= 1.3;
+    if (synergiesCompletedBy(id, run.items, run.spells).length) x *= 2;
+    return x;
   };
-  const picks = [];
-  const pool = eligible.slice();
-  // guarantee one option inspired by an answered word when possible
-  const inspiredPool = pool.filter(([, u]) => inspCount[u.element]);
-  if (inspiredPool.length) {
-    const p = weighted(r, inspiredPool, weightOf);
-    picks.push(p);
-    pool.splice(pool.indexOf(p), 1);
+  const out = [];
+  const list = candidates.slice();
+  while (out.length < n && list.length) {
+    const p = weighted(r, list, w);
+    out.push(p);
+    list.splice(list.indexOf(p), 1);
   }
-  while (picks.length < 3 && pool.length) {
-    const p = weighted(r, pool, weightOf);
-    picks.push(p);
-    pool.splice(pool.indexOf(p), 1);
-  }
-  return picks.map(([id, u]) => {
-    const insp = [...run.inspirations].reverse().find((i) => i.element === u.element);
-    const nextIds = [...ownedIds, id];
-    const synergy = Object.entries(SYNERGIES).find(
-      ([sid, s]) => s.requires.includes(id) && s.requires.every((q) => nextIds.includes(q)) && !activeSynergies(run.upgrades).includes(sid),
-    );
-    return { id, level: (owned[id] || 0) + 1, inspiredBy: insp?.wordId || null, synergy: synergy?.[0] || null };
-  });
+  return out;
 }
 
-/** Returns newly activated synergy ids. */
-export function pickUpgrade(run, id, accountLevel) {
-  const before = activeSynergies(run.upgrades);
+export function offerSpell(run, unlockedSpellIds, r = rng(run)) {
+  const choices = unlockedSpellIds.filter((id) => !run.spells.includes(id));
+  return choices.length ? choices[Math.floor(r() * choices.length)] : null;
+}
+
+/** After a won battle, prepare the reward screen. Pools come from unlocks.js (vocabulary). */
+export function battleReward(run, { itemPool, spellPool }) {
+  const t = run.battle.type;
+  const r = rng(run);
+  const inkMult = run.items.includes('lucky_cat') ? 1.25 : 1;
+  let ink = t === 'elite' || t === 'guardian' ? RUN.inkPerElite : RUN.inkPerBattle[0] + Math.floor(r() * (RUN.inkPerBattle[1] - RUN.inkPerBattle[0]));
+  ink = Math.round(ink * inkMult);
+  run.ink += ink;
+  run.stats.inkEarned += ink;
+  if (t === 'boss') return null;
+  if (t === 'secretboss') {
+    const epics = itemPool.filter((id) => ITEMS[id].rarity === 'epic' && !run.items.includes(id));
+    return { kind: 'items', choices: epics.length ? epics.slice(0, 1) : draftItems(run, itemPool, 2, { minRarity: 'rare', r }), ink };
+  }
+  const spell = t === 'battle' && r() < RUN.spellOfferChance ? offerSpell(run, spellPool, r) : null;
+  if (spell) return { kind: 'spell', spell, ink };
+  return {
+    kind: 'items',
+    choices: draftItems(run, itemPool, 3, { minRarity: t === 'elite' || t === 'guardian' ? 'rare' : null, r }),
+    ink,
+  };
+}
+
+/** Returns newly completed synergy ids. */
+export function takeItem(run, id, accountLevel) {
+  if (run.items.includes(id)) return [];
+  const before = activeSynergies(run.items, run.spells);
   const maxBefore = maxHpOf(run, accountLevel);
-  const owned = run.upgrades.find((u) => u.id === id);
-  if (owned) owned.level += 1;
-  else run.upgrades.push({ id, level: 1 });
+  run.items.push(id);
   const maxAfter = maxHpOf(run, accountLevel);
-  // max HP gains also heal by the same amount
-  if (maxAfter > maxBefore) run.hp = Math.min(maxAfter, run.hp + (maxAfter - maxBefore));
-  if (!run.choicesFree) run.sparks -= RUN.sparksPerUpgrade;
-  run.inspirations = [];
-  run.choices = null;
-  const fresh = activeSynergies(run.upgrades).filter((s) => !before.includes(s));
-  run.synergiesSeen.push(...fresh);
-  if (!run.choicesFree && run.sparks >= RUN.sparksPerUpgrade) {
-    run.choices = upgradeChoices(run, accountLevel);
-    return fresh;
-  }
-  const after = run.afterPick;
-  run.afterPick = null;
-  run.choicesFree = false;
-  enterPhase(run, after);
-  return fresh;
+  if (maxAfter > maxBefore) run.hp += maxAfter - maxBefore;
+  run.hp = Math.min(run.hp, maxAfter);
+  return activeSynergies(run.items, run.spells).filter((s) => !before.includes(s));
 }
 
-export function skipPick(run) {
-  run.choices = null;
-  const after = run.afterPick;
-  run.afterPick = null;
-  run.choicesFree = false;
-  enterPhase(run, after);
+export const replaceableSlots = (run) =>
+  run.spells.map((id, i) => ({ id, i, locked: SIGNATURE_LOCKED && SPELLS[id]?.signature })).filter((s) => !s.locked).map((s) => s.i);
+
+/** slot: index to replace, or null to add into a free slot. Returns newly completed synergies. */
+export function takeSpell(run, spellId, slot = null) {
+  const before = activeSynergies(run.items, run.spells);
+  if (run.spells.length < SPELL_SLOTS && slot === null) run.spells.push(spellId);
+  else if (slot !== null && replaceableSlots(run).includes(slot)) run.spells[slot] = spellId;
+  else return [];
+  return activeSynergies(run.items, run.spells).filter((s) => !before.includes(s));
 }
 
-export function resolveBattle(run, sim) {
-  run.hp = sim.heroHp;
+export function resolveBattle(run, sim, accountLevel) {
+  run.hp = Math.max(0, Math.round(sim.heroHp));
   run.stats.kills += sim.kills;
-  run.stats.dealt += sim.dealt;
   run.stats.battles += 1;
-  const type = run.battle.type;
+  const t = run.battle.type;
   if (sim.result !== 'win') {
     run.phase = 'defeat';
     return;
   }
-  if (type === 'boss') {
-    run.phase = 'victory';
+  healRun(run, accountLevel, RUN.victoryHealPct);
+  if (t === 'guardian') {
+    run.stats.guardians += 1;
+    healRun(run, accountLevel, RUN.actHealPct);
+  }
+  if (t === 'boss') {
+    run.phase = run.biome === 'beyond' ? 'complete' : 'victory';
     return;
   }
-  run.bonusPick = type === 'elite';
-  run.reward = { type, kills: sim.kills, duration: sim.duration };
   run.phase = 'reward';
 }
 
-export function continueAfterReward(run, accountLevel) {
-  const maxHp = maxHpOf(run, accountLevel);
-  run.hp = Math.min(maxHp, run.hp + Math.round(maxHp * RUN.victoryHealPct));
-  if (run.bonusPick) {
-    run.bonusPick = false;
-    openTreasure(run, accountLevel);
-    return;
+/** After the reward: guardians lead to the next act, otherwise back to the map. */
+export function afterReward(run) {
+  const wasGuardian = run.battle?.type === 'guardian';
+  leaveNode(run);
+  if (wasGuardian) {
+    run.act += 1;
+    run.biome = null;
+    run.map = null;
+    run.pos = null;
+    run.phase = run.act >= 3 ? 'lairIntro' : 'biome';
   }
-  advanceFloor(run);
 }
 
-export function openTreasure(run, accountLevel) {
-  run.choices = upgradeChoices(run, accountLevel, { rareBoost: true });
-  run.choicesFree = true;
-  run.afterPick = 'map';
-  run.phase = 'pick';
+export function enterLair(run) {
+  chooseBiome(run, 'lair');
+}
+export function enterBeyond(run) {
+  run.act = 4;
+  chooseBiome(run, 'beyond');
 }
 
-export function restHeal(run, accountLevel) {
-  const maxHp = maxHpOf(run, accountLevel);
-  run.hp = Math.min(maxHp, run.hp + Math.round(maxHp * RUN.restHealPct));
-  advanceFloor(run);
+// ------------------------------------------------------------------ merchant & shrine
+export function openShop(run, itemPool, spellPool, { secret = false } = {}) {
+  const r = rng(run);
+  const items = draftItems(run, itemPool, secret ? 4 : 3, { minRarity: secret ? 'rare' : null, r });
+  const spell = offerSpell(run, spellPool, r);
+  const disc = secret ? 0.8 : 1;
+  run.shop = {
+    secret,
+    stock: [
+      ...items.map((id) => ({ kind: 'item', id, price: Math.round(RUN.prices[ITEMS[id].rarity] * disc), sold: false })),
+      ...(spell ? [{ kind: 'spell', id: spell, price: Math.round(RUN.prices.spell * disc), sold: false }] : []),
+      { kind: 'heal', id: 'heal', price: Math.round(RUN.prices.heal * disc), sold: false },
+    ],
+  };
+}
+
+export function shrineOptions(run, itemPool) {
+  const biome = BIOMES[run.biome];
+  const element = Object.keys(biome.elementMods || {})[0] || 'light';
+  const gifts = itemPool.filter((id) => ITEMS[id].element === element && !run.items.includes(id));
+  return { element, gift: gifts.length ? gifts[Math.floor(rng(run)() * gifts.length)] : null };
 }
 
 export function scoreOf(run) {
-  const floorsCleared = run.phase === 'victory' ? RUN.floors : run.floor - 1;
+  const won = run.phase === 'victory' || run.phase === 'complete';
   return (
-    floorsCleared * SCORE.floor + run.stats.kills * SCORE.kill + run.stats.correct * SCORE.correct + (run.phase === 'victory' ? SCORE.boss : 0)
+    run.floor * SCORE.floor +
+    run.stats.kills * SCORE.kill +
+    run.stats.casts * SCORE.cast +
+    run.stats.guardians * SCORE.guardian +
+    (won ? SCORE.boss : 0) +
+    (run.phase === 'complete' ? SCORE.wordeater : 0)
   );
 }
+
+export const actBiomes = (act) => ACT_BIOMES[act] || [];

@@ -2,7 +2,7 @@ import { useStore } from '../store/store.js';
 import { levelInfo, dueCount, masteryCounts, dayKey } from '../store/progress.js';
 import { MASTERY, DAY, SKILLS } from '../learn/srs.js';
 import { ACHIEVEMENTS } from '../game/achievements.js';
-import { SYNERGIES } from '../game/data/upgrades.js';
+import { SYNERGIES } from '../game/data/synergies.js';
 import { TopBar, Bar } from '../components/ui.jsx';
 import Icon from '../assets/icons/Icons.jsx';
 import { VOCAB } from '../learn/vocab.js';

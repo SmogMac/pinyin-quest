@@ -82,7 +82,7 @@ Glyph names are listed in `src/assets/icons/Icons.jsx`. Badge colours come from 
 
 ## Effects
 
-Spell effects are CSS (`.fx-*` classes in `app.css`) coloured by element: `projectile`, `burst`, `slash`, `rays`, `bubble` and `sparkles`. `BattleView.jsx` picks the effect per ability in the `cast` handler. To use image effects, render an `<img>` inside the `.fx` element for that ability.
+Spell effects are CSS (`.fx-*` classes in `app.css`) coloured by element: `projectile`, `burst`, `slash`, `rays`, `bubble` and `sparkles`. `BattleScreen.jsx` picks the effect per spell in its `cast` handler. To use image effects, render an `<img>` inside the `.fx` element for that ability.
 
 ## Naming conventions
 

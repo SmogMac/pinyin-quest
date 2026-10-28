@@ -1,13 +1,14 @@
 # Pinyin Quest
 
-Learn to **speak and understand** Mandarin with flashcards, spaced repetition and a cute roguelike autobattler. Every correct answer powers up your hero, and the *meaning* of the word decides the reward: 水 shuǐ (water) brings shields, 火 huǒ (fire) sets enemies ablaze.
+Learn to **speak and understand** Mandarin with flashcards, spaced repetition and a cute roguelike. **Learning words gives you magic:** you cast spells by solving quick Mandarin puzzles while your hero fights in real time, collect passive items that transform how they fight, and unlock new items, spells and lands by learning more vocabulary.
 
 - Pinyin first, with tone marks. Hanzi stays small and can be hidden entirely.
 - Mandarin audio on every card (normal and slow) via the browser's zh-CN voice, with a slot for recorded clips.
-- Five study modes: teaching card, flashcard (Again/Hard/Good/Easy), multiple choice, **listening**, recall (English → pinyin), plus optional speaking practice.
+- Study modes: teaching card, flashcard (Again/Hard/Good/Easy), multiple choice, **listening**, recall (English → pinyin), plus optional speaking practice.
 - SM-2-style spaced repetition, tracked **separately** for recognition, listening, recall and speaking.
-- Roguelike adventure: a 10-floor run with battles, elites, campfires, treasure, teacher challenges and a boss. It has 4 heroes with signature passives, 20 upgrades, 8 synergies, 7 enemies and the 墨龙 mò lóng (Ink Dragon) boss.
-- Passive learning in the game: every enemy, upgrade, synergy, map node and element is named in pinyin first (e.g. 石头人 shí tou rén, "stone person"), with Hanzi and English beside it. Tap a name to hear it; picking an upgrade speaks its name.
+- **Adventure:** real-time autobattles, three spells cast through Mandarin puzzles (combat never pauses), 58 passive items, 27 synergies, 8 elements with reactions, 9 biomes with battlefield effects, branching scroll-map routes, the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**.
+- **Soundless Mode:** play 100% of the game without audio; listening exercises are swapped for text and picture ones and never counted as missed.
+- Passive learning everywhere: enemies, items, spells, reactions and places are named in pinyin first (e.g. 石头人 shí tou rén, "stone person"), with Hanzi and English beside them. Tap a name to hear it.
 - Installable PWA that works offline. All progress stays on the device, with JSON export and import.
 
 ---
@@ -33,7 +34,8 @@ Open the printed URL (http://localhost:5173). `--host` is on, so the URL also wo
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the production build (http://localhost:4173) |
-| `npm test` | Combat, synergy and whole-run balance tests |
+| `npm test` | Engine, items, synergies, content and whole-run balance tests |
+| `node tests/sweep.mjs` | Balance report: win rate and battle lengths per hero |
 | `npm run vocab` | Rebuild `src/data/vocab.json` from the source dataset |
 | `npm run icons` | Rebuild the app icons from `tools/art-source/icon.webp` |
 | `npm run art` | Trim and resize character art from `tools/art-source/` into `public/assets/characters/` |
@@ -59,21 +61,24 @@ The repo includes `.github/workflows/deploy.yml`, which runs the tests, builds, 
 src/
   app/App.jsx              screen routing, toasts, audio unlock, error boundary
   screens/                 Home, Learn (Quick Learn + summary), Adventure, Collection, Progress, Settings
-  components/              StudyCard (all study modes), BattleView, Sprite, AudioButtons, ui
-  learn/                   vocab loader, srs.js (scheduler), session.js (what to study next),
-                           questions.js (distractors), grading.js (grades/XP), adventurePicker.js
+  components/              StudyCard (study modes), BattleScreen (real-time battle), CastPuzzle (spell puzzles),
+                           ScrollMap (route map), HeroCarousel, Sprite, AudioButtons, ui
+  learn/                   vocab, srs (scheduler), session (what to study next), questions (distractors),
+                           puzzles (spellcasting puzzles), pinyinTools (tones), shapes (drawing recognition)
   game/
-    combat.js              deterministic battle simulation (no UI)
-    run.js                 roguelike run state machine (no UI)
+    combat.js              real-time combat engine + event/hook system (no UI)
+    run.js                 run state machine: acts, maps, rewards, shops (no UI)
+    unlocks.js             vocabulary → which items, spells and lands can appear
     achievements.js        achievements + cosmetic robes
-    data/                  balance.js, upgrades.js, enemies.js, elements.js  ← tuning lives here
+    data/                  everything tunable: heroes, spells, items, synergies, enemies, biomes,
+                           elements (statuses, reactions, terrain), balance, story, events
   audio/                   speech.js (TTS/recorded/speech recognition), sfx.js, music.js
   store/                   store.js (localStorage save, export/import), progress.js (XP, streaks)
   assets/                  manifest.js + characters/, enemies/, backgrounds/, icons/
-  data/                    vocab.json (generated), wordThemes.json, examples.json
-tools/                     build-vocab.mjs, make-icons.mjs, source/ (downloaded dataset)
-tests/                     node:test suites
-public/                    manifest, service worker, icons, audio/
+  data/                    vocab.json (generated), wordThemes.json, examples.json, pictures.json
+tools/                     build-vocab.mjs, make-icons.mjs, process-art.mjs, art-source/
+tests/                     node:test suites + sim.js (simulated player) + sweep.mjs
+public/                    manifest, service worker, icons, audio/, assets/characters/
 ```
 
 ## Vocabulary
@@ -84,7 +89,7 @@ public/                    manifest, service worker, icons, audio/
 - Drops non-meanings ("variant of…", "surname…") and pushes archaic, dialect and place-name senses to the end.
 - Applies a small correction table (`PRIMARY_READING`, `MEANING_FIRST`) where the everyday sense wasn't listed first. Example: 年 = *year*, not "grain".
 
-Nothing is invented. Example sentences (`src/data/examples.json`, about 95 common words) are authored for this app and marked as such. Words without one simply show none.
+Nothing is invented. Example sentences (`src/data/examples.json`, about 95 common words) are authored for this app. Words without one simply show none.
 
 **New learners** start with concrete high-frequency words (I, you, to be, to have…). Abstract particles like 的 and 了 are held back until about 20 words are known.
 
@@ -94,8 +99,9 @@ Nothing is invented. Example sentences (`src/data/examples.json`, about 95 commo
 - **Your own words:** append objects to `src/data/vocab.json` in the same shape:
   `{ "id": "熊猫", "hanzi": "熊猫", "pinyin": "xióng māo", "meanings": ["panda"], "gloss": "panda", "other": [], "pos": "noun", "hsk": 4, "freq": null, "rank": 2268 }`.
   `id` must be unique; it keys the saved progress.
-- **Example sentences:** add `"熊猫": ["我喜欢熊猫。", "Wǒ xǐhuan xióngmāo.", "I like pandas."]` to `examples.json`.
-- **Gameplay element:** add the Hanzi to a list in `wordThemes.json`. Unlisted words fall back to `POS_ELEMENT` in `src/game/data/elements.js`: numbers → Focus, pronouns → Kin, grammar words → Arcane, everything else neutral.
+- **Example sentences:** add `"熊猫": ["我喜欢熊猫。", "Wǒ xǐhuan xióngmāo.", "I like pandas."]` to `examples.json`. They also become phrase-building spell puzzles.
+- **Element:** add the Hanzi to an element list in `wordThemes.json`. Learning element words unlocks that element's items, spells and lands, and fire spells tend to ask fire words.
+- **Picture puzzles:** add `"熊猫": "🐼"` to `pictures.json` (or an illustration in `PICTURE_IMAGES` in the asset manifest).
 
 ### Recorded audio (optional)
 
@@ -114,43 +120,26 @@ Recorded clips take priority over TTS, play at 0.7× in slow mode, and fall back
 - **Scheduler (`src/learn/srs.js`):** SM-2 with learning steps (1m, 10m), then day intervals. Again → lapse (ease −0.2, interval halved, relearn). Reviewing a card *before* it's due never grows its interval, so cramming can't inflate mastery.
 - **Separate skills:** recognition (flashcard/MC), listening, recall and speaking each keep their own card. Listening and recall unlock after the first correct recognition.
 - **Mastery:** New → Learning → Familiar (recognition interval ≥2d) → Strong (≥7d + another skill ≥3d) → Mastered (≥21d + another skill ≥10d). Mastery only grows through spaced, successful recall over days.
-- **Sessions:** 2, 5 or 10 minutes, or Endless. Due words come first, with recently missed words at the front. New words are introduced with a teaching card and quizzed again two cards later, then once more by ear. Missed words return three cards later.
+- **Sessions:** 2, 5 or 10 minutes, or Endless. Due words come first, with recently missed words at the front. New words are introduced with a teaching card and quizzed again two cards later. Missed words return three cards later.
+- **Spell puzzles count:** every vocabulary puzzle solved in battle updates that word's schedule and earns XP, like a Quick Learn card.
 - **XP:** a correct answer earns 8–15 XP depending on difficulty. Wrong answers earn nothing but are scheduled sooner. Answers under 0.7s earn 1 XP, and repeats within a session earn less.
 - **Streaks:** any study keeps the day. Every 7-day block earns a shield (max 2) that covers one missed day.
+- **Soundless Mode (Settings):** mutes everything; listening cards become recognition cards, audio puzzles are replaced, and listening reviews simply wait until audio is back (never marked missed). Toggle any time, even mid-battle; an open audio puzzle is swapped without counting as a failure.
 
-## Adventure
+## Adventure (summary)
 
-Each run: **choose a node → answer questions → draft upgrades → watch the autobattle → collect rewards → next floor**. Floor 10 is the boss.
+**The hero fights automatically; you cast up to 3 spells by solving Mandarin puzzles while the fight keeps going; passive items transform how the hero fights; learning words widens what you can find.** See **[docs/ADVENTURE.md](docs/ADVENTURE.md)** for the full design and how to add heroes, spells, items, synergies, enemies, biomes and puzzle types.
 
-- Every correct answer gives **+1 spark**, plus a one-battle **blessing** from the word's element (e.g. water: +15 shield, wind: +10% attack speed).
-- Every 2 sparks lets you draft 1 of 3 upgrades. Drafts favour the elements of the words you just answered, and the card shows "Inspired by shuǐ (water)".
-- Wrong answers give the enemies +8% attack for that battle and still update the word's schedule. They never end the run.
-- New words are always taught with a teaching card before they're asked.
-- Battles are simulated up front with a seeded RNG, then replayed with animations at 1×, 2× or 4×, or skipped. The run autosaves after every step and resumes after closing the app.
-- Persistent progression is deliberately light: +2 max HP per account level (capped at +30), a few upgrades unlocked by level, and cosmetic robes from levels and achievements.
-
-### Heroes
-
-Heroes are defined in `src/game/data/heroes.js` (stats, passive numbers, unlock rule). The hero is picked on the Adventure start screen or in Settings and is fixed for the run.
-
-| Hero | Unlock | Passive |
-| --- | --- | --- |
-| **Xīn Yí** 欣怡, Cheerful Wanderer | from the start | **kāi xīn 开心 (Good Cheer):** each correct answer heals 4% HP; a quiz with no mistakes gives +1 bonus spark. Simple, and it rewards learning directly. |
-| **Méi** 梅, Silent Blade | account level 3 | **méi huā 梅花 (Plum Blossom):** opens each battle with a sword draw (bá dāo) for 200% damage. Each ability she casts makes her next attack a guaranteed crit that also cuts every other enemy for 50%. Synergises with abilities (huǒ qiú, tài yáng), cooldown and echo upgrades, crit damage, and dì yù huǒ (crit burns). Lower HP, higher attack and crit. |
-| **Ruì Zhé** 睿哲, Nervous Scholar | account level 5 | **jǐn zhāng 紧张 (Nervous Genius):** throws a scroll every 4s from the start. Each *different* element among his upgrades makes all his abilities 10% stronger. The first time he drops below half HP in a battle, he panics: casts every ability at once and attacks 30% faster. Rewards varied, ability-heavy builds. |
-| **Huǒ Huǒ** 火火, Ember Apprentice | account level 8 | **diǎn huǒ 点火 (Kindling):** every 4th attack is a burning fire bolt for double damage, and fire-word blessings count twice. Wears the unlockable robes. |
-
-Passives are implemented by id: battle effects in `combat.js` (`plum_blossom`, `kindling`) and quiz effects in `run.js` (`good_cheer`); `nervous_genius` uses both `combat.js` and the hero's innate `abilities` list in `heroes.js`. To add a hero, add an entry to `HEROES`, add its sprite to the manifest, and, if the passive is new, handle its id in one of those two files. `tests/heroes.test.js` covers each passive, and `tests/run.test.js` checks every hero's win rate stays in a fair band. Currently all four heroes win 64–76% of simulated runs at 80% answer accuracy.
+| Hero | Unlock | Signature spell | Passive |
+| --- | --- | --- | --- |
+| **Xīn Yí** 欣怡, Cheerful Wanderer | from the start | **jiā yóu 加油:** heal, shield, attack speed | **kāi xīn 开心:** every successful cast heals 6% (first one also shields) |
+| **Méi** 梅, Silent Blade | account level 3 | **bá dāo 拔刀:** critical slash on every enemy + Curse | **méi huā 梅花:** sword-draw opener; each cast makes her next attack a splashing crit |
+| **Ruì Zhé** 睿哲, Nervous Scholar | account level 5 | **zhī shi 知识:** 3 scrolls, each applies a random status | **jǐn zhāng 紧张:** +10% spell power per different element; panics at half HP (cooldowns reset) |
+| **Huǒ Huǒ** 火火, Ember Apprentice | account level 8 | **diǎn huǒ 点火:** set everything burning | **huǒ miáo 火苗:** fire attacks, every 4th is a burning bolt; fire items appear twice as often |
 
 ### Changing battle balance
 
-All tuning lives in data files, so no engine changes are needed:
-
-- `src/game/data/balance.js`: hero base stats, sparks per upgrade, heal amounts, wrong-answer penalty, per-floor enemy scaling, enrage timers, node weights.
-- `src/game/data/enemies.js`: enemy stats, traits (poison, dodge, drain, thorns, enrage), abilities, and which groups appear on which floors.
-- `src/game/data/upgrades.js`: upgrades (`mods(level)` returns stat changes and abilities) and synergies (`patch`).
-
-Run `npm test` after changes. `tests/run.test.js` plays 450 simulated runs and prints win rate, average floor and battle lengths by answer accuracy. Current targets: about 50% wins at 80% accuracy, 10–20s battles, 18–25s boss fights.
+Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `enemies.js`, `spells.js`, `items.js`, `synergies.js`, `biomes.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who picks items at random and solves 85% of spell puzzles: the dragon is beaten in 33–73% of runs depending on the hero; normal battles last 9–15s, elites 13–26s, guardians 17–28s, the dragon 25–41s.
 
 ## Replacing art
 
@@ -162,6 +151,8 @@ Gameplay code only refers to **asset keys**. All art is resolved in `src/assets/
 
 - **Audio** depends on the device having a Mandarin TTS voice. Without one, the app says so; it doesn't fail silently. No recorded clips are bundled yet; drop them in as described above.
 - **Speaking practice** (off by default, in Settings) uses the browser's speech recognition when available (Chrome/Edge). It can only check whether the recognised characters match. It **cannot judge tones**, so self-grading is always offered.
-- **Example sentences** cover about 95 of the most common words. Other words show definitions only.
-- Characters are original vector art made for this project, not professional illustration. The manifest is ready for replacement art.
+- **Passive-only builds** (never casting) are viable but hard: about 5–20% of simulated runs reach and beat the dragon with good item choices, versus 55–90% for players who cast well.
+- **Picture puzzles** use emoji placeholders until illustrations are added.
+- **Example sentences** cover about 95 of the most common words, which limits phrase-building puzzles to those words.
+- Characters and enemies are original vector art made for this project (plus your hero art); the manifest is ready for replacement art.
 - Progress lives in this browser's storage. Use **Settings → Export JSON** to back up or move devices.

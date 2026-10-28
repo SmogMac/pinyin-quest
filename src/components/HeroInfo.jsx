@@ -1,6 +1,8 @@
 // Name, passive, starting stats and (if locked) unlock requirement for one hero.
 import { useStore } from '../store/store.js';
 import { HEROES } from '../game/data/heroes.js';
+import { SPELLS } from '../game/data/spells.js';
+import { ItemIcon } from './Sprite.jsx';
 import { heroUnlocked } from '../game/achievements.js';
 import { buildHero } from '../game/combat.js';
 import { levelInfo } from '../store/progress.js';
@@ -41,6 +43,15 @@ export default function HeroInfo({ heroId }) {
           <Icon name="sparkle" size={13} /> {h.passive.py} {h.passive.zh} <span className="muted">· {h.passive.en}</span>
         </b>
         <span>{h.passive.desc}</span>
+      </div>
+      <div className="hero-info-sig">
+        <ItemIcon kind="spell" id={h.signature} def={SPELLS[h.signature]} size={30} />
+        <span>
+          <b>
+            {SPELLS[h.signature].py} · {SPELLS[h.signature].en}
+          </b>{' '}
+          <span className="muted">signature spell · {h.attack.style}</span>
+        </span>
       </div>
       <div className="hero-info-stats" aria-label="Starting stats">
         {stats.map(([icon, label, value]) => (

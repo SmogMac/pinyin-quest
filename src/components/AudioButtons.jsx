@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import Icon from '../assets/icons/Icons.jsx';
 import { speak, audioStatus, onVoicesChanged } from '../audio/speech.js';
+import { useStore } from '../store/store.js';
 
 /** Big "play" + "slow" pair. Shows a visible message when audio cannot play. */
 export function AudioButtons({ text, big = false, autoplay = false, onPlayed }) {
+  const soundless = useStore().settings.soundless;
   const [playing, setPlaying] = useState(null);
   const [msg, setMsg] = useState(null);
 
@@ -23,6 +25,7 @@ export function AudioButtons({ text, big = false, autoplay = false, onPlayed }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, autoplay]);
 
+  if (soundless) return null;
   return (
     <div className={`audio-buttons ${big ? 'big' : ''}`}>
       <button type="button" className={`audio-btn ${playing === 'normal' ? 'playing' : ''}`} onClick={() => run(false)} aria-label="Play Mandarin pronunciation (R)">
@@ -38,13 +41,14 @@ export function AudioButtons({ text, big = false, autoplay = false, onPlayed }) 
 
 /** Inline banner explaining audio problems (no Mandarin voice, unsupported browser). */
 export function AudioStatusBanner() {
+  const soundless = useStore().settings.soundless;
   const [status, setStatus] = useState(audioStatus());
   useEffect(() => onVoicesChanged(() => setStatus(audioStatus())), []);
   useEffect(() => {
     const t = setTimeout(() => setStatus(audioStatus()), 2500);
     return () => clearTimeout(t);
   }, []);
-  if (status === 'ok' || status === 'loading') return null;
+  if (soundless || status === 'ok' || status === 'loading') return null;
   return (
     <div className="banner warn" role="status">
       <Icon name="speaker" size={18} />

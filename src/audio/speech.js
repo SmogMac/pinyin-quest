@@ -83,6 +83,7 @@ export function stopSpeech() {
  */
 export function speak(text, { slow = false } = {}) {
   const st = getState().settings;
+  if (st.soundless) return Promise.resolve({ ok: false, reason: null });
   if (st.muted) return Promise.resolve({ ok: false, reason: 'Sound is muted in Settings.' });
   stopSpeech();
   const vol = st.speechVol;

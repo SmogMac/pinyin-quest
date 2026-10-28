@@ -1,4 +1,4 @@
-import { SPRITES, ABILITY_ICONS } from '../assets/manifest.js';
+import { SPRITES, ABILITY_ICONS, SPELL_ICONS } from '../assets/manifest.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import Icon from '../assets/icons/Icons.jsx';
 
@@ -48,11 +48,24 @@ export default function Sprite({ id, state = 'idle', scale = 1, palette, flip = 
 
 export function AbilityIcon({ id, element, size = 44, level }) {
   const def = ABILITY_ICONS[id] || { glyph: 'sparkle' };
-  const el = ELEMENTS[element] || ELEMENTS.arcane;
+  const el = ELEMENTS[element] || ELEMENTS.physical;
   return (
     <div className="ability-icon" style={{ width: size, height: size, '--el': el.color, '--el-glow': el.glow }}>
       {def.src ? <img src={asset(def.src)} alt="" /> : <Icon name={def.glyph} size={size * 0.56} />}
       {level ? <span className="ability-level">{level}</span> : null}
+    </div>
+  );
+}
+
+/** Icon for a passive item, spell or synergy (glyph from data, coloured by element). */
+export function ItemIcon({ kind = 'item', def, id, size = 40, badge }) {
+  const el = ELEMENTS[def?.element] || ELEMENTS.physical;
+  const override = kind === 'spell' ? SPELL_ICONS[id] : ABILITY_ICONS[id];
+  const glyph = override?.glyph || def?.icon || 'sparkle';
+  return (
+    <div className={`ability-icon kind-${kind} rarity-${def?.rarity || 'common'}`} style={{ width: size, height: size, '--el': el.color, '--el-glow': el.glow }}>
+      {override?.src ? <img src={asset(override.src)} alt="" /> : <Icon name={glyph} size={size * 0.56} />}
+      {badge ? <span className="ability-level">{badge}</span> : null}
     </div>
   );
 }

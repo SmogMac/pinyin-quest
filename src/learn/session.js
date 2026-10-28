@@ -27,12 +27,14 @@ export function createSession(minutes, save) {
     used: new Map(), // id -> times shown this session
     recent: [],
     stats: { reviewed: 0, newLearned: 0, correct: 0, wrong: 0, xp: 0, improved: [], words: new Set() },
-    allowSpeaking: Boolean(save.settings.speaking),
+    allowSpeaking: Boolean(save.settings.speaking) && !save.settings.soundless,
   };
 }
 
-export function skillUnlocked(record, skill, allowSpeaking) {
+export function skillUnlocked(record, skill, allowSpeaking, soundless = false) {
   if (skill === 'rec') return true;
+  // Soundless Mode: listening isn't scheduled (and never counts as missed) until audio is back
+  if (skill === 'lis' && soundless) return false;
   const rec = record?.skills?.rec;
   if (!rec || rec.ok < 1) return false;
   if (skill === 'spk') return allowSpeaking && (record.skills.rev?.ok || 0) >= 1;
@@ -40,17 +42,18 @@ export function skillUnlocked(record, skill, allowSpeaking) {
 }
 
 const SKILL_MODE = { lis: 'listen', rev: 'reverse', spk: 'speak' };
-export function modeForSkill(skill, rng = Math.random) {
+export function modeForSkill(skill, rng = Math.random, soundless = false) {
   if (skill === 'rec') return rng() < 0.35 ? 'flash' : 'mc';
+  if (soundless && skill === 'lis') return 'mc';
   return SKILL_MODE[skill];
 }
 
 /** Most urgent skill for a word: earliest-due unlocked skill, introducing unlocked new skills too. */
-export function pickSkill(record, now, allowSpeaking, { dueOnly = false } = {}) {
+export function pickSkill(record, now, allowSpeaking, { dueOnly = false, soundless = false } = {}) {
   let best = null;
   let bestDue = Infinity;
   for (const k of SKILLS) {
-    if (!skillUnlocked(record, k, allowSpeaking)) continue;
+    if (!skillUnlocked(record, k, allowSpeaking, soundless)) continue;
     const c = record.skills[k];
     const due = !c || c.state === 'new' ? now + 1 : c.due; // fresh skills: right after anything due
     if (dueOnly && !(c && isDue(c, now)) && !(!c && record.skills.rec?.state === 'review')) continue;
@@ -65,8 +68,9 @@ export function pickSkill(record, now, allowSpeaking, { dueOnly = false } = {}) 
 /** Words with something due, most urgent first; recently missed words go to the front. */
 export function dueWords(save, now = Date.now(), allowSpeaking = false) {
   const list = [];
+  const soundless = Boolean(save.settings?.soundless);
   for (const [id, r] of Object.entries(save.words)) {
-    const skill = pickSkill(r, now, allowSpeaking, { dueOnly: true });
+    const skill = pickSkill(r, now, allowSpeaking, { dueOnly: true, soundless });
     if (!skill) continue;
     const c = r.skills[skill];
     const lapsed = r.hist.length && r.hist[r.hist.length - 1] === 0;
@@ -114,7 +118,7 @@ export function nextTask(session, save, rng = Math.random) {
   }
   if (due.length) {
     const d = due[0];
-    return { id: d.id, kind: 'quiz', mode: modeForSkill(d.skill, rng) };
+    return { id: d.id, kind: 'quiz', mode: modeForSkill(d.skill, rng, save.settings.soundless) };
   }
 
   // 3. extra practice: weakest / least recently reviewed learned words
@@ -124,8 +128,8 @@ export function nextTask(session, save, rng = Math.random) {
     .sort((a, b) => a.score - b.score);
   if (learned.length) {
     const { id, r } = learned[0];
-    const skill = pickSkill(r, now, session.allowSpeaking) || 'rec';
-    return { id, kind: 'quiz', mode: modeForSkill(skill, rng) };
+    const skill = pickSkill(r, now, session.allowSpeaking, { soundless: save.settings.soundless }) || 'rec';
+    return { id, kind: 'quiz', mode: modeForSkill(skill, rng, save.settings.soundless) };
   }
   // 4. brand new learner past their daily cap: still teach something
   const w = nextNewWord(save, pending);
@@ -147,7 +151,7 @@ export function afterTask(session, task, correct, save) {
     session.scheduled.push({ at: session.count + RETRY_GAP, task: { id: task.id, kind: 'quiz', mode: task.mode === 'flash' ? 'mc' : task.mode, retry: true } });
   } else if (task.followup === 1) {
     // second check on a brand new word, this time by ear
-    const mode = save.settings.autoplay !== false ? 'listen' : 'reverse';
+    const mode = save.settings.autoplay !== false && !save.settings.soundless ? 'listen' : 'reverse';
     session.scheduled.push({ at: session.count + 3, task: { id: task.id, kind: 'quiz', mode, followup: 2 } });
   }
 }

@@ -11,6 +11,7 @@
 import Hero from './characters/Hero.jsx';
 import Companion from './characters/Companion.jsx';
 import { Slime, Sporecap, Bat, Goblin, Golem, Wisp, Knight, Wyrm } from './enemies/Enemies.jsx';
+import { Panda, Kite, Crab, Turtle, Snowman, Thunderbird, ShadowSprite, Lantern, Wraith, WordEater, Rabbit } from './enemies/EnemiesExtra.jsx';
 
 export const SPRITES = {
   // Playable heroes (see src/game/data/heroes.js). Image art is prepared by `npm run art`.
@@ -27,7 +28,22 @@ export const SPRITES = {
   wisp: { component: Wisp, w: 112, h: 122, flying: true },
   knight: { component: Knight, w: 124, h: 134 },
   wyrm: { component: Wyrm, w: 230, h: 196 },
+  panda: { component: Panda, w: 110, h: 110 },
+  kite: { component: Kite, w: 84, h: 92, flying: true },
+  crab: { component: Crab, w: 120, h: 90 },
+  turtle: { component: Turtle, w: 120, h: 90 },
+  snowman: { component: Snowman, w: 96, h: 115 },
+  thunderbird: { component: Thunderbird, w: 112, h: 94, flying: true },
+  shadow: { component: ShadowSprite, w: 96, h: 115 },
+  lantern: { component: Lantern, w: 90, h: 108, flying: true },
+  wraith: { component: Wraith, w: 76, h: 84, flying: true },
+  wordeater: { component: WordEater, w: 240, h: 207 },
+  rabbit: { component: Rabbit, w: 120, h: 130 },
 };
+
+// Picture-puzzle illustrations: { '水': 'assets/pictures/water.png' }. Words not listed use the
+// emoji placeholder from src/data/pictures.json.
+export const PICTURE_IMAGES = {};
 
 // Ability / upgrade icons: glyph name from Icons.jsx + element (for colour).
 // Replace with { src: 'assets/icons/fireball.png' } to use a custom image.
@@ -72,9 +88,24 @@ export const NODE_ICONS = {
   treasure: 'chest',
   lesson: 'book',
   boss: 'crown',
+  guardian: 'crown',
+  shrine: 'sun',
+  merchant: 'coin',
+  event: 'sparkle',
+  secret: 'eye',
+  secretboss: 'moon',
 };
 
-// Spell effect styles keyed by element; the BattleView draws these with CSS.
+// Spell icons (glyph from Icons.jsx, coloured by the spell's element). Replace with { src }.
+export const SPELL_ICONS = {
+  jiayou: { glyph: 'heart' }, badao: { glyph: 'slash' }, zhishi: { glyph: 'book' }, dianhuo: { glyph: 'flame' },
+  huoqiu: { glyph: 'flame' }, dongtian: { glyph: 'snow' }, shandian: { glyph: 'bolt' }, xiayu: { glyph: 'drop' },
+  qiang: { glyph: 'mountain' }, heiye: { glyph: 'moon' }, dafeng: { glyph: 'wind' }, yangguang: { glyph: 'sun' },
+  dahai: { glyph: 'wave' }, dizhen: { glyph: 'mountain' }, xixue: { glyph: 'drop' }, xingxing: { glyph: 'star' },
+  kuaipao: { glyph: 'wind' },
+};
+
+// Spell effect styles keyed by element; the BattleScreen draws these with CSS.
 // Set `src` to an image/animated WebP to replace the procedural effect.
 export const EFFECTS = {
   projectile: { size: 26 },

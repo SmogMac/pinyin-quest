@@ -80,6 +80,18 @@ export default function Settings({ go }) {
         <Choice label="Daily XP goal" value={st.dailyGoal} options={[[50, 'Chill 50'], [100, 'Steady 100'], [150, 'Keen 150'], [250, 'Intense 250']]} onChange={(v) => set('dailyGoal', v)} />
         <Choice label="New words per day" value={st.newPerDay} options={[[5, '5'], [10, '10'], [15, '15'], [25, '25'], [40, '40']]} onChange={(v) => set('newPerDay', v)} />
         <Toggle
+          label="Soundless Mode"
+          desc="Play everything without audio: listening exercises are swapped for text and picture ones, never counted as missed. Great for public transport."
+          value={st.soundless}
+          onChange={(v) => set('soundless', v)}
+        />
+        <Toggle
+          label="Relaxed casting"
+          desc="Slows combat to 40% while a spell puzzle is open. Normal play never pauses or slows."
+          value={st.relaxedCasting}
+          onChange={(v) => set('relaxedCasting', v)}
+        />
+        <Toggle
           label="Speaking practice"
           desc={speechRecognitionSupported() ? 'Adds “say it” cards. Uses your browser’s speech recognition; tones can’t be judged reliably.' : 'Adds “say it” cards with self-grading (no speech recognition in this browser).'}
           value={st.speaking}

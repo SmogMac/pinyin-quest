@@ -26,6 +26,8 @@ export function defaultSave() {
       hideHanzi: false,
       autoplay: true,
       autoContinue: false,
+      soundless: false,
+      relaxedCasting: false,
       speechVol: 1,
       sfxVol: 0.6,
       musicVol: 0.35,
@@ -40,7 +42,11 @@ export function defaultSave() {
       sessionMinutes: 5,
       battleSpeed: 1,
     },
-    adventure: { runs: 0, wins: 0, bestFloor: 0, bestScore: 0, bosses: 0, kills: 0, synergies: {}, current: null },
+    adventure: {
+      runs: 0, wins: 0, bestFloor: 0, bestScore: 0, bosses: 0, kills: 0, synergies: {}, current: null,
+      dragonWins: 0, wordEaterWins: 0, secretBosses: 0, discovered: { items: {}, spells: {} }, storySeen: {},
+    },
+    gameWords: {}, // spell names & shape words taught by the game: { zh: { seen, ok, bad } }
   };
 }
 
@@ -52,6 +58,11 @@ function hydrate(data) {
   for (const k of ['profile', 'stats', 'settings', 'adventure', 'cosmetics']) out[k] = { ...base[k], ...(data[k] || {}) };
   out.stats.modes = { ...base.stats.modes, ...(data.stats?.modes || {}) };
   out.words = data.words || {};
+  out.gameWords = data.gameWords || {};
+  out.adventure.discovered = { items: {}, spells: {}, ...(data.adventure?.discovered || {}) };
+  out.adventure.storySeen = data.adventure?.storySeen || {};
+  // v1 saves counted Ink Dragon wins as `bosses`
+  if (data.adventure && data.adventure.dragonWins === undefined) out.adventure.dragonWins = data.adventure.bosses || 0;
   out.achievements = data.achievements || {};
   return out;
 }

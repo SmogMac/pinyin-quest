@@ -7,7 +7,9 @@ import { masteryOf } from './srs.js';
 
 export function pickAdventureTasks(save, count, { listeningFocus = false, rng = Math.random } = {}) {
   const now = Date.now();
-  const allowSpk = Boolean(save.settings.speaking);
+  const allowSpk = Boolean(save.settings.speaking) && !save.settings.soundless;
+  const soundless = Boolean(save.settings.soundless);
+  if (soundless) listeningFocus = false;
   const tasks = [];
   const used = new Set();
   const learnedIds = Object.keys(save.words);
@@ -24,9 +26,9 @@ export function pickAdventureTasks(save, count, { listeningFocus = false, rng = 
 
   const quizFor = (id) => {
     const rec = save.words[id];
-    let skill = rec ? pickSkill(rec, now, allowSpk) || 'rec' : 'rec';
+    let skill = rec ? pickSkill(rec, now, allowSpk, { soundless }) || 'rec' : 'rec';
     if (listeningFocus && rec?.skills.rec?.ok >= 1) skill = 'lis';
-    let mode = modeForSkill(skill, rng);
+    let mode = modeForSkill(skill, rng, soundless);
     if (mode === 'flash' || mode === 'speak') mode = 'mc'; // keep battles snappy and objective
     return { id, kind: 'quiz', mode };
   };

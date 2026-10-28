@@ -66,7 +66,11 @@ export default function HeroCarousel({ onCenterChange }) {
     if (e.button !== undefined && e.button !== 0) return;
     cancelAnimationFrame(raf.current);
     drag.current = { x: e.clientX, start: posRef.current, moved: false, width: stageRef.current.offsetWidth };
-    stageRef.current.setPointerCapture?.(e.pointerId);
+    try {
+      stageRef.current.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* not all pointers can be captured */
+    }
   };
   const onPointerMove = (e) => {
     const d = drag.current;

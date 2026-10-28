@@ -14,7 +14,7 @@ const midi = (n) => 440 * 2 ** ((n - 69) / 12);
 
 function level() {
   const s = getState().settings;
-  if (s.muted || !s.music) return 0;
+  if (s.muted || s.soundless || !s.music) return 0;
   return s.musicVol * (ducked ? 0.25 : 1) * 0.12;
 }
 
@@ -42,7 +42,8 @@ function tick() {
 }
 
 export function syncMusic() {
-  const on = level() > 0 || (getState().settings.music && !getState().settings.muted);
+  const st = getState().settings;
+  const on = level() > 0 || (st.music && !st.muted && !st.soundless);
   if (on && !timer) {
     const c = audioCtx();
     if (!c) return;
