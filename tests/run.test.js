@@ -23,7 +23,7 @@ test('the Forgotten Beyond and Word Eater are reachable after the dragon', () =>
 
 test('balance: winnable but not trivial, battles are short, bosses take longer', () => {
   const report = {};
-  for (const heroId of ['xinyi', 'mei', 'ruizhe', 'huohuo']) {
+  for (const heroId of ['xinyi', 'mei', 'ruizhe', 'huojin', 'fuyun']) {
     let wins = 0;
     let floors = 0;
     const d = { battle: [], elite: [], guardian: [], boss: [] };

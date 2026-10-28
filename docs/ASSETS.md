@@ -57,7 +57,8 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 | `xinyi` | Xīn Yí (image) | 112×142 |
 | `mei` | Méi (image) | 96×142 |
 | `ruizhe` | Ruì Zhé (image) | 87×142 |
-| `hero` | Huǒ Huǒ (vector, recoloured by robes) | 120×150 |
+| `huojin` | Huǒ Jìn (image + animated flame layer) | 103×142 |
+| `fuyun` | Fú Yún (image) | 107×142 |
 | `companion` | Fox Spirit ally | 64×56 |
 | `slime`, `sporecap`, `bat`, `goblin`, `golem` | normal enemies | ~90–130 square |
 | `wisp`, `knight` | elites | ~115×125 |
@@ -65,7 +66,15 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 
 Enemy definitions in `src/game/data/enemies.js` reference sprites through their `sprite` field, so a new enemy just needs a new manifest key.
 
-**Hero cosmetics:** Huǒ Huǒ (the vector hero) is recoloured by the `ROBES` palettes in `src/game/achievements.js`. Image-based heroes ignore the palette. To keep cosmetics with image art, add one manifest key per robe (e.g. `hero_tide`) and pick it in `Sprite` by robe id.
+### Effect layers
+
+A sprite can carry an animated effect drawn on top of it, such as Huojin's palm flame:
+
+```js
+huojin: { src: 'assets/characters/huojin.webp', w: 103, h: 142, fx: { src: 'assets/characters/huojin-fire.webp', kind: 'flame', origin: '84% 44%' } },
+```
+
+The effect image has the **same canvas** as the character, so it lines up when stacked. In `tools/process-art.mjs`, list it under the character job's `layers` so both are cropped with the same box. `kind` picks the CSS animation (`.fx-flame` in `app.css`: a flicker plus the `#fx-flame-wave` SVG ripple filter from `Sprite.jsx`), and `origin` is the point the effect sways from (the flame's base). The effect stops on still or greyed heroes and hides on locked silhouettes and when the hero is defeated.
 
 ## Ability and upgrade icons (`ABILITY_ICONS`)
 

@@ -17,7 +17,7 @@ import { heroDef } from '../game/data/heroes.js';
 import { EVENTS } from '../game/data/events.js';
 import { STORY } from '../game/data/story.js';
 import { unlockedItems, unlockedSpells, actBiomeOptions, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
-import { checkAchievements, selectedHero, heroPalette } from '../game/achievements.js';
+import { checkAchievements, selectedHero } from '../game/achievements.js';
 import { getWord } from '../learn/vocab.js';
 import StudyCard from '../components/StudyCard.jsx';
 import BattleScreen from '../components/BattleScreen.jsx';
@@ -273,7 +273,7 @@ function AdventureStart({ go, accountLevel, onCodex, codex, closeCodex }) {
       <TopBar title="Adventure" onBack={() => go('home')} />
       <div className="card adv-intro">
         <div className="adv-intro-art">
-          <Sprite id={h.sprite} scale={0.8} palette={heroPalette(s)} />
+          <Sprite id={h.sprite} scale={0.8} />
           <span className="vs">VS</span>
           <Sprite id="wyrm" scale={0.5} />
         </div>
@@ -1079,7 +1079,7 @@ function InventoryModal({ run, accountLevel, onClose }) {
         <span>墨 {run.ink}</span>
       </div>
       <div className="build-row">
-        <Sprite id={def.sprite} scale={0.4} palette={heroPalette()} />
+        <Sprite id={def.sprite} scale={0.4} />
         <div>
           <CnName def={def.passive} speakable />
           <p className="small">{def.passive.desc}</p>

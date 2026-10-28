@@ -69,7 +69,7 @@ src/
     combat.js              real-time combat engine + event/hook system (no UI)
     run.js                 run state machine: acts, maps, rewards, shops (no UI)
     unlocks.js             vocabulary → which items, spells and lands can appear
-    achievements.js        achievements + cosmetic robes
+    achievements.js        achievements + hero unlocks
     data/                  everything tunable: heroes, spells, items, synergies, enemies, biomes,
                            elements (statuses, reactions, terrain), balance, story, events
   audio/                   speech.js (TTS/recorded/speech recognition), sfx.js, music.js
@@ -135,11 +135,12 @@ Recorded clips take priority over TTS, play at 0.7× in slow mode, and fall back
 | **Xīn Yí** 欣怡, Cheerful Wanderer | from the start | **jiā yóu 加油:** heal, shield, attack speed | **kāi xīn 开心:** every successful cast heals 6% (first one also shields) |
 | **Méi** 梅, Silent Blade | account level 3 | **bá dāo 拔刀:** critical slash on every enemy + Curse | **méi huā 梅花:** sword-draw opener; each cast makes her next attack a splashing crit |
 | **Ruì Zhé** 睿哲, Nervous Scholar | account level 5 | **zhī shi 知识:** 3 scrolls, each applies a random status | **jǐn zhāng 紧张:** +10% spell power per different element; panics at half HP (cooldowns reset) |
-| **Huǒ Huǒ** 火火, Ember Apprentice | account level 8 | **diǎn huǒ 点火:** set everything burning | **huǒ miáo 火苗:** fire attacks, every 4th is a burning bolt; fire items appear twice as often |
+| **Huǒ Jìn** 火烬, Grumpy Fire Master | account level 8 | **diǎn huǒ 点火:** set everything burning | **huǒ hou 火候:** fire attacks, every 4th is a burning bolt; +15% damage to Burning enemies; fire items appear twice as often |
+| **Fú Yún** 浮云, Lucky Assassin | account level 10 | **xuán fēng 旋风:** wind damage to every enemy, then +dodge and attack speed | **yùn qi 运气:** every dodge sets up a guaranteed crit with a wind slash on all other enemies; once per battle survives a knockout at 1 HP |
 
 ### Changing battle balance
 
-Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `enemies.js`, `spells.js`, `items.js`, `synergies.js`, `biomes.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who picks items at random and solves 85% of spell puzzles: the dragon is beaten in 33–73% of runs depending on the hero; normal battles last 9–15s, elites 13–26s, guardians 17–28s, the dragon 25–41s.
+Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `enemies.js`, `spells.js`, `items.js`, `synergies.js`, `biomes.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who picks items at random and solves 85% of spell puzzles: the dragon is beaten in 36–76% of runs depending on the hero; normal battles last 9–15s, elites 13–26s, guardians 17–28s, the dragon 25–41s.
 
 ## Replacing art
 

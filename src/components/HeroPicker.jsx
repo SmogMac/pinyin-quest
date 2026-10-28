@@ -1,6 +1,6 @@
 import { useStore, update } from '../store/store.js';
 import { HEROES } from '../game/data/heroes.js';
-import { heroUnlocked, selectedHero, heroPalette } from '../game/achievements.js';
+import { heroUnlocked, selectedHero } from '../game/achievements.js';
 import { speak } from '../audio/speech.js';
 import { play } from '../audio/sfx.js';
 import Sprite from './Sprite.jsx';
@@ -30,7 +30,7 @@ export default function HeroPicker({ compact = false }) {
             }}
           >
             <div className="hero-card-art">
-              <Sprite id={h.sprite} scale={compact ? 0.55 : 0.7} palette={heroPalette(s)} state={on ? 'idle' : 'still'} />
+              <Sprite id={h.sprite} scale={compact ? 0.55 : 0.7} state={on ? 'idle' : 'still'} />
               {!ok && <Icon name="lock" size={22} className="hero-lock" />}
             </div>
             <div className="hero-card-text">

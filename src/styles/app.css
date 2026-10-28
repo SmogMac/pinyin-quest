@@ -1575,40 +1575,6 @@ kbd {
 .card .btn {
   margin-top: 8px;
 }
-.wardrobe {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  gap: 8px;
-}
-.robe {
-  border: 3px solid transparent;
-  background: var(--paper-2);
-  border-radius: 16px;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-  color: var(--ink);
-}
-.robe.on {
-  border-color: var(--gold-deep);
-  background: #fff1c2;
-}
-.robe.locked {
-  opacity: 0.5;
-  filter: grayscale(0.7);
-}
-.robe small {
-  font-size: 0.7rem;
-  text-align: center;
-  font-weight: 700;
-}
-.robe-lock {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-}
 .confirm-row {
   display: flex;
   flex-wrap: wrap;
@@ -3249,4 +3215,40 @@ kbd {
   border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: 0 0 0 3px var(--paper-edge) inset;
   border-top: 4px solid var(--gold-deep);
+}
+
+/* ===== Sprite effect layers (e.g. Huojin's palm flame) ===== */
+.sprite-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-flame {
+  filter: url(#fx-flame-wave) drop-shadow(0 0 6px rgba(255, 140, 40, 0.65));
+  animation: flame-flicker 1.6s ease-in-out infinite;
+}
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); opacity: 1; }
+  20% { transform: scale(0.97, 1.05) skewX(-2deg); opacity: 0.94; }
+  45% { transform: scale(1.03, 0.97) skewX(1.5deg); opacity: 1; }
+  70% { transform: scale(0.98, 1.06) skewX(-1deg); opacity: 0.9; }
+}
+.sprite.st-cast .fx-flame,
+.sprite.st-attack .fx-flame {
+  animation-duration: 0.5s;
+  filter: url(#fx-flame-wave) drop-shadow(0 0 12px rgba(255, 170, 60, 0.9));
+}
+.sprite.st-still .fx-flame {
+  animation: none;
+  filter: none;
+}
+.sprite.st-dead .sprite-fx,
+.carousel-item.locked .sprite-fx,
+.hero-card.locked .sprite-fx {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-flame {
+    animation: none;
+  }
 }

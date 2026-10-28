@@ -1,4 +1,4 @@
-// Achievements and the cosmetic hero robes they unlock.
+// Achievements and hero unlocks.
 import { getState, update } from '../store/store.js';
 import { masteryOf } from '../learn/srs.js';
 import { levelInfo } from '../store/progress.js';
@@ -35,7 +35,8 @@ export const ACHIEVEMENTS = [
   { id: 'level_10', name: 'Seasoned Scholar', desc: 'Reach account level 10.', test: (s) => levelInfo(s.profile.xp).level >= 10 },
   { id: 'hero_mei', name: 'Méi joins you!', desc: 'Unlock Mei, the Silent Blade (level 3).', test: (s) => heroUnlocked('mei', s) },
   { id: 'hero_ruizhe', name: 'Ruì Zhé joins you!', desc: 'Unlock Ruizhe, the Nervous Scholar (level 5).', test: (s) => heroUnlocked('ruizhe', s) },
-  { id: 'hero_huohuo', name: 'Huǒ Huǒ joins you!', desc: 'Unlock Huo Huo, the Ember Apprentice (level 8).', test: (s) => heroUnlocked('huohuo', s) },
+  { id: 'hero_huojin', name: 'Huǒ Jìn joins you!', desc: 'Unlock Huojin, the Grumpy Fire Master (level 8).', test: (s) => heroUnlocked('huojin', s) },
+  { id: 'hero_fuyun', name: 'Fú Yún joins you!', desc: 'Unlock Fuyun, the Lucky Assassin (level 10).', test: (s) => heroUnlocked('fuyun', s) },
 ];
 
 export function heroUnlocked(id, s = getState()) {
@@ -48,30 +49,6 @@ export function heroUnlocked(id, s = getState()) {
 export function selectedHero(s = getState()) {
   const id = s.cosmetics.hero;
   return HEROES[id] && heroUnlocked(id, s) ? id : 'xinyi';
-}
-
-/** Palette for vector heroes that support robes (Huo Huo); ignored by image heroes. */
-export function heroPalette(s = getState()) {
-  return ROBES[s.cosmetics.robe] || ROBES.ember;
-}
-
-// Robe colour schemes for Huo Huo, the vector hero (cosmetic only).
-export const ROBES = {
-  ember: { name: 'Ember Apprentice', robe: '#d9483b', trim: '#ffb347', hat: '#c23a35', dark: '#8f2530', req: null },
-  tide: { name: 'Tide Caller', robe: '#2f7fd8', trim: '#8ee3ff', hat: '#2569b8', dark: '#1d4a85', req: { level: 3 } },
-  verdant: { name: 'Verdant Druid', robe: '#3c9d5d', trim: '#c7f27a', hat: '#2f8550', dark: '#1f5c38', req: { level: 5 } },
-  royal: { name: 'Royal Scholar', robe: '#6b4bd6', trim: '#ffd84a', hat: '#5a3cc0', dark: '#3a2585', req: { achievement: 'streak_7' } },
-  moonlit: { name: 'Moonlit Sage', robe: '#3b3f6b', trim: '#c9d2ff', hat: '#2c2f55', dark: '#1b1d38', req: { achievement: 'boss' } },
-  sakura: { name: 'Sakura Mystic', robe: '#f08bb4', trim: '#fff1f7', hat: '#e0709d', dark: '#a84a74', req: { achievement: 'mastered_50' } },
-  scholar: { name: 'Ink Scholar', robe: '#3a3a3a', trim: '#e8d5a6', hat: '#262626', dark: '#111111', req: { achievement: 'words_100' } },
-};
-
-export function robeUnlocked(id, s = getState()) {
-  const req = ROBES[id]?.req;
-  if (!req) return true;
-  if (req.level) return levelInfo(s.profile.xp).level >= req.level;
-  if (req.achievement) return Boolean(s.achievements[req.achievement]);
-  return false;
 }
 
 const toastListeners = new Set();

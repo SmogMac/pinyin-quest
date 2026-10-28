@@ -1,6 +1,6 @@
 // Balance sweep helper (not part of npm test): node tests/sweep.mjs
 import { playRun } from './sim.js';
-const heroes = ['xinyi', 'mei', 'ruizhe', 'huohuo'];
+const heroes = ['xinyi', 'mei', 'ruizhe', 'huojin', 'fuyun'];
 const out = {};
 for (const heroId of heroes) {
   let wins = 0, floors = 0; const d = { battle: [], elite: [], guardian: [], boss: [] };

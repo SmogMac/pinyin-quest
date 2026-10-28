@@ -21,7 +21,7 @@ export function defaultSave() {
       studyMs: 0,
     },
     achievements: {},
-    cosmetics: { robe: 'ember', hero: 'xinyi' },
+    cosmetics: { hero: 'xinyi' },
     settings: {
       hideHanzi: false,
       autoplay: true,
@@ -64,6 +64,14 @@ function hydrate(data) {
   // v1 saves counted Ink Dragon wins as `bosses`
   if (data.adventure && data.adventure.dragonWins === undefined) out.adventure.dragonWins = data.adventure.bosses || 0;
   out.achievements = data.achievements || {};
+  // Huo Huo was replaced by Huojin (same unlock and fire kit)
+  if (out.cosmetics.hero === 'huohuo') out.cosmetics.hero = 'huojin';
+  if (out.adventure.current?.heroId === 'huohuo') out.adventure.current.heroId = 'huojin';
+  if (out.achievements.hero_huohuo) {
+    out.achievements.hero_huojin = out.achievements.hero_huohuo;
+    delete out.achievements.hero_huohuo;
+  }
+  delete out.cosmetics.robe;
   return out;
 }
 

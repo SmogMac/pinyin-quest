@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore, update } from '../store/store.js';
 import { HEROES } from '../game/data/heroes.js';
-import { heroUnlocked, selectedHero, heroPalette } from '../game/achievements.js';
+import { heroUnlocked, selectedHero } from '../game/achievements.js';
 import { play } from '../audio/sfx.js';
 import Sprite from './Sprite.jsx';
 import Icon from '../assets/icons/Icons.jsx';
@@ -95,7 +95,6 @@ export default function HeroCarousel({ onCenterChange }) {
     goTo(t);
   };
 
-  const palette = heroPalette(s);
   return (
     <div
       className="carousel"
@@ -135,7 +134,7 @@ export default function HeroCarousel({ onCenterChange }) {
               zIndex: 10 - Math.round(ad * 3),
             }}
           >
-            <Sprite id={h.sprite} scale={0.85} palette={palette} state={isCenter && !locked ? 'idle' : 'still'} />
+            <Sprite id={h.sprite} scale={0.85} state={isCenter && !locked ? 'idle' : 'still'} />
             {locked && isCenter && <Icon name="lock" size={26} className="carousel-lock" />}
           </div>
         );

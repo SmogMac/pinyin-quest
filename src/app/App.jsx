@@ -12,6 +12,7 @@ import Collection from '../screens/Collection.jsx';
 import Progress from '../screens/Progress.jsx';
 import Settings from '../screens/Settings.jsx';
 import Icon from '../assets/icons/Icons.jsx';
+import { SpriteFilters } from '../components/Sprite.jsx';
 
 const SCREENS = { home: Home, learn: Learn, adventure: Adventure, collection: Collection, progress: Progress, settings: Settings };
 
@@ -69,6 +70,7 @@ export default function App() {
   const Screen = SCREENS[route.name] || Home;
   return (
     <div className="app">
+      <SpriteFilters />
       <ErrorBoundary onReset={() => go('home')}>
         <Screen go={go} params={route.params} key={route.name + JSON.stringify(route.params)} />
       </ErrorBoundary>

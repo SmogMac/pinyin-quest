@@ -11,7 +11,6 @@ import { heroFor } from '../game/run.js';
 import { wraithWords } from '../game/unlocks.js';
 import { generatePuzzle } from '../learn/puzzles.js';
 import { useStore, update, getState } from '../store/store.js';
-import { heroPalette } from '../game/achievements.js';
 import { play } from '../audio/sfx.js';
 import Sprite, { ItemIcon } from './Sprite.jsx';
 import CastPuzzle from './CastPuzzle.jsx';
@@ -248,7 +247,6 @@ export default function BattleScreen({ run, accountLevel, worldColor = 1, onEnd,
   const H = b.hero;
   const v = vis.current;
   const n = now();
-  const palette = heroPalette(s);
   const terrain = Object.keys(b.terrain).filter((k) => b.terrain[k] > 0);
   const boss = b.units.find((u) => u.side === 1 && (u.boss || u.edef?.guardian) && u.alive);
   const visibleUnits = b.units.filter((u) => u.alive || n - (v.dead[u.id] || 0) < 700);
@@ -328,7 +326,7 @@ export default function BattleScreen({ run, accountLevel, worldColor = 1, onEnd,
               )}
               {u.shield > 0 && u.alive && isHero && <div className="shield-bubble" />}
               {u.charging && <div className="charge-ring" />}
-              <Sprite id={sprite} state={state} scale={scale} palette={palette} flip={false} />
+              <Sprite id={sprite} state={state} scale={scale} flip={false} />
             </div>
           );
         })}

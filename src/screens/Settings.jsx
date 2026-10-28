@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore, update, exportSave, importSave, resetSave } from '../store/store.js';
 import { mandarinVoices, onVoicesChanged, speak, audioStatus, speechRecognitionSupported, ttsSupported } from '../audio/speech.js';
-import { ROBES, robeUnlocked } from '../game/achievements.js';
 import HeroPicker from '../components/HeroPicker.jsx';
 import { TopBar, Button } from '../components/ui.jsx';
-import Sprite from '../components/Sprite.jsx';
 import { AudioStatusBanner } from '../components/AudioButtons.jsx';
 import Icon from '../assets/icons/Icons.jsx';
 import { syncMusic } from '../audio/music.js';
@@ -139,26 +137,6 @@ export default function Settings({ go }) {
       <section className="card">
         <h3 className="sum-sub">Heroes</h3>
         <HeroPicker compact />
-        <h3 className="sum-sub" style={{ marginTop: 16 }}>Huǒ Huǒ’s robes</h3>
-        <div className="wardrobe">
-          {Object.entries(ROBES).map(([id, r]) => {
-            const ok = robeUnlocked(id, s);
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`robe ${s.cosmetics.robe === id ? 'on' : ''} ${ok ? '' : 'locked'}`}
-                disabled={!ok}
-                onClick={() => update((x) => (x.cosmetics.robe = id))}
-                title={ok ? r.name : `Locked: ${r.req.level ? `reach level ${r.req.level}` : 'earn an achievement'}`}
-              >
-                <Sprite id="hero" scale={0.42} palette={r} />
-                <small>{ok ? r.name : r.req.level ? `Level ${r.req.level}` : 'Achievement'}</small>
-                {!ok && <Icon name="lock" size={16} className="robe-lock" />}
-              </button>
-            );
-          })}
-        </div>
       </section>
 
       <section className="card">

@@ -5,10 +5,11 @@
 // Sprite entry forms (see docs/ASSETS.md for sizes and conventions):
 //   { component: ReactSvgComponent, w, h }                       built-in vector art (default)
 //   { src: 'assets/enemies/slime.webp', w, h }                   single image (PNG/SVG/WebP), path relative to /public
+//   { src, w, h, fx: { src, kind, origin } }                     image plus an animated effect layer drawn on top
+//                                                                 (same canvas size; `origin` is the effect's base)
 //   { sheet: { src, frameW, frameH, fps, states: { idle: [row, frames], attack: [...], hurt, dead, walk } }, w, h }
 //                                                                 sprite sheet: one row per animation state
 // w/h are the on-stage display size in CSS pixels (before the stage's responsive scale).
-import Hero from './characters/Hero.jsx';
 import Companion from './characters/Companion.jsx';
 import { Slime, Sporecap, Bat, Goblin, Golem, Wisp, Knight, Wyrm } from './enemies/Enemies.jsx';
 import { Panda, Kite, Crab, Turtle, Snowman, Thunderbird, ShadowSprite, Lantern, Wraith, WordEater, Rabbit } from './enemies/EnemiesExtra.jsx';
@@ -18,7 +19,8 @@ export const SPRITES = {
   xinyi: { src: 'assets/characters/xinyi.webp', w: 112, h: 142 },
   mei: { src: 'assets/characters/mei.webp', w: 96, h: 142 },
   ruizhe: { src: 'assets/characters/ruizhe.webp', w: 87, h: 142 },
-  hero: { component: Hero, w: 120, h: 150, anchor: 'bottom' }, // Huo Huo (vector, recoloured by robes)
+  huojin: { src: 'assets/characters/huojin.webp', w: 103, h: 142, fx: { src: 'assets/characters/huojin-fire.webp', kind: 'flame', origin: '84% 44%' } },
+  fuyun: { src: 'assets/characters/fuyun.webp', w: 107, h: 142 },
   companion: { component: Companion, w: 64, h: 56, anchor: 'bottom' },
   slime: { component: Slime, w: 92, h: 83 },
   sporecap: { component: Sporecap, w: 90, h: 99 },
@@ -98,7 +100,7 @@ export const NODE_ICONS = {
 
 // Spell icons (glyph from Icons.jsx, coloured by the spell's element). Replace with { src }.
 export const SPELL_ICONS = {
-  jiayou: { glyph: 'heart' }, badao: { glyph: 'slash' }, zhishi: { glyph: 'book' }, dianhuo: { glyph: 'flame' },
+  jiayou: { glyph: 'heart' }, badao: { glyph: 'slash' }, zhishi: { glyph: 'book' }, dianhuo: { glyph: 'flame' }, xuanfeng: { glyph: 'wind' },
   huoqiu: { glyph: 'flame' }, dongtian: { glyph: 'snow' }, shandian: { glyph: 'bolt' }, xiayu: { glyph: 'drop' },
   qiang: { glyph: 'mountain' }, heiye: { glyph: 'moon' }, dafeng: { glyph: 'wind' }, yangguang: { glyph: 'sun' },
   dahai: { glyph: 'wave' }, dizhen: { glyph: 'mountain' }, xixue: { glyph: 'drop' }, xingxing: { glyph: 'star' },

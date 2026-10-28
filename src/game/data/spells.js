@@ -61,6 +61,18 @@ export const SPELLS = {
     },
   },
 
+  xuanfeng: {
+    py: 'xuán fēng', zh: '旋风', en: 'Whirlwind', element: 'wind', cd: 9, tier: 1, signature: true, tags: ['damage', 'aoe', 'control', 'defensive'],
+    puzzles: ['syllables', 'shape'],
+    desc: 'Spin through every enemy for 16 wind damage, then gain +30% dodge and +25% attack speed for 4s.',
+    cast(b, c) {
+      for (const f of b.foes()) {
+        b.damage(b.hero, f, 16 * c.power, { element: c.element, kind: 'spell' });
+      }
+      b.addBuff(b.hero, { id: 'whirlwind', dur: 4, stats: { dodge: 0.3, aspdPct: 0.25 } });
+    },
+  },
+
   // ------------------------------------------------------------------ discoverable spells
   huoqiu: {
     py: 'huǒ qiú', zh: '火球', en: 'Fireball', element: 'fire', cd: 8, tier: 1, requires: ['火'], tags: ['damage'],

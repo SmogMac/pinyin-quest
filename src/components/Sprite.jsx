@@ -5,10 +5,27 @@ import Icon from '../assets/icons/Icons.jsx';
 const asset = (src) => `${import.meta.env.BASE_URL}${src}`;
 
 /**
+ * Shared SVG filters for sprite effect layers (rendered once by App). The flame filter ripples
+ * the fire image with animated noise so it licks and wavers like a real flame.
+ */
+export function SpriteFilters() {
+  return (
+    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+      <filter id="fx-flame-wave" x="-25%" y="-25%" width="150%" height="150%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.035 0.09" numOctaves="2" seed="4" result="noise">
+          <animate attributeName="baseFrequency" dur="2.4s" values="0.035 0.09;0.045 0.12;0.03 0.08;0.035 0.09" repeatCount="indefinite" />
+        </feTurbulence>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+  );
+}
+
+/**
  * Renders a sprite by manifest key. `state` (idle|attack|hurt|dead|victory|walk) is exposed as
  * a CSS class for procedural animation, and selects the row for sprite sheets.
  */
-export default function Sprite({ id, state = 'idle', scale = 1, palette, flip = false, className = '' }) {
+export default function Sprite({ id, state = 'idle', scale = 1, flip = false, className = '' }) {
   const def = SPRITES[id];
   if (!def) return null;
   const w = def.w * scale;
@@ -37,11 +54,14 @@ export default function Sprite({ id, state = 'idle', scale = 1, palette, flip = 
     body = <img src={asset(def.src)} alt="" width={w} height={h} draggable="false" />;
   } else {
     const C = def.component;
-    body = <C palette={palette} />;
+    body = <C />;
   }
   return (
     <div className={`sprite sprite-${id} st-${state} ${def.flying ? 'flying' : ''} ${flip ? 'flip' : ''} ${className}`} style={style}>
       {body}
+      {def.fx && (
+        <img className={`sprite-fx fx-${def.fx.kind}`} src={asset(def.fx.src)} alt="" width={w} height={h} draggable="false" style={{ transformOrigin: def.fx.origin }} />
+      )}
     </div>
   );
 }

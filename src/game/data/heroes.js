@@ -97,18 +97,18 @@ export const HEROES = {
     },
     unlock: { level: 5, text: 'Reach account level 5' },
   },
-  huohuo: {
-    py: 'Huǒ Huǒ', zh: '火火', en: 'Huo Huo', title: 'Ember Apprentice', sprite: 'hero', usesRobes: true,
-    blurb: 'A tiny pyromancer with a very big hat. Loves anything that burns.',
+  huojin: {
+    py: 'Huǒ Jìn', zh: '火烬', en: 'Huojin', title: 'Grumpy Fire Master', sprite: 'huojin',
+    blurb: 'A stern old master who keeps a flame in his palm and has no patience for slow learners, or for enemies.',
     stats: { maxHp: 130, atk: 13, def: 2, aspd: 1.0, crit: 0.05, critDmg: 1.5, dodge: 0 },
     attack: { range: 46, element: 'fire', style: 'Ranged fire bolts' },
     signature: 'dianhuo',
-    strength: 'Fire everywhere; Burn builds come naturally.',
-    weakness: 'Fire-resistant enemies (crabs, snow is fine) slow her down.',
+    strength: 'Fire everywhere; Burn builds come naturally and hit harder.',
+    weakness: 'Fire-resistant enemies (crabs, turtles) slow him down.',
     poolBias: { fire: 2 },
     passive: {
-      id: 'kindling', py: 'huǒ miáo', zh: '火苗', en: 'Little Flame',
-      desc: 'Basic attacks are fire. Every 4th attack is a fire bolt for double damage that sets the target Burning. Fire items show up twice as often.',
+      id: 'perfect_heat', py: 'huǒ hou', zh: '火候', en: 'Perfect Heat',
+      desc: 'Basic attacks are fire. Every 4th attack is a fire bolt for double damage that sets the target Burning. Burning enemies take 15% more damage from him. Fire items show up twice as often.',
       hooks: {
         onAttack(b, p, s) {
           if (p.count % 4 !== 0) return;
@@ -120,9 +120,49 @@ export const HEROES = {
           s.bolt = false;
           b.applyStatus(p.target, 'burn', { dps: 3, src: b.hero });
         },
+        modDamage(b, c) {
+          if (c.tgt.statuses.burn) c.mult *= 1.15;
+        },
       },
     },
     unlock: { level: 8, text: 'Reach account level 8' },
+  },
+  fuyun: {
+    py: 'Fú Yún', zh: '浮云', en: 'Fuyun', title: 'Lucky Assassin', sprite: 'fuyun',
+    blurb: 'Smiles like she knows something you don’t. Blades drift where the wind takes them, and luck always seems to be on her side.',
+    stats: { maxHp: 125, atk: 12, def: 2, aspd: 1.25, crit: 0.15, critDmg: 1.7, dodge: 0.2 },
+    attack: { range: 11, element: 'physical', style: 'Twin daggers' },
+    signature: 'xuanfeng',
+    strength: 'Dodges a lot; every dodge sets up a critical strike.',
+    weakness: 'Lowest health; relies on luck and speed.',
+    passive: {
+      id: 'lucky_streak', py: 'yùn qi', zh: '运气', en: 'Lucky Streak',
+      desc: 'After she dodges, her next attack is a guaranteed crit, and a gust of wind slices every other enemy for half that damage. Once per battle, a hit that would knock her out misses instead: she keeps 1 HP and dodges every attack for 1.5s.',
+      hooks: {
+        onDodge: (b, p, s) => (s.ready = true),
+        onAttack(b, p, s) {
+          if (!s.ready) return;
+          s.ready = false;
+          s.gust = true;
+          p.mult *= b.hero.critDmg; // guaranteed crit
+        },
+        onHit(b, p, s) {
+          if (!s.gust || p.sub) return;
+          s.gust = false;
+          b.label(b.hero, 'fēng!', 'good');
+          for (const f of b.foes()) if (f !== p.target) b.damage(b.hero, f, p.dealt * 0.5, { element: 'wind', kind: 'proc' });
+        },
+        onFatal(b, p, s) {
+          if (p.prevented || s.luckUsed) return;
+          s.luckUsed = true;
+          p.prevented = true;
+          b.hero.hp = 1;
+          b.addBuff(b.hero, { id: 'lucky', dur: 1.5, stats: { dodge: 1 } });
+          b.label(b.hero, 'yùn qi hǎo!', 'good');
+        },
+      },
+    },
+    unlock: { level: 10, text: 'Reach account level 10' },
   },
 };
 
