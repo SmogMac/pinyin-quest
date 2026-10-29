@@ -4,13 +4,26 @@
 //   hooks: functions called by the combat engine: (battle, payload, state) => void
 //          onBattleStart onAttack onHit onCrit onSpellHit onDamaged onDodge onBlock onShieldBreak
 //          onStatus onReaction onCast onCastFail onKill onMove onHeal onTick onLowHp onFatal
-//          modDamage modIncoming modSpellPower modHeal
+//          onKnockback (you pushed/pulled an enemy) onKnocked (you were pushed) onRecover
+//          onMomentum ({on}) · modDamage modIncoming modSpellPower modHeal
+//          modKnockback (push you receive) modKnockOut (push you deal)
+//   stats also include kbPct (push further), kbRes (resist pushes), momentumAspd
 //   requires: vocabulary (any one learned Hanzi word unlocks the item for discovery)
 //   category: attack | movement | defense | spell | conditional | strange
 // Names are shown pinyin-first. Add new items freely; the engine never needs changing.
 
 const R = { common: 'common', rare: 'rare', epic: 'epic' };
 const nearHero = (b, r = 30) => b.foes().filter((f) => f.x - b.hero.x <= r);
+/** Countercurrent's gust (at most twice a second, so chained knockbacks can't loop). */
+function gust(b, s) {
+  if ((s.at || -9) > b.t - 0.5) return;
+  s.at = b.t;
+  b.emit({ type: 'cast', spell: 'gust', element: 'wind' });
+  for (const f of nearHero(b, 26)) {
+    b.damage(b.hero, f, b.hero.atk * 0.25, { element: 'wind', kind: 'proc' });
+    b.knockback(f, 7, { src: b.hero });
+  }
+}
 const pick = (b, list) => list[Math.floor(b.rng() * list.length)];
 const RANDOM_STATUSES = ['burn', 'chill', 'wet', 'shock', 'curse', 'dazzle'];
 const STATUS_ELEMENT = { burn: 'fire', chill: 'ice', frozen: 'ice', wet: 'water', shock: 'lightning', curse: 'dark', dazzle: 'light', stun: 'earth' };
@@ -577,6 +590,138 @@ export const ITEMS = {
         }
       },
     },
+  },
+  // ------------------------------------------------------------- positioning & momentum
+  relentless: {
+    py: 'bù tuì', zh: '不退', en: 'Relentless Advance', element: 'physical', rarity: R.common, category: 'movement', icon: 'fist', requires: ['走', '跑'],
+    desc: 'Recovering from a knockback grants +35% attack speed and +25% move speed for 3s.',
+    hooks: {
+      onRecover(b) {
+        b.addBuff(b.hero, { id: 'relentless', dur: 3, stats: { aspdPct: 0.35, speedPct: 0.25 } });
+      },
+    },
+  },
+  thunder_impact: {
+    py: 'zhòng jī', zh: '重击', en: 'Thunderous Impact', element: 'earth', rarity: R.common, category: 'attack', icon: 'fist', requires: ['重', '打'],
+    desc: 'Your hits push 50% further; critical hits push twice as far and Shock.',
+    stats: { kbPct: 0.5 },
+    hooks: {
+      onCrit(b, p) {
+        if (p.kind !== 'attack' || !p.target.alive) return;
+        b.knockback(p.target, b.hero.kb, { src: b.hero });
+        b.applyStatus(p.target, 'shock', { dur: 2, src: b.hero });
+      },
+    },
+  },
+  battle_standard: {
+    py: 'zhàn qí', zh: '战旗', en: 'Battle Standard', element: 'physical', rarity: R.rare, category: 'conditional', icon: 'crown', requires: ['打', '前'],
+    desc: 'Momentum also grants +18% damage and +10% more attack speed.',
+    stats: { momentumAspd: 0.1 },
+    hooks: { modDamage: (b, c) => b.hero.momentum && (c.mult *= 1.18) },
+  },
+  countercurrent: {
+    py: 'nì liú', zh: '逆流', en: 'Countercurrent', element: 'wind', rarity: R.rare, category: 'movement', icon: 'wind', requires: ['风', '水'],
+    desc: 'When you hop back from a dodge or get knocked back, a gust pushes every enemy within reach back as well (and deals 25% attack as wind).',
+    hooks: {
+      onDodge(b, p, s) {
+        gust(b, s);
+      },
+      onKnocked(b, p, s) {
+        gust(b, s);
+      },
+    },
+  },
+  iron_roots: {
+    py: 'tiě gēn', zh: '铁根', en: 'Iron Roots', element: 'earth', rarity: R.common, category: 'defense', icon: 'mountain', requires: ['树', '地'],
+    desc: '+2 defence. While standing still you take 70% less knockback.',
+    stats: { def: 2 },
+    hooks: { modKnockback: (b, p) => b.hero.still > 0.3 && (p.dist *= 0.3) },
+  },
+  reckless_charge: {
+    py: 'měng chōng', zh: '猛冲', en: 'Reckless Charge', element: 'fire', rarity: R.common, category: 'conditional', icon: 'flame', requires: ['跑', '快'],
+    desc: 'Each time you gain Momentum, your next attack deals +100% damage and knocks its target far back.',
+    hooks: {
+      onMomentum: (b, p, s) => p.on && (s.armed = true),
+      onAttack(b, p, s) {
+        if (!s.armed) return;
+        s.armed = false;
+        p.mult *= 2;
+        p.kbMult = (p.kbMult ?? 1) * 3;
+        b.label(b.hero, 'měng chōng!', 'good');
+      },
+    },
+  },
+  territorial_guardian: {
+    py: 'shǒu tǔ', zh: '守土', en: 'Territorial Guardian', element: 'earth', rarity: R.common, category: 'defense', icon: 'shield', requires: ['家', '地'],
+    desc: 'While you fight in your own half: +6 defence and take 12% less damage.',
+    hooks: {
+      onTick(b) {
+        if (b.inOwnZone(b.hero)) b.addBuff(b.hero, { id: 'home_ground', dur: 1.1, stats: { def: 6 } });
+      },
+      modIncoming: (b, c) => b.inOwnZone(b.hero) && (c.mult *= 0.88),
+    },
+  },
+  chain_hook: {
+    py: 'gōu suǒ', zh: '钩锁', en: 'Chain Hook', element: 'physical', rarity: R.rare, category: 'attack', icon: 'vortex', requires: ['拉'],
+    desc: 'Every 4th basic attack hooks its target and pulls it toward you instead of pushing it; pulled enemies take +25% damage for 2s.',
+    hooks: {
+      onAttack(b, p, s) {
+        if (p.count % 4 !== 0) return;
+        p.kbMult = 0;
+        s.hook = true;
+      },
+      onHit(b, p, s) {
+        if (!s.hook || p.sub) return;
+        s.hook = false;
+        b.pull(p.target, 10, { src: b.hero });
+        p.target.hookedUntil = b.t + 2;
+      },
+      modDamage: (b, c) => c.tgt.hookedUntil > b.t && (c.mult *= 1.25),
+    },
+  },
+  swift_pursuit: {
+    py: 'shén xíng', zh: '神行', en: 'Swift Pursuit', element: 'wind', rarity: R.common, category: 'movement', icon: 'wind', requires: ['快', '跑'],
+    desc: '+30% move speed. Your first attack after moving at least a body-length deals +30% damage.',
+    stats: { speedPct: 0.3 },
+    hooks: {
+      onMove: (b, p, s) => (s.ready = true),
+      onAttack(b, p, s) {
+        if (!s.ready) return;
+        s.ready = false;
+        p.mult *= 1.3;
+      },
+    },
+  },
+  heavy_frame: {
+    py: 'chén zhòng', zh: '沉重', en: 'Heavy Frame', element: 'earth', rarity: R.common, category: 'defense', icon: 'mountain', requires: ['重'],
+    desc: '+50% knockback resistance and +3 defence, but 10% slower movement.',
+    stats: { kbRes: 0.5, def: 3, speedPct: -0.1 },
+  },
+  hit_and_run: {
+    py: 'yóu jī', zh: '游击', en: 'Hit and Run', element: 'wind', rarity: R.rare, category: 'movement', icon: 'wind', requires: ['走'],
+    desc: 'After you dodge: +50% move speed for 2s and your next attack deals +60% damage.',
+    hooks: {
+      onDodge(b, p, s) {
+        s.ready = true;
+        b.addBuff(b.hero, { id: 'hit_and_run', dur: 2, stats: { speedPct: 0.5 } });
+      },
+      onAttack(b, p, s) {
+        if (!s.ready) return;
+        s.ready = false;
+        p.mult *= 1.6;
+      },
+    },
+  },
+  boundary_stone: {
+    py: 'jiè shí', zh: '界石', en: 'Boundary Stone', element: 'earth', rarity: R.common, category: 'conditional', icon: 'mountain', requires: ['石头', '山'],
+    desc: 'Enemies standing in your half take +25% damage from you: drive them out and deny their Momentum.',
+    hooks: { modDamage: (b, c) => c.tgt.side === 1 && !b.inOwnZone(c.tgt) && (c.mult *= 1.25) },
+  },
+  long_stride: {
+    py: 'dà bù', zh: '大步', en: 'Long Stride', element: 'wind', rarity: R.common, category: 'movement', icon: 'wind', requires: ['走', '步'],
+    desc: '+20% move speed and your dodge hop carries you less far back, so you keep your ground.',
+    stats: { speedPct: 0.2 },
+    hooks: { onDodge: (b) => b.hero.vx && (b.hero.vx *= 0.5) },
   },
   spring_tea: {
     py: 'chá', zh: '茶', en: 'Spring Tea', element: 'water', rarity: R.common, category: 'defense', icon: 'drop', requires: ['茶', '喝'],

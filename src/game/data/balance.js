@@ -31,9 +31,9 @@ export const SCALING = {
   defPerFloor: 0.2, // flat def added per floor
   // global knobs applied to every enemy (bosses use their own)
   enemyHp: 1.0,
-  enemyAtk: 0.43,
+  enemyAtk: 0.38,
   bossHp: 0.85,
-  bossAtk: 0.62,
+  bossAtk: 0.56,
 };
 
 export const COMBAT = {
@@ -44,6 +44,18 @@ export const COMBAT = {
   maxDodge: 0.6,
   maxHookDepth: 6, // chain reactions stop recursing past this depth
   maxProcsPerStep: 400, // safety valve for absurd builds
+  // positioning (world units; the camera maps the world onto the stage separately)
+  worldW: 130, // battlefield width; the Hero Zone is the left half, the Enemy Zone the right
+  zoneBuffer: 3, // Momentum hysteresis around the midpoint, so standing on the line can't flicker
+  momentumAspd: 0.25, // attack speed while standing in the opposing zone
+  kbDecay: 9, // knockback slides out smoothly over ~0.3s instead of teleporting
+  kbRecover: 0.18, // seconds of recovery after a heavy knockback before moving/attacking again
+  heavyKb: 3, // pushes at least this far stagger; lighter taps only nudge
+  dodgeHop: 7, // distance a successful dodge hops back
+  heroSpeed: 19, // base hero move speed (units/s)
+  enemySpeedMult: 1.5, // enemy data speeds were tuned for the old, smaller field
+  rangedReach: 1.2, // ranged attack ranges stretch with the wider field
+  minGap: 11, // ground enemies never stand closer than this (about two-thirds of a body)
 };
 
 export const SCORE = { floor: 60, kill: 8, cast: 6, guardian: 200, boss: 500, wordeater: 1000 };

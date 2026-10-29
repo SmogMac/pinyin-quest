@@ -2,6 +2,7 @@
 // Components subscribe with useStore(); mutations go through update(fn).
 import { useSyncExternalStore } from 'react';
 
+// The storage key keeps the game's original name so existing progress is found after the rename.
 const KEY = 'pinyin-quest-save-v1';
 export const SAVE_VERSION = 1;
 
@@ -144,12 +145,12 @@ export function useStore() {
 
 export function exportSave() {
   persistNow();
-  const blob = new Blob([JSON.stringify({ app: 'pinyin-quest', exportedAt: new Date().toISOString(), save: state }, null, 1)], {
+  const blob = new Blob([JSON.stringify({ app: 'moyu-rumble', exportedAt: new Date().toISOString(), save: state }, null, 1)], {
     type: 'application/json',
   });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `pinyin-quest-save-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `moyu-rumble-save-${new Date().toISOString().slice(0, 10)}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -166,7 +167,7 @@ export function importSave(text) {
   }
   const data = parsed?.save ?? parsed;
   if (!data || typeof data !== 'object' || typeof data.words !== 'object' || !data.profile) {
-    return 'That file does not look like a Pinyin Quest save.';
+    return 'That file does not look like a Moyu Rumble save.';
   }
   state = hydrate(data);
   update(() => {});

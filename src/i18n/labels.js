@@ -36,6 +36,11 @@ export const LABELS = {
   newSpell: { py: 'xīn fǎ shù', zh: '新法术', en: 'New spell' },
   boss: { py: 'shǒu lǐng', zh: '首领', en: 'Boss' },
   tryAgain: { py: 'zài lái', zh: '再来', en: 'Try again' },
+  newRun: { py: 'xīn mào xiǎn', zh: '新冒险', en: 'New Run' },
+  continueRun: { py: 'jì xù mào xiǎn', zh: '继续冒险', en: 'Continue Run' },
+  abandonRun: { py: 'fàng qì mào xiǎn', zh: '放弃冒险', en: 'Abandon Run' },
+  keepPlaying: { py: 'jì xù wán', zh: '继续玩', en: 'Keep Playing' },
+  chooseHero: { py: 'xuǎn zé yīng xióng', zh: '选择英雄', en: 'Choose your hero' },
 };
 
 /** "py · English" as one plain string, for aria-labels and titles. */

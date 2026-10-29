@@ -10,9 +10,12 @@
 //               Victory/Defeat overlay is shown
 //   → onContinue when the player taps Continue (rewards / map / end screen)
 //
-// Rendering: the simulation runs at COMBAT.dt (20 Hz); unit positions are interpolated between the
-// last two steps so motion is smooth at any display rate. Static layers (backdrop, sprites, the
-// puzzle sheet, effects) are memoised so a frame only re-renders what moves.
+// Rendering: the simulation runs at COMBAT.dt (20 Hz) in world units (0…COMBAT.worldW); the camera
+// maps world x to stage % and scales sprites to the stage width, separately from gameplay. Unit
+// positions are interpolated between the last two steps so motion is smooth at any display rate.
+// Static layers (backdrop, sprites, the puzzle sheet, effects) are memoised so a frame only
+// re-renders what moves. The field stays uncluttered: no enemy names, health bars or weakness
+// lists (tap an enemy or the eye button to inspect it); bosses get one bar at the top.
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Battle } from '../game/combat.js';
 import { COMBAT } from '../game/data/balance.js';
@@ -32,6 +35,10 @@ import Icon from '../assets/icons/Icons.jsx';
 import { BgSky, BgFar, BgMid, BgGround, BgDecor } from '../assets/backgrounds/Backgrounds.jsx';
 
 const STATUS_GLYPH = { burn: 'flame', chill: 'snow', frozen: 'snow', wet: 'drop', shock: 'bolt', curse: 'skull', stun: 'star', dazzle: 'sun' };
+/** World x → stage percent (the camera). */
+const P = (x) => (x * 100) / COMBAT.worldW;
+// sprite size relative to the old 100-unit field: the wider world is shown zoomed out
+const CAM_BASE = 100 / COMBAT.worldW;
 const MAX_FX = 48;
 const MAX_FLOATS = 24;
 const MELEE_FX = new Set(['slash', 'dagger', 'chain']);
@@ -131,6 +138,17 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   const phase = useRef('fighting'); // fighting -> resolved (never back)
   const [ended, setEnded] = useState(null);
   const endedRef = useRef(null);
+  const [inspect, setInspect] = useState(null); // enemy id or 'all'
+  // camera: zoom adapts to the stage width (phones show the whole arena; wide screens a bit closer)
+  const stageRef = useRef(null);
+  const [cam, setCam] = useState(CAM_BASE);
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(([e]) => setCam(CAM_BASE * Math.min(1.25, Math.max(1, e.contentRect.width / 420))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // the loop closure is created once, so it reads the latest callback through a ref
   const onResolveRef = useRef(onResolve);
   onResolveRef.current = onResolve;
@@ -138,10 +156,11 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
 
   // ---------------------------------------------------------------- event -> visuals
   const xOf = (id) => {
-    if (id === 'hero') return H.x;
+    if (id === 'hero') return P(H.x);
     const u = b.units.find((x) => x.id === id);
-    return u ? u.x : 60;
+    return P(u ? u.x : COMBAT.worldW * 0.6);
   };
+  const lastLabel = useRef({});
   const now = () => performance.now();
   function pushFx(e) {
     const v = vis.current;
@@ -150,6 +169,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   }
   function float(x, text, kind, color) {
     const v = vis.current;
+    if (v.floats.length >= MAX_FLOATS - 4 && kind !== 'crit' && kind !== 'taken') return; // keep the field readable
     v.floats.push({ id: ++fxSeq, x: x + (Math.random() * 4 - 2), text, kind, color, until: now() + 950 });
     if (v.floats.length > MAX_FLOATS) v.floats.shift();
   }
@@ -162,26 +182,26 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     if ((v.flash[id] || 0) > now()) return;
     v.flash[id] = now() + 240;
   }
-  function impact(id, element, crit) {
+  function impact(id, element, crit, eff) {
     const v = vis.current;
     const t = now();
-    if (!crit && (v.impactAt[id] || 0) > t) return;
+    if (!crit && !eff && (v.impactAt[id] || 0) > t) return;
     v.impactAt[id] = t + 90;
-    pushFx({ type: 'impact', el: element || 'physical', x: xOf(id), crit, until: t + (crit ? 420 : 320) });
+    pushFx({ type: 'impact', el: element || 'physical', x: xOf(id), crit, eff, until: t + (crit || eff === 'weak' ? 420 : 320) });
   }
   function spellFx(spell, element) {
     const cfg = SPELL_FX[spell];
     if (!cfg) return;
     const t = now();
     const color = ELEMENTS[element]?.color;
-    if (cfg.at === 'foes') for (const f of b.foes()) pushFx({ type: 'spell', kind: cfg.kind, x: f.x, color, until: t + 900 });
+    if (cfg.at === 'foes') for (const f of b.foes()) pushFx({ type: 'spell', kind: cfg.kind, x: P(f.x), color, until: t + 900 });
     else if (cfg.at === 'front') {
       const f = b.front();
-      pushFx({ type: 'spell', kind: cfg.kind, x: f ? f.x : 60, from: H.x, color, until: t + 1500 });
+      pushFx({ type: 'spell', kind: cfg.kind, x: f ? P(f.x) : 60, from: P(H.x), color, until: t + 1500 });
     } else if (cfg.at === 'field') {
       pushFx({ type: 'spell', kind: cfg.kind, x: 50, color, until: t + 1000 });
       if (cfg.kind === 'quake' && !getState().settings.reducedMotion) vis.current.shake = t + 600;
-    } else pushFx({ type: 'spell', kind: cfg.kind, x: H.x, color, until: t + 1000 });
+    } else pushFx({ type: 'spell', kind: cfg.kind, x: P(H.x), color, until: t + 1000 });
   }
 
   function handle(events) {
@@ -214,19 +234,18 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           break;
         case 'hit': {
           const x = xOf(e.tgt);
+          // effectiveness shows in the hit itself (bigger burst / dull puff, number style), not as text
+          const eff = e.eff === 'weak' ? 'weak' : e.eff === 'resist' || e.eff === 'immune' ? 'resist' : null;
           if (e.amount > 0 || e.absorbed > 0) {
-            const kind = e.tgt === 'hero' ? 'taken' : e.crit ? 'crit' : e.kind === 'dot' ? 'dot' : e.kind === 'spell' ? 'spell' : 'dmg';
-            if (e.amount > 0) float(x, e.crit ? `${e.amount}!` : `${e.amount}`, kind, e.element !== 'physical' ? ELEMENTS[e.element]?.color : null);
-            if (e.absorbed > 0) float(x, `(${e.absorbed})`, 'absorb');
+            const kind = e.tgt === 'hero' ? 'taken' : e.crit ? 'crit' : eff === 'weak' ? 'weakhit' : eff === 'resist' ? 'resisted' : e.kind === 'dot' ? 'dot' : e.kind === 'spell' ? 'spell' : 'dmg';
+            if (e.amount > 0 && (e.kind !== 'dot' || e.amount >= 3)) float(x, e.crit ? `${e.amount}!` : `${e.amount}`, kind, eff ? null : e.element !== 'physical' ? ELEMENTS[e.element]?.color : null);
           }
-          if (e.eff === 'weak') float(x, 'Weak!', 'weak');
-          else if (e.eff === 'resist' || e.eff === 'immune') float(x, e.eff === 'immune' ? 'Immune' : 'Resist', 'resist');
           if (e.kind !== 'dot' && e.amount > 0) {
             flash(e.tgt);
             unitState(e.tgt, 'hurt', 220);
           }
           if (e.kind === 'attack' || e.kind === 'spell') {
-            impact(e.tgt, e.element, e.crit);
+            impact(e.tgt, e.element, e.crit, eff);
             play(e.crit ? 'crit' : 'hit');
           }
           break;
@@ -235,38 +254,60 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           float(xOf(e.tgt), `${e.text}!`, 'reaction');
           pushFx({ type: 'burst', x: xOf(e.tgt), color: '#fff', until: now() + 450 });
           break;
-        case 'label':
-          if (e.tgt === 'field') v.banner = { text: e.text, until: now() + 1400, small: true };
-          else float(xOf(e.tgt), e.text, e.kind === 'enemy' ? 'enemy' : e.kind === 'good' ? 'good' : 'proc');
+        case 'label': {
+          if (e.tgt === 'field') {
+            v.banner = { text: e.text, until: now() + 1400, small: true };
+            break;
+          }
+          // at most one shout per character every ~0.7s, so labels never pile up
+          const t = now();
+          if ((lastLabel.current[e.tgt] || 0) > t) break;
+          lastLabel.current[e.tgt] = t + 700;
+          float(xOf(e.tgt), e.text, e.kind === 'enemy' ? 'enemy' : e.kind === 'good' ? 'good' : 'proc');
           break;
+        }
         case 'heal':
           if (e.amount >= 2) float(xOf(e.tgt), `+${e.amount}`, 'heal');
           break;
         case 'dodge':
-          float(xOf(e.tgt), 'Dodge', 'dodge');
-          unitState(e.tgt, 'dodge', 340);
+          // the hop itself (a 'hop' event) shows the dodge; no text
+          unitState(e.tgt, 'dodge', 360);
           play('dodge');
           break;
         case 'miss':
-          float(xOf(e.tgt), 'Miss', 'dodge');
+          pushFx({ type: 'whiff', x: xOf(e.tgt), until: now() + 300 });
           break;
         case 'block':
-          float(xOf('hero'), 'Block', 'dodge');
           unitState('hero', 'block', 320);
-          pushFx({ type: 'guard', x: H.x, until: now() + 320 });
+          pushFx({ type: 'guard', x: xOf('hero'), until: now() + 320 });
+          break;
+        case 'hop':
+          pushFx({ type: 'dust', x: xOf(e.tgt), small: true, until: now() + 450 });
+          break;
+        case 'knock':
+          if (e.d >= COMBAT.heavyKb) unitState(e.tgt, e.pull ? 'pulled' : 'knocked', 320);
+          if (e.d >= 8 && !getState().settings.reducedMotion) v.punch = now() + 180;
+          break;
+        case 'land':
+          pushFx({ type: 'dust', x: xOf(e.tgt), small: e.hop, until: now() + 450 });
+          if (!e.hop) unitState(e.tgt, 'land', 180);
           break;
         case 'cast':
           if (e.enemy) pushFx({ type: 'burst', x: xOf('hero'), color: ELEMENTS[e.element]?.color || '#7a4dff', until: now() + 550 });
+          else if (e.spell === 'gust') pushFx({ type: 'spell', kind: 'gust', x: xOf('hero'), until: now() + 800 });
           else {
             unitState('hero', e.spell === 'leiting' ? 'smash' : 'cast', e.spell === 'leiting' ? 520 : 420);
-            pushFx({ type: 'ring', x: H.x, color: ELEMENTS[e.element]?.color, until: now() + 600 });
+            pushFx({ type: 'ring', x: xOf('hero'), color: ELEMENTS[e.element]?.color, until: now() + 600 });
             if (!e.echo) spellFx(e.spell, e.element);
             play('spell');
           }
           break;
         case 'slam':
           pushFx({ type: 'slam', x: xOf(e.tgt), pts: [zapPoints(), zapPoints(), zapPoints()], until: now() + 700 });
-          if (!getState().settings.reducedMotion) v.shake = now() + 300;
+          if (!getState().settings.reducedMotion) {
+            v.shake = now() + 300;
+            v.punch = now() + 220;
+          }
           break;
         case 'burst':
           pushFx({ type: 'tburst', x: xOf(e.tgt), pts: [zapPoints(), zapPoints()], until: now() + 380 });
@@ -446,7 +487,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   const v = vis.current;
   const n = now();
   const a = alpha.current;
-  const ix = (u) => (u.px === undefined ? u.x : u.px + (u.x - u.px) * a);
+  const ix = (u) => P(u.px === undefined ? u.x : u.px + (u.x - u.px) * a);
   const terrain = Object.keys(b.terrain).filter((k) => b.terrain[k] > 0);
   const boss = b.units.find((u) => u.side === 1 && (u.boss || u.edef?.guardian) && u.alive);
   const visibleUnits = b.units.filter((u) => u.alive || n - (v.dead[u.id] || 0) < 700);
@@ -454,8 +495,15 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
 
   return (
     <div className={`battle2 ${reduced ? 'calm' : ''}`}>
-      <div className={`stage stage2 theme-${theme} ${v.stageFx && v.stageFx.until > n ? `flash-${v.stageFx.kind}` : ''} ${v.shake > n ? 'shaking' : ''}`}>
+      <div
+        ref={stageRef}
+        className={`stage stage2 theme-${theme} ${v.stageFx && v.stageFx.until > n ? `flash-${v.stageFx.kind}` : ''} ${v.shake > n ? 'shaking' : ''} ${(v.punch || 0) > n ? 'punch' : ''}`}
+      >
         <Backdrop theme={theme} worldColor={worldColor} />
+        {/* the two territories: a faint wash on each half and a brush mark at the midpoint */}
+        <div className="zone zone-hero" aria-hidden="true" />
+        <div className="zone zone-enemy" aria-hidden="true" />
+        <div className="zone-mark" aria-hidden="true" />
         {terrain.map((k) => (
           <div key={k} className={`terrain-tint terrain-${k}`} style={{ '--tc': TERRAIN[k].color }} />
         ))}
@@ -481,15 +529,16 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           else if (moving) state = 'walk';
           else state = 'idle';
           const sprite = isHero ? H.sprite : u.sprite === 'shade' ? H.sprite : u.sprite;
-          const scale = isHero ? 0.62 : u.side === 0 ? 0.5 : (u.edef?.scale || 1) * (u.boss ? 0.62 : 0.56);
+          const scale = cam * (isHero ? 0.8 : u.side === 0 ? 0.64 : (u.edef?.scale || 1) * (u.boss ? 0.8 : 0.72));
           const stList = u.alive ? Object.keys(u.statuses) : [];
-          const isBoss = u === boss;
           return (
             <div
               key={u.id}
               className={`unit2 ${u.side === 0 ? 'side-hero' : 'side-enemy'} ${u.sprite === 'shade' ? 'is-shade' : ''} ${u.statuses.frozen ? 'is-frozen' : ''} ${u.charging ? 'is-charging' : ''} ${(v.flash[u.id] || 0) > n ? 'hit-flash' : ''}`}
               style={{ transform: `translateX(calc(${ix(u)}cqw - 50%))`, bottom: u.flying ? '30%' : '13%' }}
+              onClick={u.side === 1 && u.alive ? () => setInspect(u.id) : undefined}
             >
+              {u.alive && u.momentum && <Momentum side={u.side} />}
               {isHero && u.alive && (
                 <div className="unit-head hero-head">
                   {meter && (
@@ -502,13 +551,8 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
                   <HpBar hp={u.hp} max={u.maxHp} shield={u.shield} hero />
                 </div>
               )}
-              {u.side === 1 && u.alive && (
-                <div className="unit-head">
-                  {!isBoss && <span className="unit-name">{u.label || u.py}</span>}
-                  {!isBoss && <HpBar hp={u.hp} max={u.maxHp} shield={u.shield} />}
-                  <AffinityPips u={u} />
-                </div>
-              )}
+              {/* Word Eater's wraiths carry a learned word: that label is the point, so it stays */}
+              {u.side === 1 && u.alive && u.label && <span className="unit-word">{u.label}</span>}
               {stList.length > 0 && (
                 <div className="status-pips">
                   {stList.slice(0, 5).map((k) => (
@@ -535,6 +579,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         ))}
         {v.banner && v.banner.until > n && <div className={`battle-banner ${v.banner.small ? 'small' : ''}`}>{v.banner.text}</div>}
         {s.settings.perfOverlay && <PerfOverlay p={perf.current} fx={v.effects} floats={v.floats.length} units={b.units.length} />}
+        {inspect && <EnemyPanel b={b} focus={inspect} onClose={() => setInspect(null)} />}
 
         {ended && (
           <div className={`battle-result ${ended} pop-in`}>
@@ -552,6 +597,9 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         <div className="hud-row hud-controls">
           <button type="button" className="chip small" onClick={onInventory} aria-label="Items and synergies">
             <Icon name="chest" size={14} /> {run.items.length}
+          </button>
+          <button type="button" className="chip small" onClick={() => setInspect('all')} aria-label="Inspect enemies: weaknesses and resistances">
+            <Icon name="eye" size={14} />
           </button>
           {Object.keys(H.statuses).map((k) => (
             <span key={k} className="status-pip big" style={{ background: STATUSES[k].color }} title={STATUSES[k].name}>
@@ -719,7 +767,7 @@ const Effect = memo(function Effect({ e }) {
       );
     case 'impact':
       return (
-        <div className={`fx-impact i-${e.el} ${e.crit ? 'crit' : ''}`} style={style}>
+        <div className={`fx-impact i-${e.el} ${e.crit ? 'crit' : ''} ${e.eff ? `eff-${e.eff}` : ''}`} style={style}>
           <i />
           <b />
         </div>
@@ -745,6 +793,14 @@ const Effect = memo(function Effect({ e }) {
               <polyline className="zap-core" points={p} />
             </svg>
           ))}
+        </div>
+      );
+    case 'dust':
+      return (
+        <div className={`fx-dust ${e.small ? 'small' : ''}`} style={style}>
+          <i />
+          <i />
+          <i />
         </div>
       );
     case 'spell':
@@ -773,23 +829,65 @@ function PerfOverlay({ p, fx, floats, units }) {
   );
 }
 
-function AffinityPips({ u }) {
-  const entries = Object.entries(u.affinity || {}).filter(([el]) => ELEMENTS[el]);
-  const weak = entries.filter(([, m]) => m > 1).slice(0, 2);
-  const resist = entries.filter(([, m]) => m < 1).slice(0, 2);
-  if (!weak.length && !resist.length) return null;
+/** Momentum: two stacked orange chevrons with a black outline, beside the character
+ * (left of heroes, right of enemies), pulsing gently upward. */
+const Momentum = memo(function Momentum({ side }) {
   return (
-    <div className="aff-pips">
-      {weak.map(([el]) => (
-        <span key={el} className="aff weak" style={{ '--c': ELEMENTS[el].color }} title={`Weak to ${ELEMENTS[el].name}`}>
-          ▲{ELEMENTS[el].py}
-        </span>
+    <svg className={`momentum ${side === 0 ? 'left' : 'right'}`} viewBox="0 0 16 20" aria-label="Momentum" role="img">
+      {[3, 10].map((y) => (
+        <g key={y}>
+          <path d={`M2.5 ${y + 6} L8 ${y + 0.8} L13.5 ${y + 6}`} className="chev-outline" />
+          <path d={`M2.5 ${y + 6} L8 ${y + 0.8} L13.5 ${y + 6}`} className="chev-fill" />
+        </g>
       ))}
-      {resist.map(([el]) => (
-        <span key={el} className="aff resist" style={{ '--c': ELEMENTS[el].color }} title={`Resists ${ELEMENTS[el].name}`}>
-          ▼{ELEMENTS[el].py}
-        </span>
-      ))}
+    </svg>
+  );
+});
+
+/** Enemy inspection: weaknesses, resistances and traits live here, not on the battlefield. */
+function EnemyPanel({ b, focus, onClose }) {
+  const list = b.foes().sort((a, c) => (a.id === focus ? -1 : c.id === focus ? 1 : a.x - c.x));
+  return (
+    <div className="enemy-panel" role="dialog" aria-label="Enemy information">
+      <div className="ep-head">
+        <b>
+          <Bi py="dí rén" en="Enemies" inline />
+        </b>
+        <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
+          <Icon name="x" size={16} />
+        </button>
+      </div>
+      {list.map((u) => {
+        const def = ENEMIES[u.enemyId];
+        const aff = Object.entries(u.affinity || {}).filter(([el]) => ELEMENTS[el]);
+        const weak = aff.filter(([, m]) => m > 1);
+        const resist = aff.filter(([, m]) => m < 1);
+        return (
+          <div key={u.id} className={`ep-row ${u.id === focus ? 'on' : ''}`}>
+            <div className="ep-name">
+              <b>{def.py}</b> <span className="ep-zh">{def.zh}</span> <small>{def.name}</small>
+              <span className="ep-hp">
+                {Math.max(0, Math.round(u.hp))}/{u.maxHp}
+              </span>
+            </div>
+            <div className="ep-tags">
+              {weak.map(([el]) => (
+                <span key={el} className="aff weak" style={{ '--c': ELEMENTS[el].color }}>
+                  ▲ {ELEMENTS[el].py} · {ELEMENTS[el].name}
+                </span>
+              ))}
+              {resist.map(([el, m]) => (
+                <span key={el} className="aff resist" style={{ '--c': ELEMENTS[el].color }}>
+                  {m === 0 ? '✕' : '▼'} {ELEMENTS[el].py} · {ELEMENTS[el].name}
+                </span>
+              ))}
+              {u.kbRes > 0 && <span className="aff">sturdy: {Math.round(u.kbRes * 100)}% less knockback</span>}
+              {u.stance !== 'normal' && <span className="aff">{u.stance === 'aggressive' ? 'aggressive: invades your half' : 'defensive: holds its half'}</span>}
+            </div>
+            {def.blurb && <p className="ep-blurb">{def.blurb}</p>}
+          </div>
+        );
+      })}
     </div>
   );
 }

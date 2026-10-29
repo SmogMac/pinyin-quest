@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useStore, update, getState } from '../store/store.js';
+import { useStore, update, getState, flush } from '../store/store.js';
 import { levelInfo, addXp } from '../store/progress.js';
 import { pickAdventureTasks } from '../learn/adventurePicker.js';
 import {
-  newRun, chooseBiome, chooseNode, leaveNode, battleReward, takeItem, takeSpell, replaceableSlots, resolveBattle, afterReward,
+  chooseBiome, chooseNode, leaveNode, battleReward, takeItem, takeSpell, replaceableSlots, resolveBattle, afterReward,
   enterLair, enterBeyond, openShop, shrineOptions, draftItems, heroFor, healRun, scoreOf, RUN_VERSION,
 } from '../game/run.js';
 import { RUN } from '../game/data/balance.js';
@@ -17,7 +17,7 @@ import { heroDef } from '../game/data/heroes.js';
 import { EVENTS } from '../game/data/events.js';
 import { STORY } from '../game/data/story.js';
 import { unlockedItems, unlockedSpells, actBiomeOptions, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
-import { checkAchievements, selectedHero } from '../game/achievements.js';
+import { checkAchievements, selectedHero, heroUnlocked } from '../game/achievements.js';
 import { getWord } from '../learn/vocab.js';
 import StudyCard from '../components/StudyCard.jsx';
 import BattleScreen from '../components/BattleScreen.jsx';
@@ -30,15 +30,21 @@ import { play } from '../audio/sfx.js';
 import { speak, stopSpeech } from '../audio/speech.js';
 import { LevelUpOverlay } from './Learn.jsx';
 import Bi from '../components/Bi.jsx';
+import { ConfirmNewRun, ConfirmAbandon } from '../components/ConfirmDialog.jsx';
+import HeroShowcase from '../components/HeroShowcase.jsx';
+import { activeRun, startRun, abandonRun, finishRun as endRunIn } from '../game/runManager.js';
 import { SPELL_SLOTS } from '../game/data/spells.js';
 
 const mutate = (fn) => update((s) => s.adventure.current && fn(s.adventure.current, s));
 const accountLevelOf = (s) => levelInfo(s.profile.xp).level;
 const worldColorOf = (s) => Math.min(1, learnedWords(s).size / 250);
 
-export default function Adventure({ go }) {
+export default function Adventure({ go, params = {} }) {
   const s = useStore();
   const run = s.adventure.current;
+  // The Adventure menu (Continue / New Run / Abandon) shows until the player enters the run;
+  // Home's Continue button enters it directly.
+  const [entered, setEntered] = useState(Boolean(params.resume));
   const accountLevel = accountLevelOf(s);
   const [levelUp, setLevelUp] = useState(null);
   const [inventory, setInventory] = useState(false);
@@ -58,6 +64,12 @@ export default function Adventure({ go }) {
   };
 
   useEffect(() => () => stopSpeech(), []);
+  // a different run (new or abandoned) never inherits the previous run's finished-battle screen
+  useEffect(() => {
+    setHeld(null);
+    setInventory(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run?.seed, run?.startedAt]);
 
   // Runs from the previous version can't continue with the new item system.
   const outdated = run && run.v !== RUN_VERSION;
@@ -114,11 +126,14 @@ export default function Adventure({ go }) {
     if (fresh.length) setSynergyPopup(fresh);
   };
 
-  if (!run) return <AdventureStart go={go} accountLevel={accountLevel} onCodex={() => setCodex(true)} codex={codex} closeCodex={() => setCodex(false)} />;
   if (outdated) return <OutdatedRun go={go} />;
+  if (!run || !entered)
+    return (
+      <AdventureMenu go={go} accountLevel={accountLevel} onEnter={() => setEntered(true)} onCodex={() => setCodex(true)} codex={codex} closeCodex={() => setCodex(false)} />
+    );
 
   const maxHp = heroFor(run, accountLevel).maxHp;
-  const inBattle = run.phase === 'battle' || Boolean(held);
+  const inBattle = (run.phase === 'battle' && Boolean(run.battle)) || Boolean(held);
   const battleKey = held?.key ?? run.battle?.seed;
   const pools = () => ({ itemPool: unlockedItems(getState()), spellPool: unlockedSpells(getState()) });
 
@@ -127,7 +142,7 @@ export default function Adventure({ go }) {
       {!inBattle && (
         <TopBar
           title={run.biome ? BIOMES[run.biome].py : `Act ${run.act}`}
-          onBack={() => go('home')}
+          onBack={() => setEntered(false)}
           right={
             <button type="button" className="icon-btn" onClick={() => setInventory(true)} aria-label="Items, spells and synergies">
               <Icon name="chest" />
@@ -289,23 +304,96 @@ function secretNodes(save, biome) {
   return out;
 }
 
-// ------------------------------------------------------------------------------ start & HUD
-function AdventureStart({ go, accountLevel, onCodex, codex, closeCodex }) {
+// ------------------------------------------------------------------------------ run menu & HUD
+/**
+ * Adventure menu: Continue Run (when one exists), New Run (always), Abandon Run (when one exists).
+ * Starting over with a run in progress, or abandoning it, always asks first. Only the run itself
+ * is cleared (see game/runManager.js); learning progress and permanent unlocks are untouched.
+ */
+function AdventureMenu({ go, accountLevel, onEnter, onCodex, codex, closeCodex }) {
+  const s = useStore();
+  const current = activeRun(s);
+  const [view, setView] = useState('menu'); // menu | pick
+  const [confirm, setConfirm] = useState(null); // 'new' | 'abandon'
+  const abandon = () => {
+    update((x) => abandonRun(x));
+    flush(); // a refresh must never bring an abandoned run back
+    setConfirm(null);
+  };
+  const begin = (heroId) => {
+    play('levelUp');
+    update((x) => startRun(x, { heroId, accountLevel }));
+    flush();
+    onEnter();
+  };
+  if (view === 'pick') return <HeroPick go={go} onBack={() => setView('menu')} onStart={begin} />;
+  return (
+    <>
+      <AdventureStart go={go} onCodex={onCodex} codex={codex} closeCodex={closeCodex}>
+        <div className="run-menu">
+          {current && (
+            <Button className="wide big" onClick={onEnter}>
+              <Icon name="play" size={20} /> <Bi k="continueRun" />
+              <small className="run-menu-sub">
+                {heroDef(current.heroId).py} · {current.biome ? BIOMES[current.biome].py : `Act ${current.act}`} · floor {current.floor}
+              </small>
+            </Button>
+          )}
+          <Button className="wide big" variant={current ? 'secondary' : 'primary'} onClick={() => (current ? setConfirm('new') : setView('pick'))}>
+            <Icon name="swords" size={20} /> <Bi k="newRun" />
+          </Button>
+          {current && (
+            <button type="button" className="link-btn danger" onClick={() => setConfirm('abandon')}>
+              <Bi k="abandonRun" inline />
+            </button>
+          )}
+        </div>
+      </AdventureStart>
+      {confirm === 'new' && (
+        <ConfirmNewRun
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            abandon();
+            setView('pick');
+          }}
+        />
+      )}
+      {confirm === 'abandon' && <ConfirmAbandon onCancel={() => setConfirm(null)} onConfirm={abandon} />}
+    </>
+  );
+}
+
+/** Character selection for a fresh run: the hero line-up with stats, then Start. */
+function HeroPick({ go, onBack, onStart }) {
+  const s = useStore();
+  const [shown, setShown] = useState(() => selectedHero(s));
+  const h = heroDef(shown);
+  const ok = heroUnlocked(shown, s);
+  return (
+    <div className="screen adventure-start hero-pick">
+      <TopBar title={<Bi k="chooseHero" />} onBack={onBack} />
+      <HeroShowcase onShow={setShown} />
+      <Button className="wide big" disabled={!ok} onClick={() => ok && onStart(shown)}>
+        <Icon name="swords" size={22} /> <Bi k="start" py={`kāi shǐ · ${h.py}`} en={ok ? `Begin as ${h.en}` : 'Locked'} />
+      </Button>
+      <button type="button" className="link-btn" onClick={() => go('home')}>
+        <Bi k="home" inline />
+      </button>
+    </div>
+  );
+}
+
+function AdventureStart({ go, onCodex, codex, closeCodex, children }) {
   const s = useStore();
   const a = s.adventure;
-  const heroId = selectedHero(s);
+  // show the hero of the run in progress, otherwise the one picked on Home
+  const heroId = activeRun(s)?.heroId || selectedHero(s);
   const h = heroDef(heroId);
   const sig = SPELLS[h.signature];
   const cx = useMemo(() => codexSummary(s), [s]);
-  const start = () => {
-    play('levelUp');
-    update((st) => {
-      st.adventure.current = newRun({ accountLevel, heroId, beyondUnlocked: (st.adventure.dragonWins || 0) >= RUN.dragonWinsForBeyond });
-    });
-  };
   return (
     <div className="screen adventure-start">
-      <TopBar title="Adventure" onBack={() => go('home')} />
+      <TopBar title={<Bi k="adventure" inline />} onBack={() => go('home')} />
       <div className="card adv-intro">
         <div className="adv-intro-art">
           <Sprite id={h.sprite} scale={0.8} />
@@ -328,10 +416,7 @@ function AdventureStart({ go, accountLevel, onCodex, codex, closeCodex }) {
             <p className="small muted">{sig.desc}</p>
           </div>
         </div>
-        <Button className="wide big" onClick={start}>
-          <Icon name="swords" size={22} /> <Bi k="start" py={`kāi shǐ · ${h.py}`} en={`Begin as ${h.en}`} />
-        </Button>
-        <p className="small muted center">Change hero by swiping the line-up on the Home screen.</p>
+        {children}
       </div>
       <div className="card">
         <div className="progress-line">
@@ -948,15 +1033,8 @@ function MerchantView({ run, grantItem, grantSpell, accountLevel }) {
 
 // ------------------------------------------------------------------------------ run end
 function finishRun(run, won) {
-  const score = scoreOf(run);
-  update((s) => {
-    const a = s.adventure;
-    a.runs += 1;
-    if (won) a.wins += 1;
-    a.bestFloor = Math.max(a.bestFloor, run.floor);
-    a.bestScore = Math.max(a.bestScore, score);
-    a.current = null;
-  });
+  update((s) => endRunIn(s, won));
+  flush();
   checkAchievements();
 }
 
@@ -1178,26 +1256,18 @@ function InventoryModal({ run, accountLevel, onClose }) {
           ))}
         </details>
       )}
-      {!confirm ? (
-        <button type="button" className="link-btn danger" onClick={() => setConfirm(true)}>
-          Abandon run
-        </button>
-      ) : (
-        <div className="confirm-row">
-          <span>Abandon this run?</span>
-          <Button
-            variant="danger"
-            onClick={() => {
-              finishRun(run, false);
-              onClose();
-            }}
-          >
-            Abandon
-          </Button>
-          <Button variant="ghost" onClick={() => setConfirm(false)}>
-            Keep playing
-          </Button>
-        </div>
+      <button type="button" className="link-btn danger" onClick={() => setConfirm(true)}>
+        <Bi k="abandonRun" inline />
+      </button>
+      {confirm && (
+        <ConfirmAbandon
+          onCancel={() => setConfirm(false)}
+          onConfirm={() => {
+            update((x) => abandonRun(x));
+            flush();
+            onClose();
+          }}
+        />
       )}
     </Modal>
   );

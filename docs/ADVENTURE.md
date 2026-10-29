@@ -13,6 +13,10 @@
 
 Runs save after every step, so you can close the app between encounters and resume later. A battle is saved as finished the moment it ends (before the Victory/Defeat screen), so reloading never replays a completed fight.
 
+### Starting, continuing and abandoning runs
+
+The Adventure menu always offers **xīn mào xiǎn · New Run**; **jì xù mào xiǎn · Continue Run** and **fàng qì mào xiǎn · Abandon Run** appear while a run is in progress (Home's big button continues directly). Starting a new run over an unfinished one, or abandoning it (also from the in-run items menu, even mid-battle), always asks for confirmation first. All of it goes through `game/runManager.js`, which only ever replaces or clears `adventure.current`: vocabulary and review data, XP, heroes, achievements, story, boss victories, discoveries and lifetime statistics are never touched. Changes are written to storage immediately, so an abandoned run can't reappear after a refresh. `tests/runs.test.js` covers these rules.
+
 ### Battle flow
 
 `FIGHTING → RESOLVED (result saved once) → Victory/Defeat overlay → Continue → rewards / map / end screen`
@@ -20,6 +24,22 @@ Runs save after every step, so you can close the app between encounters and resu
 - The engine runs at a fixed 20 Hz (`COMBAT.dt`); the screen interpolates positions between steps, so motion is smooth at any display rate and the simulation never depends on frame rate.
 - Pending engine events are drained every frame, including ones emitted by player actions between steps (a spell that kills the last enemy). After every tick, `Battle.settle()` kills any unit at 0 HP and declares the winner, so simultaneous deaths, damage over time, chain reactions and phase changes can't leave a fight unresolved. `tests/flow.test.js` covers these cases.
 - Saved runs from the three-slot version keep their signature and most recent pickup spell; the extra spell is refunded as 40 ink, with a one-time notice.
+
+### Positioning, knockback and Momentum
+
+Combat happens on a real battlefield in world units (`COMBAT.worldW` = 130, about 30% wider than before relative to the characters). The camera maps it onto the stage and adapts its zoom to the screen width; gameplay never depends on screen size or frame rate (fixed 20 Hz steps).
+
+- **Two zones:** the left half is the Hero Zone, the right half the Enemy Zone. Anyone can cross; the zones are territory, not walls (a faint ground tint and a brush mark show the line).
+- **Momentum:** standing in the *other* side's half gives +25% attack speed (`COMBAT.momentumAspd`) to basic attacks (not spell cooldowns). A ±3 buffer at the midpoint (`COMBAT.zoneBuffer`) stops it flickering. Shown as two orange chevrons beside the character (left of heroes, right of enemies).
+- **Knockback:** every basic attack pushes by its weight (`attack.kb` for heroes, `kb` for enemies; crits ×1.5; Léi's ball and chain 7, a qi orb 1.5); spells like Fireball, Thunder Crash, Great Gale and Tidal Wave launch harder; bosses push hardest with telegraphed charge attacks. Pushes slide out smoothly over ~0.3s. Pushes of 3+ stagger (no moving or attacking until recovered, but the swing timer keeps counting). `kbRes` resists pushes (bosses 70%, guardians 50%, golems and turtles 50%, Léi 35%). Pulls are a separate effect (`battle.pull`), used by Léi's Chain Pull and the Chain Hook item.
+- **Dodging** is a real hop backwards (`COMBAT.dodgeHop`): no damage, but ground is given up.
+- **Movement speed matters:** fast heroes (Fú Yún +30%, Méi +15%) reach the line first, chase knocked-back enemies and win back ground after a dodge; slow bruisers (Léi −10%) hold it with heavy pushes and knockback resistance.
+- **Positioning AI:** heroes press to a line just past the midpoint (or chase into range) and step back up to it after being pushed; ranged heroes stop at body contact and only give ground when an enemy is right on top of them. Enemies close to attack range; `stance: 'aggressive'` enemies move faster and their shooters press into your half, `'defensive'` shooters hold their own half. Movement uses hysteresis so nobody jitters, ground enemies keep a body-width apart (`COMBAT.minGap`), and nothing leaves the arena.
+- **Items and synergies** for this: Relentless Advance, Thunderous Impact, Battle Standard, Countercurrent, Iron Roots, Reckless Charge, Territorial Guardian, Chain Hook, Swift Pursuit, Heavy Frame, Hit and Run, Boundary Stone, Long Stride; synergies Vanguard Charge, Line Breaker, Wind Rider, Hold the Line, Fighting Spirit, Border Wall, Storm Hammer. New hook triggers: `onKnockback`, `onKnocked`, `onRecover`, `onMomentum`, `modKnockback`, `modKnockOut`; new stats `kbPct`, `kbRes`, `momentumAspd`.
+
+### Battle screen
+
+The battlefield shows the characters, attacks and spells, the hero's health bar over the hero, one boss bar at the top, the two spell buttons and Momentum chevrons. Enemy names, health bars and weakness lists are not drawn on the field: tap an enemy (or the eye button) to open the inspection panel. Effective hits show a big bright burst and a large yellow number, resisted hits a small grey puff and a grey number.
 
 ### Route map
 

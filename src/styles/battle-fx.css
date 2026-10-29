@@ -1424,3 +1424,310 @@
 .spell-bar.two .spell-btn {
   padding-top: 18px;
 }
+
+/* =====================================================================
+   Positioning: zones, Momentum, knockback/dodge feedback, enemy panel
+   ===================================================================== */
+/* the two territories: a faint wash on the ground of each half, and an ink mark at the midpoint */
+.zone {
+  position: absolute;
+  bottom: 0;
+  height: 24%;
+  width: 50%;
+  pointer-events: none;
+  z-index: 1;
+}
+.zone-hero {
+  left: 0;
+  background: linear-gradient(to top, rgba(255, 196, 120, 0.13), transparent);
+}
+.zone-enemy {
+  right: 0;
+  background: linear-gradient(to top, rgba(120, 150, 255, 0.11), transparent);
+}
+.zone-mark {
+  position: absolute;
+  left: 50%;
+  bottom: 9%;
+  width: 3px;
+  height: 7%;
+  margin-left: -1.5px;
+  border-radius: 3px;
+  background: linear-gradient(rgba(30, 20, 20, 0), rgba(30, 20, 20, 0.35));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Momentum chevrons: beside the character (left of heroes, right of enemies) */
+.momentum {
+  position: absolute;
+  bottom: 30%;
+  width: 15px;
+  height: 19px;
+  z-index: 4;
+  overflow: visible;
+  pointer-events: none;
+  animation: momentum-pulse 0.9s ease-in-out infinite;
+}
+.momentum.left {
+  left: -12px;
+}
+.momentum.right {
+  right: -12px;
+}
+.chev-outline,
+.chev-fill {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.chev-outline {
+  stroke: #111;
+  stroke-width: 5;
+}
+.chev-fill {
+  stroke: #ff8a1c;
+  stroke-width: 2.6;
+}
+@keyframes momentum-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+.reduced-motion .momentum {
+  animation: none;
+}
+
+/* knockback: lean back while sliding, squash on landing; pulls lean forward */
+.side-enemy .sprite.st-knocked {
+  transform-origin: 50% 100%;
+  animation: knocked-r 0.32s ease-out;
+}
+.side-hero .sprite.st-knocked {
+  transform-origin: 50% 100%;
+  animation: knocked-l 0.32s ease-out;
+}
+@keyframes knocked-r {
+  30% {
+    transform: rotate(12deg) scale(0.95, 1.04);
+  }
+}
+@keyframes knocked-l {
+  30% {
+    transform: rotate(-12deg) scale(0.95, 1.04);
+  }
+}
+.sprite.st-pulled {
+  transform-origin: 50% 100%;
+  animation: knocked-l 0.32s ease-out;
+}
+.sprite.st-land {
+  transform-origin: 50% 100%;
+  animation: land 0.18s ease-out;
+}
+@keyframes land {
+  40% {
+    transform: scale(1.08, 0.9);
+  }
+}
+/* dodge: the hop is real displacement now, so the sprite only tucks and tilts */
+.side-hero .sprite.st-dodge {
+  animation: hop-r 0.36s ease-out;
+}
+.side-enemy .sprite.st-dodge {
+  animation: hop-l 0.36s ease-out;
+}
+@keyframes hop-r {
+  40% {
+    transform: translateY(-14px) rotate(-10deg) scale(0.96, 1.04);
+  }
+  85% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+}
+@keyframes hop-l {
+  40% {
+    transform: translateY(-14px) rotate(10deg) scale(0.96, 1.04);
+  }
+  85% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+}
+/* dust puffs at the feet (dodge hops, landings) */
+.fx-dust {
+  position: absolute;
+  bottom: 12%;
+  width: 0;
+  height: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.fx-dust > i {
+  position: absolute;
+  width: 16px;
+  height: 10px;
+  margin: -5px 0 0 -8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(225, 205, 170, 0.85), rgba(180, 150, 110, 0) 70%);
+  animation: dust 0.45s ease-out forwards;
+}
+.fx-dust > i:nth-child(1) {
+  --dx: -14px;
+}
+.fx-dust > i:nth-child(2) {
+  --dx: 0px;
+  animation-delay: 0.03s;
+}
+.fx-dust > i:nth-child(3) {
+  --dx: 14px;
+  animation-delay: 0.06s;
+}
+.fx-dust.small > i {
+  width: 11px;
+  height: 7px;
+}
+@keyframes dust {
+  from {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: translate(var(--dx), -10px) scale(1.4);
+    opacity: 0;
+  }
+}
+.fx2-whiff {
+  bottom: 30%;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.6);
+  animation: burst 0.3s ease-out forwards;
+}
+
+/* effectiveness in the hit itself: big bright burst when weak, small grey puff when resisted */
+.fx-impact.eff-weak > i {
+  width: 60px;
+  height: 60px;
+  margin: -30px;
+}
+.fx-impact.eff-weak > b {
+  width: 84px;
+  height: 84px;
+  margin: -42px;
+  --ip: #fff6a0;
+}
+.fx-impact.eff-resist > i {
+  width: 20px;
+  height: 20px;
+  margin: -10px;
+  background: radial-gradient(circle, rgba(200, 200, 210, 0.8) 20%, transparent 70%);
+}
+.fx-impact.eff-resist > b {
+  display: none;
+}
+.float-weakhit {
+  color: #fff27a;
+  font-size: 1.55rem;
+  text-shadow:
+    0 2px 0 #6a3a00,
+    0 0 10px rgba(255, 220, 80, 0.9);
+}
+.float-resisted {
+  color: #b9b9c6;
+  font-size: 0.95rem;
+}
+
+/* subtle camera punch on the heaviest impacts (no zooming around) */
+.stage2.punch .bg-stack {
+  animation: punch 0.22s ease-out;
+}
+@keyframes punch {
+  40% {
+    transform: scale(1.012);
+  }
+}
+.reduced-motion .stage2.punch .bg-stack {
+  animation: none;
+}
+
+/* tap an enemy to inspect it */
+.unit2.side-enemy {
+  cursor: pointer;
+}
+.unit-word {
+  font-family: var(--font-hanzi);
+  font-size: 0.8rem;
+  color: #fff;
+  text-shadow: 0 1px 0 #000, 0 0 6px #6b3fb0;
+  margin-bottom: 2px;
+}
+.enemy-panel {
+  position: absolute;
+  inset: 8px;
+  z-index: 12;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(22, 12, 38, 0.92);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+.ep-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.ep-head .icon-btn {
+  color: #fff;
+}
+.ep-row {
+  padding: 6px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.ep-row.on {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+.ep-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ep-name b {
+  font-family: var(--font-pinyin);
+}
+.ep-zh {
+  font-family: var(--font-hanzi);
+  opacity: 0.8;
+}
+.ep-name small {
+  opacity: 0.7;
+}
+.ep-hp {
+  margin-left: auto;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+.ep-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.ep-tags .aff {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+}
+.ep-blurb {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  opacity: 0.75;
+}

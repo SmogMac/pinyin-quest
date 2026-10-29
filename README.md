@@ -1,4 +1,4 @@
-# Pinyin Quest
+# Moyu Rumble
 
 Learn to **speak and understand** Mandarin with flashcards, spaced repetition and a cute roguelike. **Learning words gives you magic:** you cast spells by solving quick Mandarin puzzles while your hero fights in real time, collect passive items that transform how they fight, and unlock new items, spells and lands by learning more vocabulary.
 
@@ -6,7 +6,7 @@ Learn to **speak and understand** Mandarin with flashcards, spaced repetition an
 - Mandarin audio on every card (normal and slow) via the browser's zh-CN voice, with a slot for recorded clips.
 - Study modes: teaching card, flashcard (Again/Hard/Good/Easy), multiple choice, **listening**, recall (English → pinyin), plus optional speaking practice.
 - SM-2-style spaced repetition, tracked **separately** for recognition, listening, recall and speaking.
-- **Adventure:** real-time autobattles, two spells (your hero's signature plus one found on the road) cast through Mandarin puzzles (combat never pauses), 58 passive items, 27 synergies, 8 elements with reactions, 9 biomes with battlefield effects, branching scroll-map routes, the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**.
+- **Adventure:** real-time autobattles, two spells (your hero's signature plus one found on the road) cast through Mandarin puzzles (combat never pauses), positional combat (knockback, dodge hops, a Hero Zone and an Enemy Zone, and **Momentum** for whoever holds the other side's half), 71 passive items, 34 synergies, 8 elements with reactions, 9 biomes with battlefield effects, branching scroll-map routes, the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**.
 - **Soundless Mode:** play 100% of the game without audio; listening exercises are swapped for text and picture ones and never counted as missed.
 - Passive learning everywhere: enemies, items, spells, reactions and places are named in pinyin first (e.g. 石头人 shí tou rén, "stone person"), with Hanzi and English beside them. Tap a name to hear it.
 - Installable PWA that works offline. All progress stays on the device, with JSON export and import.
@@ -15,7 +15,7 @@ Learn to **speak and understand** Mandarin with flashcards, spaced repetition an
 
 ## Run it
 
-**Just want to play?** Double-click `Play Pinyin Quest.bat`. For your phone (install, APK, automatic updates), see **[docs/INSTALL.md](docs/INSTALL.md)**.
+**Just want to play?** Double-click `Play Moyu Rumble.bat`. For your phone (install, APK, automatic updates), see **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 Requires Node 18+ (tested with Node 24).
 
@@ -135,13 +135,13 @@ Recorded clips take priority over TTS, play at 0.7× in slow mode, and fall back
 | **Xīn Yí** 欣怡, Cheerful Wanderer | from the start | **jiā yóu 加油:** heal, shield, attack speed | **kāi xīn 开心:** every successful cast heals 6% (first one also shields) |
 | **Méi** 梅, Silent Blade | account level 3 | **bá dāo 拔刀:** critical slash on every enemy + Curse | **méi huā 梅花:** sword-draw opener; each cast makes her next attack a splashing crit |
 | **Ruì Zhé** 睿哲, Nervous Scholar | account level 5 | **zhī shi 知识:** 3 scrolls, each applies a random status | **jǐn zhāng 紧张:** +10% spell power per different element; panics at half HP (cooldowns reset) |
-| **Huǒ Jìn** 火烬, Grumpy Fire Master | account level 8 | **diǎn huǒ 点火:** set everything burning | **huǒ hou 火候:** fire attacks, every 4th is a burning bolt; +15% damage to Burning enemies; fire items appear twice as often |
+| **Huǒ Jìn** 火烬, Grumpy Fire Master | account level 8 | **diǎn huǒ 点火:** set everything burning | **huǒ hou 火候:** fire attacks, every 4th is a burning bolt that blasts the target back; +20% damage to Burning enemies; fire items appear twice as often |
 | **Fú Yún** 浮云, Lucky Assassin | account level 10 | **xuán fēng 旋风:** wind damage to every enemy, then +dodge and attack speed | **yùn qi 运气:** every dodge sets up a guaranteed crit with a wind slash on all other enemies; once per battle survives a knockout at 1 HP |
 | **Léi** 雷, Thunder Brawler | account level 12 | **léi tíng yī jī 雷霆一击 (Thunder Crash):** slam the charged ball and chain: lightning around the target, Shock, and arcs to every Wet enemy | **pí qi 脾气 (Static Temper):** heavy swings also hit enemies beside the target; every 4 hits charge a lightning burst (charge pips shown over Léi) |
 
 ### Changing battle balance
 
-Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `enemies.js`, `spells.js`, `items.js`, `synergies.js`, `biomes.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who picks items at random and solves 85% of spell puzzles: the dragon is beaten in 40–72% of runs depending on the hero; normal battles last 9–15s, elites 13–28s, guardians 17–28s, the dragon 24–44s. Balance was retuned for two spell slots: shorter signature cooldowns, slightly softer enemies, and a larger per-item attack bonus so passive items shape more of the build.
+Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `enemies.js`, `spells.js`, `items.js`, `synergies.js`, `biomes.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who picks items at random and solves 85% of spell puzzles: the dragon is beaten in 36–68% of runs depending on the hero; normal battles last 8–15s, elites 13–31s, guardians 17–27s, the dragon 24–44s. Balance was retuned for two spell slots: shorter signature cooldowns, slightly softer enemies, and a larger per-item attack bonus so passive items shape more of the build.
 
 ## Replacing art
 
@@ -153,7 +153,7 @@ Gameplay code only refers to **asset keys**. All art is resolved in `src/assets/
 
 - **Audio** depends on the device having a Mandarin TTS voice. Without one, the app says so; it doesn't fail silently. No recorded clips are bundled yet; drop them in as described above.
 - **Speaking practice** (off by default, in Settings) uses the browser's speech recognition when available (Chrome/Edge). It can only check whether the recognised characters match. It **cannot judge tones**, so self-grading is always offered.
-- **Passive-only builds** (never casting) are viable but hard: about 3–23% of simulated runs beat the dragon even with random item picks, versus 40–72% for players who solve 85% of puzzles.
+- **Passive-only builds** (never casting) are viable but hard: 0–37% of simulated runs beat the dragon with random item picks (heavy and fast fighters like Léi and Fú Yún do best; Xīn Yí, who relies on her spell, does worst), versus 36–68% for players who solve 85% of puzzles.
 - **Performance:** measured in desktop Chrome (dev build, 375×812 viewport): steady 120 fps on a 120 Hz display during a 2× speed boss fight, worst frame 9 ms, no long tasks, about 1.5 ms of rendering per frame. Not yet measured on a real Android phone. Turn on **Settings → Performance overlay** to see FPS, frame time and effect counts on your device.
 - **Picture puzzles** use emoji placeholders until illustrations are added.
 - **Example sentences** cover about 95 of the most common words, which limits phrase-building puzzles to those words.

@@ -118,7 +118,7 @@ test('saved runs with three spells migrate to two (extra refunded as ink)', () =
 
 test('Lei: Static Temper charges on hits and bursts with lightning; Thunder Crash shocks', () => {
   const b = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['golem', 'golem'], seed: 2 });
-  const evs = play(b, 12);
+  const evs = play(b, 25);
   assert.ok(evs.some((e) => e.type === 'burst'), 'a charged swing releases a burst');
   assert.ok(evs.some((e) => e.type === 'hit' && e.element === 'lightning' && e.kind === 'proc'));
   const c = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['golem'], seed: 2 });
@@ -149,6 +149,125 @@ test('route maps: every node is connected and no two routes cross', () => {
           assert.ok(!((a.col - c.col) * (b.col - d.col) < 0), `seed ${seed} act ${act}: ${a.id}>${b.id} crosses ${c.id}>${d.id}`);
         }
       }
+    }
+  }
+});
+
+// ------------------------------------------------------------------ positioning
+const solo = (heroId, enemies, opts = {}) => new Battle({ hero: buildHero({ heroId, ...opts }), enemies, seed: 4, ...opts.battle });
+const tick = (b, s) => {
+  for (let t = 0; t < s; t += COMBAT.dt) b.step(COMBAT.dt);
+};
+
+test('knockback moves the target smoothly over several ticks, not instantly', () => {
+  const b = solo('xinyi', ['slime']);
+  const e = b.foes()[0];
+  const x0 = e.x;
+  b.knockback(e, 10, { src: b.hero });
+  assert.equal(e.x, x0, 'no teleport on the hit itself');
+  b.physics(COMBAT.dt);
+  const first = e.x - x0;
+  assert.ok(first > 0 && first < 6, `first tick covers part of it (${first.toFixed(2)})`);
+  for (let i = 0; i < 30; i++) b.physics(COMBAT.dt);
+  assert.ok(Math.abs(e.x - x0 - 10) < 1.5, `total ≈ 10 (${(e.x - x0).toFixed(2)})`);
+});
+
+test('knockback resistance, bosses and pulls', () => {
+  const b = solo('xinyi', ['slime', 'golem']);
+  const [slime, golem] = b.foes();
+  assert.ok(b.knockback(golem, 10) < b.knockback(slime, 10), 'golems resist pushes');
+  const boss = solo('xinyi', ['wyrm']).foes()[0];
+  assert.ok(boss.kbRes >= 0.6, 'bosses are hard to move');
+  const c = solo('lei', ['slime']);
+  const e = c.foes()[0];
+  const x0 = e.x;
+  c.pull(e, 8, { src: c.hero });
+  for (let i = 0; i < 30; i++) c.physics(COMBAT.dt);
+  assert.ok(e.x < x0, 'pull drags the enemy toward the hero');
+  assert.ok(e.x >= c.hero.x + 5, 'never through the hero');
+});
+
+test('nothing is pushed out of the arena', () => {
+  const b = solo('xinyi', ['slime']);
+  const e = b.foes()[0];
+  b.knockback(e, 500);
+  b.knockback(b.hero, 500);
+  for (let i = 0; i < 60; i++) b.physics(COMBAT.dt);
+  assert.ok(e.x <= COMBAT.worldW - 2 && b.hero.x >= 2);
+});
+
+test('a dodge is a real hop backwards', () => {
+  const b = solo('fuyun', ['goblin']);
+  b.hero.dodge = 1; // always dodge
+  const x0 = b.hero.x;
+  const goblin = b.foes()[0];
+  b.damage(goblin, b.hero, 10, { kind: 'attack' });
+  for (let i = 0; i < 30; i++) b.physics(COMBAT.dt);
+  assert.ok(x0 - b.hero.x > COMBAT.dodgeHop * 0.8, `hopped back ${(x0 - b.hero.x).toFixed(1)}`);
+  assert.equal(b.hero.hp, b.hero.maxHp, 'and took no damage');
+});
+
+test('Momentum: gained in the opposing half, with a buffer at the line, and it speeds up attacks', () => {
+  const b = solo('xinyi', ['golem']);
+  const H = b.hero;
+  const mid = COMBAT.worldW / 2;
+  const at = (x) => {
+    H.x = x;
+    b.updateMomentum();
+    return !!H.momentum;
+  };
+  assert.equal(at(mid - 10), false);
+  assert.equal(at(mid + 1), false, 'not yet: inside the buffer');
+  assert.equal(at(mid + COMBAT.zoneBuffer + 1), true, 'deep enough: Momentum');
+  assert.equal(at(mid + 1), true, 'hysteresis: keeps it on the line');
+  assert.equal(at(mid - COMBAT.zoneBuffer - 1), false, 'back home: lost');
+  const base = b.attackSpeed(H);
+  at(mid + 10);
+  assert.ok(Math.abs(b.attackSpeed(H) / base - (1 + COMBAT.momentumAspd)) < 1e-9, 'attack speed +25%');
+  // enemies mirror it in the hero's half
+  const g = b.foes()[0];
+  g.x = mid - 10;
+  b.updateMomentum();
+  assert.equal(!!g.momentum, true);
+});
+
+test('faster heroes reach the midpoint sooner', () => {
+  const when = (heroId) => {
+    const b = solo(heroId, ['turtle']);
+    let t = 0;
+    while (b.hero.x < COMBAT.worldW / 2 && t < 20) {
+      b.step(COMBAT.dt);
+      t += COMBAT.dt;
+    }
+    return t;
+  };
+  assert.ok(when('fuyun') < when('lei'), 'Fú Yún (fast) beats Léi (slow) to the line');
+});
+
+test('positioning is stable: no units overlap and nobody jitters back and forth', () => {
+  const b = solo('mei', ['slime', 'goblin', 'golem']);
+  let flips = 0;
+  let lastDir = 0;
+  let lastX = b.hero.x;
+  for (let i = 0; i < 400 && !b.result; i++) {
+    b.step(COMBAT.dt);
+    const ground = b.foes().filter((f) => !f.flying).sort((a, c) => a.x - c.x);
+    for (let j = 1; j < ground.length; j++) assert.ok(ground[j].x - ground[j - 1].x >= COMBAT.minGap - 1e-6, 'enemies keep a body-width apart');
+    const dx = b.hero.x - lastX;
+    const dir = Math.abs(dx) < 0.05 ? 0 : Math.sign(dx);
+    if (dir && lastDir && dir !== lastDir && !b.hero.vx) flips++;
+    if (dir) lastDir = dir;
+    lastX = b.hero.x;
+  }
+  assert.ok(flips < 25, `self-driven direction changes: ${flips}`);
+});
+
+test('battles with positioning still always resolve', () => {
+  for (const heroId of ['xinyi', 'mei', 'ruizhe', 'huojin', 'fuyun', 'lei']) {
+    for (const enemies of [['slime', 'goblin', 'bat'], ['golem'], ['wyrm']]) {
+      const b = new Battle({ hero: buildHero({ heroId, accountLevel: 8 }), enemies, seed: 9, floor: 8 });
+      tick(b, COMBAT.maxDuration + 1);
+      assert.ok(['win', 'lose'].includes(b.result), `${heroId} vs ${enemies}: ${b.result}`);
     }
   }
 });

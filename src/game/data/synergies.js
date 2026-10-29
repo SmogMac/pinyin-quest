@@ -3,6 +3,69 @@
 // item hooks read (e.g. b.flags.shieldFreeze makes Bursting Shield freeze enemies).
 
 export const SYNERGIES = {
+  // ---------------------------------------------------------------- positioning & momentum
+  vanguard_charge: {
+    py: 'chōng fēng', zh: '冲锋', en: 'Vanguard Charge', requires: ['reckless_charge', 'swift_pursuit'], archetype: 'Fast Fighter',
+    desc: 'Gaining Momentum also grants +40% attack speed for 4s.',
+    hooks: { onMomentum: (b, p) => p.on && b.addBuff(b.hero, { id: 'vanguard', dur: 4, stats: { aspdPct: 0.4 } }) },
+  },
+  line_breaker: {
+    py: 'pò zhèn', zh: '破阵', en: 'Line Breaker', requires: ['thunder_impact', 'heavy_frame'], archetype: 'Heavy Bruiser',
+    desc: 'Enemies you knock back at least 6 are Stunned for 0.6s.',
+    hooks: { onKnockback: (b, p) => !p.pull && p.dist >= 6 && b.applyStatus(p.target, 'stun', { dur: 0.6, src: b.hero }) },
+  },
+  wind_rider: {
+    py: 'yíng fēng', zh: '迎风', en: 'Wind Rider', requires: ['countercurrent', 'hit_and_run'], archetype: 'Wind Dancer',
+    desc: 'Every dodge also grants a 12 shield and +25% dodge for 1.5s.',
+    hooks: {
+      onDodge(b) {
+        b.addShield(b.hero, 12);
+        b.addBuff(b.hero, { id: 'wind_rider', dur: 1.5, stats: { dodge: 0.25 } });
+      },
+    },
+  },
+  hold_the_line: {
+    py: 'shǒu chéng', zh: '守城', en: 'Hold the Line', requires: ['territorial_guardian', 'iron_roots'], archetype: 'Earth Guardian',
+    desc: 'In your own half you cannot be knocked back, and melee attackers take 30% of their damage back.',
+    hooks: {
+      modKnockback: (b, p) => b.inOwnZone(b.hero) && (p.dist = 0),
+      onDamaged(b, p) {
+        if (p.kind === 'attack' && p.src?.alive && (p.src.range || 0) <= 20 && b.inOwnZone(b.hero)) b.damage(b.hero, p.src, p.dealt * 0.3, { element: 'earth', kind: 'thorns' });
+      },
+    },
+  },
+  fighting_spirit: {
+    py: 'zhàn yì', zh: '战意', en: 'Fighting Spirit', requires: ['battle_standard', 'relentless'], archetype: 'Fast Fighter',
+    desc: 'While you have Momentum: +15% critical chance and 20% less knockback taken.',
+    hooks: {
+      onTick: (b) => b.hero.momentum && b.addBuff(b.hero, { id: 'spirit', dur: 1.1, stats: { crit: 0.15 } }),
+      modKnockback: (b, p) => b.hero.momentum && (p.dist *= 0.8),
+    },
+  },
+  border_wall: {
+    py: 'jiè qiáng', zh: '界墙', en: 'Border Wall', requires: ['boundary_stone', 'qiang'], archetype: 'Earth Guardian',
+    desc: 'Casting Stone Wall drives every enemy in your half back across the midpoint.',
+    hooks: {
+      onCast(b, c) {
+        if (c.spell !== 'qiang') return;
+        for (const f of b.foes()) if (!b.inOwnZone(f)) b.knockback(f, Math.max(4, b.mid - f.x + 6), { src: b.hero });
+      },
+    },
+  },
+  storm_hammer: {
+    py: 'léi chuí', zh: '雷锤', en: 'Storm Hammer', requires: ['thunder_impact', 'leiting'], archetype: 'Heavy Bruiser',
+    desc: 'Thunder Crash launches enemies twice as far, and enemies it knocks into others Shock them too.',
+    hooks: {
+      // the flag is up only while Thunder Crash's effect runs (modSpellPower → effect → onCast)
+      modSpellPower: (b, c) => c.spell === 'leiting' && (b.flags.slamming = true),
+      modKnockOut: (b, p) => b.flags.slamming && (p.dist *= 2),
+      onCast(b, c) {
+        if (c.spell !== 'leiting') return;
+        b.flags.slamming = false;
+        for (const f of b.foes()) if (f.statuses.shock) for (const g of b.near(f, 10)) b.applyStatus(g, 'shock', { dur: 2, src: b.hero });
+      },
+    },
+  },
   chain_explosion: {
     py: 'bào zhà', zh: '爆炸', en: 'Chain Explosion', requires: ['ember_tip', 'split_ink'], archetype: 'Burning Swarm',
     desc: 'Burning enemies explode on death: 30 fire damage to nearby enemies and spread their Burn.',

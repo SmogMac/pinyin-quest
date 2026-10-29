@@ -3,12 +3,9 @@ import { useStore, update } from '../store/store.js';
 import { levelInfo, todayXp, dueCount, masteryCounts } from '../store/progress.js';
 import { SESSION_PRESETS } from '../learn/session.js';
 import { useState } from 'react';
-import { selectedHero } from '../game/achievements.js';
 import { Bar, Ring, Modal } from '../components/ui.jsx';
-import HeroCarousel from '../components/HeroCarousel.jsx';
-import HeroInfo from '../components/HeroInfo.jsx';
+import HeroShowcase from '../components/HeroShowcase.jsx';
 import Icon from '../assets/icons/Icons.jsx';
-import { BgSky, BgFar, BgMid, BgGround } from '../assets/backgrounds/Backgrounds.jsx';
 import { AudioStatusBanner } from '../components/AudioButtons.jsx';
 import { play } from '../audio/sfx.js';
 
@@ -22,7 +19,6 @@ export default function Home({ go }) {
   const learned = Object.keys(s.words).length;
   const run = s.adventure.current;
   const isNew = learned === 0;
-  const [shownHero, setShownHero] = useState(() => selectedHero(s));
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -34,7 +30,7 @@ export default function Home({ go }) {
         </div>
         <div className="home-xp">
           <div className="home-xp-row">
-            <span className="app-name">Pinyin Quest</span>
+            <span className="app-name">Moyu Rumble</span>
             <span className="muted small">
               {lv.into}/{lv.need} XP
             </span>
@@ -75,7 +71,8 @@ export default function Home({ go }) {
           className="big-action adventure"
           onClick={() => {
             play('pick');
-            go('adventure');
+            // the big button resumes a run straight away; the Adventure menu has New/Abandon
+            go('adventure', run ? { resume: true } : {});
           }}
         >
           <Icon name="swords" size={28} />
@@ -98,26 +95,7 @@ export default function Home({ go }) {
         ))}
       </div>
 
-      <section className="hero-showcase" aria-label="Choose your hero">
-        <div className="home-hero-stage">
-          <div className="bg-stack mini">
-            <div className="bg-layer">
-              <BgSky theme="forest" />
-            </div>
-            <div className="bg-layer far">
-              <BgFar theme="forest" />
-            </div>
-            <div className="bg-layer mid">
-              <BgMid theme="forest" />
-            </div>
-            <div className="bg-layer ground">
-              <BgGround theme="forest" />
-            </div>
-          </div>
-          <HeroCarousel onCenterChange={setShownHero} />
-        </div>
-        <HeroInfo heroId={shownHero} />
-      </section>
+      <HeroShowcase />
 
       <AudioStatusBanner />
 

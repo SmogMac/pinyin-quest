@@ -1,8 +1,8 @@
-# Playing Pinyin Quest
+# Playing Moyu Rumble
 
 ## On this PC (no internet needed)
 
-Double-click **`Play Pinyin Quest.bat`** in the game folder. The game opens in your browser.
+Double-click **`Play Moyu Rumble.bat`** in the game folder. The game opens in your browser.
 Keep the black window open while you play; close it when you're done.
 
 ## On your Android phone
@@ -27,7 +27,7 @@ and every update you make reaches the phone automatically.
 
 1. Open that address in **Chrome** on your phone.
 2. Tap the **⋮** menu (top right) → **Install app** (or **Add to Home screen → Install**).
-3. Pinyin Quest now has its own icon in your app drawer and opens full-screen, like any app.
+3. Moyu Rumble now has its own icon in your app drawer and opens full-screen, like any app.
    Chrome builds a real Android app package for it behind the scenes.
 4. For Mandarin audio: Android **Settings → Text-to-speech output → Google → ⚙ → Install voice data →
    Chinese (Mandarin)**. (Exact menu names vary a little by phone.)

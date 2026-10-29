@@ -49,7 +49,7 @@ export const SPELLS = {
     },
   },
   dianhuo: {
-    py: 'diǎn huǒ', zh: '点火', en: 'Ignite', element: 'fire', cd: 8, tier: 1, signature: true, tags: ['damage', 'aoe', 'terrain'],
+    py: 'diǎn huǒ', zh: '点火', en: 'Ignite', element: 'fire', cd: 7, tier: 1, signature: true, tags: ['damage', 'aoe', 'terrain'],
     puzzles: ['syllables', 'picture'],
     desc: 'Set every enemy Burning (4/s) and the ground ablaze for 6s.',
     cast(b, c) {
@@ -64,10 +64,11 @@ export const SPELLS = {
   xuanfeng: {
     py: 'xuán fēng', zh: '旋风', en: 'Whirlwind', element: 'wind', cd: 8, tier: 1, signature: true, tags: ['damage', 'aoe', 'control', 'defensive'],
     puzzles: ['syllables', 'shape'],
-    desc: 'Spin through every enemy for 16 wind damage, then gain +30% dodge and +25% attack speed for 4s.',
+    desc: 'Spin through every enemy for 16 wind damage and fling them back, then gain +30% dodge and +25% attack speed for 4s.',
     cast(b, c) {
       for (const f of b.foes()) {
         b.damage(b.hero, f, 16 * c.power, { element: c.element, kind: 'spell' });
+        b.knockback(f, 5, { src: b.hero });
       }
       b.addBuff(b.hero, { id: 'whirlwind', dur: 4, stats: { dodge: 0.3, aspdPct: 0.25 } });
     },
@@ -76,7 +77,7 @@ export const SPELLS = {
   leiting: {
     py: 'léi tíng yī jī', zh: '雷霆一击', en: 'Thunder Crash', element: 'lightning', cd: 8.5, tier: 2, signature: true, tags: ['damage', 'aoe', 'melee', 'chain'],
     puzzles: ['syllables', 'phrase'],
-    desc: 'Slam the charged ball and chain down: 26 lightning damage around the nearest enemy and Shock (3s). Lightning then arcs to every Wet enemy for half.',
+    desc: 'Slam the charged ball and chain down: 26 lightning damage around the nearest enemy, Shock (3s) and a shockwave that launches them back. Lightning then arcs to every Wet enemy for half.',
     cast(b, c) {
       const t = front(b);
       if (!t) return;
@@ -85,6 +86,7 @@ export const SPELLS = {
       for (const f of hit) {
         b.damage(b.hero, f, 26 * c.power, { element: c.element, kind: 'spell' });
         b.applyStatus(f, 'shock', { dur: 3, src: b.hero });
+        b.knockback(f, 8, { src: b.hero });
       }
       for (const f of b.foes()) {
         if (hit.has(f) || !f.statuses.wet) continue;
@@ -98,14 +100,18 @@ export const SPELLS = {
   huoqiu: {
     py: 'huǒ qiú', zh: '火球', en: 'Fireball', element: 'fire', cd: 8, tier: 1, requires: ['火'], tags: ['damage'],
     puzzles: ['syllables', 'listen'],
-    desc: 'A fireball hits the nearest enemy for 28 and Burns it; the blast hits nearby enemies for half.',
+    desc: 'A fireball hits the nearest enemy for 28, Burns it and blasts it back; the explosion hits and pushes nearby enemies for half.',
     cast(b, c) {
       const t = front(b);
       if (!t) return;
       b.emit({ type: 'shot', src: 'hero', tgt: t.id, element: c.element, spell: true, big: true });
       b.damage(b.hero, t, 28 * c.power, { element: c.element, kind: 'spell' });
       b.applyStatus(t, 'burn', { dps: 4 * c.power, src: b.hero });
-      for (const f of b.near(t, 14)) b.damage(b.hero, f, 14 * c.power, { element: c.element, kind: 'spell' });
+      b.knockback(t, 7, { src: b.hero });
+      for (const f of b.near(t, 14)) {
+        b.damage(b.hero, f, 14 * c.power, { element: c.element, kind: 'spell' });
+        b.knockback(f, 4, { src: b.hero });
+      }
     },
   },
   dongtian: {

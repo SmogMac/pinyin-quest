@@ -36,7 +36,10 @@ export function makeRng(seed) {
 const STAT_KEYS = [
   'atk', 'atkPct', 'aspdPct', 'crit', 'critDmg', 'maxHp', 'maxHpPct', 'def', 'dodge', 'block', 'dr', 'lifesteal',
   'speedPct', 'spellPower', 'cdr', 'healMult', 'shieldMult', 'statusDur', 'pierce', 'bounce', 'split', 'dmgPct',
+  'kbPct', 'kbRes', 'momentumAspd',
 ];
+const MID = COMBAT.worldW / 2;
+const reach = (r) => (r > 20 ? r * COMBAT.rangedReach : r);
 
 /** Hero stats for a run: base + account bonus + passive item stats. */
 export function buildHero({ heroId = DEFAULT_HERO, items = [], spells = null, accountLevel = 1 } = {}) {
@@ -67,7 +70,7 @@ export function buildHero({ heroId = DEFAULT_HERO, items = [], spells = null, ac
     block: Math.min(0.6, s.block),
     dr: Math.min(COMBAT.maxDr, s.dr),
     lifesteal: s.lifesteal,
-    speed: 14 * (1 + s.speedPct),
+    speed: COMBAT.heroSpeed * (1 + s.speedPct),
     spellPower: s.spellPower,
     cdr: Math.min(0.6, s.cdr),
     healMult: 1 + s.healMult,
@@ -75,8 +78,12 @@ export function buildHero({ heroId = DEFAULT_HERO, items = [], spells = null, ac
     statusDur: 1 + s.statusDur,
     pierce: s.pierce, bounce: s.bounce, split: s.split,
     dmgPct: s.dmgPct,
-    range: def.attack.range,
+    range: reach(def.attack.range),
     attackElement: def.attack.element,
+    // knockback dealt by basic attacks (heavier weapons push further) and resistance to being pushed
+    kb: (def.attack.kb ?? (def.attack.range <= 20 ? 3 : 1.5)) * (1 + s.kbPct),
+    kbRes: Math.min(0.9, s.kbRes),
+    momentumAspd: s.momentumAspd,
   };
 }
 
@@ -97,8 +104,13 @@ export function scaleEnemy(id, floor, empower = 0) {
     atk: st.atk * (1 + SCALING.atkPerFloor * f) * (1 + empower) * (def.boss ? SCALING.bossAtk : SCALING.enemyAtk),
     def: (st.def || 0) + Math.floor(SCALING.defPerFloor * f),
     aspd: st.aspd, crit: st.crit || 0, critDmg: 1.5, dodge: st.dodge || 0, block: 0, dr: 0,
-    lifesteal: st.drain || 0, range: def.ai?.range ?? 9, speed: def.ai?.speed ?? 11,
+    lifesteal: st.drain || 0, range: reach(def.ai?.range ?? 9), speed: (def.ai?.speed ?? 11) * COMBAT.enemySpeedMult,
     attackElement: def.element || 'physical', affinity: aff,
+    // knockback: bosses and big bodies resist it and hit harder; stance shapes positioning
+    // (telegraphed charge attacks push 2.5× further: that's where bosses really shove the hero)
+    kb: def.kb ?? (def.boss ? 3.2 : def.guardian ? 2.6 : (def.ai?.range ?? 9) > 20 ? 1 : 1.8),
+    kbRes: def.kbRes ?? (def.boss ? 0.7 : def.guardian ? 0.5 : def.elite ? 0.3 : 0),
+    stance: def.stance || 'normal',
   };
 }
 
@@ -126,7 +138,7 @@ export class Battle {
     this.castsThisBattle = 0;
 
     const H = {
-      id: 'hero', side: 0, name: hero.hdef.en, sprite: hero.hdef.sprite, x: 14, hp: Math.min(heroHp ?? hero.maxHp, hero.maxHp),
+      id: 'hero', side: 0, name: hero.hdef.en, sprite: hero.hdef.sprite, x: 22, vx: 0, hp: Math.min(heroHp ?? hero.maxHp, hero.maxHp),
       ...hero, statuses: {}, shield: 0, atkTimer: 0.5, alive: true, still: 0, buffs: [], attackCount: 0, immune: {},
     };
     this.hero = H;
@@ -137,7 +149,8 @@ export class Battle {
     }));
 
     this.units = [H];
-    enemies.forEach((id, i) => this.spawnEnemy(id, 72 + i * 9, empower));
+    // both sides start the same distance from the midpoint
+    enemies.forEach((id, i) => this.spawnEnemy(id, COMBAT.worldW - 22 + i * 8, empower));
     this.terrain = {};
     for (const tr of [...(this.biome.terrain || []), ...extraTerrain]) this.terrain[tr] = Infinity;
     this.biomeTimers = (this.biome.events || []).map((e) => ({ ...e, timer: e.every * 0.7 }));
@@ -163,7 +176,7 @@ export class Battle {
   spawnEnemy(id, x, empower = 0, extra = {}) {
     const s = scaleEnemy(id, this.floor, empower);
     const u = {
-      id: `e${this.uid++}`, side: 1, ...s, ...extra, x: Math.min(98, x), hp: s.maxHp, statuses: {}, shield: 0, alive: true,
+      id: `e${this.uid++}`, side: 1, ...s, ...extra, x: Math.min(COMBAT.worldW - 3, x), vx: 0, hp: s.maxHp, statuses: {}, shield: 0, alive: true,
       atkTimer: 0.8 + this.rng() * 0.6, buffs: [], immune: {},
       ai: { ...(s.edef.ai || {}) }, aiTimers: {}, phase: 0, charging: null, baseAffinity: { ...s.affinity },
     };
@@ -264,6 +277,8 @@ export class Battle {
       }
       if (this.rng() < (tgt.dodge || 0) + this.buffSum(tgt, 'dodge')) {
         this.emit({ type: 'dodge', src: src?.id, tgt: tgt.id });
+        // a dodge is a real hop backwards: no damage, but ground is given up
+        this.knockback(tgt, COMBAT.dodgeHop, { hop: true });
         if (tgt === H) this.trigger('onDodge', { src, ranged: (src?.range || 0) > 20 });
         return 0;
       }
@@ -326,6 +341,10 @@ export class Battle {
       reaction: ctx.reaction?.id, hp: tgt.hp, shield: tgt.shield,
     });
     if (src?.side === 0) this.dealt += total;
+    // impact: basic attacks push by their weight (crits and heavy weapons push further)
+    if (kind === 'attack' && total > 0 && src && !opts.sub && !opts.noKnock && tgt.alive) {
+      this.knockback(tgt, (src.kb || 0) * (ctx.crit ? 1.5 : 1) * (opts.kbMult ?? 1), { src });
+    }
     if (tgt === H) this.taken += total;
     // lifesteal / curse drain
     if (src && src.alive && kind !== 'dot' && total > 0) {
@@ -450,11 +469,116 @@ export class Battle {
     return amt;
   }
 
-  knockback(unit, d) {
-    if (!unit.alive || unit.boss) d *= unit.boss ? 0.3 : 1;
-    unit.x = Math.min(98, unit.x + d);
-    if (unit.charging && d >= 6) {
-      unit.charging.left += 0.4;
+  /**
+   * Physical knockback: the unit slides `d` units away from the other side over ~0.3s (resisted by
+   * kbRes), then needs a short recovery before moving or attacking. `pull` drags it the other way.
+   * Returns the distance actually applied.
+   */
+  knockback(unit, d, { src = null, pull = false, hop = false } = {}) {
+    if (!unit?.alive || !(d > 0)) return 0;
+    let dist = d;
+    if (!hop) {
+      const res = Math.min(0.9, (unit.kbRes || 0) + this.buffSum(unit, 'kbRes'));
+      dist *= 1 - res;
+      if (unit === this.hero) dist = this.trigger('modKnockback', { dist, src, pull }).dist;
+      if (src === this.hero && unit.side === 1) dist = this.trigger('modKnockOut', { dist, target: unit, pull }).dist;
+    }
+    if (dist < 0.4) return 0;
+    const dir = (unit.side === 1 ? 1 : -1) * (pull ? -1 : 1);
+    // initial speed chosen so the slide covers exactly `dist` with the fixed-step decay
+    const k = 1 - Math.exp(-COMBAT.kbDecay * COMBAT.dt);
+    unit.vx = (unit.vx || 0) + (dir * dist * k) / COMBAT.dt;
+    unit.hopping = hop;
+    // light taps only nudge; real pushes (3+) interrupt movement and attacks until recovered
+    unit.kbHeavy = !hop && (unit.kbHeavy || dist >= COMBAT.heavyKb);
+    if (unit.charging && dist >= 6 && !hop) unit.charging.left += 0.4;
+    this.emit({ type: hop ? 'hop' : 'knock', tgt: unit.id, d: r2(dist), pull });
+    if (!hop && src === this.hero && unit.side === 1) this.trigger('onKnockback', { target: unit, dist, pull });
+    if (!hop && unit === this.hero) this.trigger('onKnocked', { dist, src });
+    return dist;
+  }
+  pull(unit, d, opts = {}) {
+    return this.knockback(unit, d, { ...opts, pull: true });
+  }
+  /** The midpoint between the Hero Zone (left) and the Enemy Zone (right). */
+  get mid() {
+    return MID;
+  }
+  /** Sliding from a knockback or dodge, or recovering from one: no moving or attacking. */
+  staggered(u) {
+    return (Boolean(u.vx) && (u.kbHeavy || u.hopping)) || (u.recover || 0) > 0;
+  }
+  /** True while the unit stands in the opposing team's half (with hysteresis). */
+  inOwnZone(u) {
+    return u.side === 0 ? u.x < MID : u.x > MID;
+  }
+  attackSpeed(u) {
+    const momentum = u.momentum ? COMBAT.momentumAspd + (u.momentumAspd || 0) : 0;
+    return u.aspd * (1 + this.buffSum(u, 'aspdPct') + momentum) * (u.statuses.chill ? 0.65 : 1);
+  }
+
+  /** Knockback slides, recovery, overlap and bounds; runs every tick before movement AI. */
+  physics(dt) {
+    const H = this.hero;
+    const W = COMBAT.worldW;
+    const decay = Math.exp(-COMBAT.kbDecay * dt);
+    for (const u of this.units) {
+      if (!u.alive) continue;
+      if (u.recover > 0) u.recover = Math.max(0, u.recover - dt);
+      if (!u.vx) continue;
+      u.x += u.vx * dt;
+      u.vx *= decay;
+      let stop = Math.abs(u.vx) < 1.2;
+      // pulled enemies stop in front of the hero; nothing leaves the arena
+      if (u.side === 1 && u.x < H.x + 5) {
+        u.x = H.x + 5;
+        stop = true;
+      }
+      if (u.x < 2 || u.x > W - 2) {
+        u.x = Math.max(2, Math.min(W - 2, u.x));
+        stop = true;
+      }
+      if (stop) {
+        u.vx = 0;
+        if (u.kbHeavy) {
+          u.recover = COMBAT.kbRecover;
+          if (u === H) this.trigger('onRecover', {});
+        }
+        u.kbHeavy = false;
+        this.emit({ type: 'land', tgt: u.id, hop: !!u.hopping });
+        u.hopping = false;
+      }
+    }
+    this.separate();
+  }
+  /** Ground enemies keep a body-width apart (a knocked enemy shoves the one behind it). */
+  separate() {
+    const W = COMBAT.worldW;
+    const ground = this.foes()
+      .filter((f) => !f.flying)
+      .sort((a, b) => a.x - b.x);
+    for (let i = 1; i < ground.length; i++) {
+      const min = ground[i - 1].x + COMBAT.minGap;
+      if (ground[i].x < min) ground[i].x = min;
+    }
+    // squeezed against the right wall: shift the line back left instead
+    for (let i = ground.length - 1; i >= 0; i--) {
+      const max = i === ground.length - 1 ? W - 2 : ground[i + 1].x - COMBAT.minGap;
+      if (ground[i].x > max) ground[i].x = max;
+    }
+  }
+
+  /** Momentum: in the opposing half → attack speed. A small buffer stops flicker on the line. */
+  updateMomentum() {
+    const b = COMBAT.zoneBuffer;
+    for (const u of this.units) {
+      if (!u.alive || (u.side === 0 && u !== this.hero)) continue;
+      const deep = u.side === 0 ? u.x - MID : MID - u.x; // >0 = inside the opposing half
+      const on = u.momentum ? deep > -b : deep > b;
+      if (on === !!u.momentum) continue;
+      u.momentum = on;
+      this.emit({ type: 'momentum', tgt: u.id, on });
+      if (u === this.hero) this.trigger('onMomentum', { on });
     }
   }
 
@@ -560,7 +684,7 @@ export class Battle {
     const target = H.randomTarget ? this.randomFoe() : this.front();
     if (!target) return;
     H.attackCount += 1;
-    const payload = { target, count: H.attackCount, mult: 1, extra: [], element: H.attackElement };
+    const payload = { target, count: H.attackCount, mult: 1, extra: [], element: H.attackElement, kbMult: 1 };
     this.trigger('onAttack', payload);
     const hits = [{ t: payload.target, mult: payload.mult, primary: true }];
     // pierce: also hit the next enemies behind the target
@@ -578,7 +702,7 @@ export class Battle {
     for (const h of hits) {
       if (!h.t.alive) continue;
       this.emit({ type: 'shot', src: 'hero', tgt: h.t.id, element: payload.element });
-      const dealt = this.damage(H, h.t, H.atk * h.mult, { element: payload.element, kind: 'attack', sub: !h.primary });
+      const dealt = this.damage(H, h.t, H.atk * h.mult, { element: payload.element, kind: 'attack', sub: !h.primary, kbMult: h.primary ? payload.kbMult : 1 });
       if (dealt > 0 && H.split > 0 && h.primary) {
         for (let i = 0; i < H.split; i++) {
           const f = this.randomFoe([h.t]);
@@ -704,7 +828,7 @@ export class Battle {
           if (!u.charging && this.dist(u, H) <= u.range + 4) {
             u.charging = { left: cfg.windup, mult: cfg.mult, element: cfg.element || u.attackElement };
             this.emit({ type: 'telegraph', src: u.id, windup: cfg.windup, text: cfg.text || 'Charging!' });
-          }
+          } else if (!u.charging) u.aiTimers[key] = 0.5; // out of reach: try again as soon as it closes in
           break;
         case 'summon':
           for (let i = 0; i < (cfg.count || 1); i++) this.summon(u, cfg.id);
@@ -883,17 +1007,32 @@ export class Battle {
       }
     }
 
+    // knockback slides, recovery and spacing (fixed-step, so identical at any frame rate)
+    this.physics(dt);
+
     // hero
     if (H.alive && !this.disabled(H)) {
       const target = this.front();
-      if (target) {
+      if (target && this.staggered(H)) {
+        // the swing timer keeps counting, so the hero strikes right after recovering
+        H.still = 0;
+        H.atkTimer = Math.max(0, H.atkTimer - dt);
+      } else if (target) {
         const d = target.x - H.x;
         const slow = this.moveSlow(H);
+        const melee = H.range <= 20;
+        // Heroes press to a line just past the midpoint (Momentum) or chase into attack range,
+        // whichever is further forward, and step back up to it after being pushed, stopping at
+        // body contact. Ranged heroes only back off when an enemy is right on top of them (never
+        // past their rear line). Hysteresis (start beyond a margin, stop on arrival) avoids jitter.
+        const tx = Math.min(Math.max(target.x - H.range * (melee ? 0.85 : 0.8), MID + 4), target.x - 9.5);
+        const err = tx - H.x;
         let move = 0;
-        if (H.range > 20 && d < 9 && H.x > 3) move = -H.speed * slow * dt;
-        else if (d > H.range) move = Math.min(H.speed * slow * dt, d - H.range);
+        if (err > (H.moving ? 0.2 : 1.5)) move = Math.min(H.speed * slow * dt, err);
+        else if (!melee && d < 6 && H.x > COMBAT.worldW * 0.2) move = -H.speed * 0.5 * slow * dt;
+        H.moving = Boolean(move);
         if (move) {
-          H.x = Math.max(2, Math.min(70, H.x + move));
+          H.x = Math.max(3, Math.min(COMBAT.worldW - 10, H.x + move));
           H.still = 0;
           H.moved = (H.moved || 0) + Math.abs(move);
           if (H.moved >= 4) {
@@ -903,8 +1042,7 @@ export class Battle {
         } else H.still += dt;
         H.atkTimer -= dt;
         if (H.atkTimer <= 0 && d <= H.range + 1) {
-          const aspd = H.aspd * (1 + this.buffSum(H, 'aspdPct')) * (H.statuses.chill ? 0.65 : 1);
-          H.atkTimer += 1 / Math.max(0.2, aspd);
+          H.atkTimer += 1 / Math.max(0.2, this.attackSpeed(H));
           this.heroAttack();
         } else if (H.atkTimer < 0) H.atkTimer = 0;
       }
@@ -933,7 +1071,11 @@ export class Battle {
     for (const u of this.foes().sort((a, b) => a.x - b.x)) {
       if (this.result) break;
       this.enemyAi(u, dt);
-      if (this.disabled(u)) continue;
+      if (this.disabled(u) || this.staggered(u)) {
+        if (!u.flying) lastGroundX = u.x;
+        if (!this.disabled(u)) u.atkTimer = Math.max(0, u.atkTimer - dt);
+        continue;
+      }
       // charging attack
       if (u.charging) {
         u.charging.left -= dt;
@@ -941,20 +1083,28 @@ export class Battle {
           const c = u.charging;
           u.charging = null;
           this.emit({ type: 'attack', src: u.id, tgt: 'hero', big: true });
-          this.damage(u, H, u.atk * c.mult, { element: c.element, kind: 'attack' });
+          this.damage(u, H, u.atk * c.mult, { element: c.element, kind: 'attack', kbMult: 2.5 });
         }
         continue;
       }
-      const want = u.flying ? H.x + u.range : Math.max(H.x + u.range, lastGroundX + 15);
+      let want = u.flying ? H.x + u.range : Math.max(H.x + u.range, lastGroundX + 15);
       const gap = want - (H.x + u.range); // queued enemies can still reach (spears, reach)
-      if (u.x > want) {
-        u.x = Math.max(want, u.x - u.speed * this.moveSlow(u) * dt);
-      }
+      // stance: defensive shooters hold their own half when they can still reach the hero from it;
+      // aggressive shooters press into the hero's half to gain Momentum
+      if (u.range > 20 && u.stance === 'defensive' && want < MID + 3 && MID + 3 - H.x <= u.range) want = MID + 3;
+      if (u.range > 20 && u.stance === 'aggressive') want = Math.max(H.x + 12, Math.min(want, MID - 8));
+      const spd = u.speed * this.moveSlow(u) * (u.stance === 'aggressive' ? 1.2 : 1) * dt;
+      if (u.x > want + (u.moving ? 0.2 : 1)) {
+        u.x = Math.max(want, u.x - spd);
+        u.moving = true;
+      } else if (u.range > 20 && u.x < want - 8 && u.x < COMBAT.worldW - 4) {
+        u.x = Math.min(want, u.x + spd * 0.6); // shooters back away from a hero that got too close
+        u.moving = true;
+      } else u.moving = false;
       if (!u.flying) lastGroundX = u.x;
       u.atkTimer -= dt;
       if (u.atkTimer <= 0 && this.dist(u, H) <= u.range + gap + 1) {
-        const aspd = u.aspd * (1 + this.buffSum(u, 'aspdPct')) * (u.statuses.chill ? 0.65 : 1);
-        u.atkTimer += 1 / aspd;
+        u.atkTimer += 1 / this.attackSpeed(u);
         this.emit({ type: 'attack', src: u.id, tgt: 'hero' });
         if (u.range > 20) this.emit({ type: 'shot', src: u.id, tgt: 'hero', element: u.attackElement });
         // reflective temple surfaces bounce some projectiles back
@@ -968,6 +1118,8 @@ export class Battle {
       } else if (u.atkTimer < 0) u.atkTimer = 0;
     }
 
+    this.separate();
+    this.updateMomentum();
     this.settle();
     if (!this.result && this.t > COMBAT.maxDuration) this.finish('lose');
   }

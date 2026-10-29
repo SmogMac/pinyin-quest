@@ -13,6 +13,8 @@
 //   regen {every, pct, terrain?} · nuke {every, mult, element, status}
 //   onSpellHit: 'shield' | 'enrage' (reacts to your spells)
 //   rise {pct, text} (gets back up once with pct HP unless Burning or finished by fire/light)
+// stance: 'aggressive' (moves faster; shooters push into the hero's half for Momentum) |
+//         'defensive' (shooters hold their own half) · kb: knockback dealt · kbRes: 0..1 resistance
 // phases: [{at: hp fraction, text, ai, aspd, terrain, shield, summon}] — boss phase changes
 
 export const ENEMIES = {
@@ -24,7 +26,7 @@ export const ENEMIES = {
     blurb: 'Wobbly and harmless. Mostly. Conducts electricity beautifully.',
   },
   sporecap: {
-    py: 'mó gu', zh: '蘑菇', name: 'Mushroom', sprite: 'sporecap', element: 'dark',
+    stance: 'defensive', py: 'mó gu', zh: '蘑菇', name: 'Mushroom', sprite: 'sporecap', element: 'dark',
     stats: { maxHp: 74, atk: 3, def: 1, aspd: 0.75 },
     onHitStatus: { id: 'curse', dur: 2 },
     affinity: { fire: 'weak', earth: 'resist' },
@@ -38,56 +40,56 @@ export const ENEMIES = {
     blurb: 'Fast, flying (ignores ground effects) and hard to hit.',
   },
   goblin: {
-    py: 'xiǎo yāo', zh: '小妖', name: 'Goblin', sprite: 'goblin', element: 'dark',
+    stance: 'aggressive', py: 'xiǎo yāo', zh: '小妖', name: 'Goblin', sprite: 'goblin', element: 'dark',
     stats: { maxHp: 84, atk: 6, def: 2, aspd: 0.85, crit: 0.15 },
     ai: { range: 36 },
     affinity: { light: 'weak' },
     blurb: 'Throws ink from range. Steals your homework.',
   },
   golem: {
-    py: 'shí tou rén', zh: '石头人', name: 'Stone Golem', sprite: 'golem', element: 'earth',
+    kbRes: 0.5, kb: 4, py: 'shí tou rén', zh: '石头人', name: 'Stone Golem', sprite: 'golem', element: 'earth',
     stats: { maxHp: 140, atk: 8, def: 6, aspd: 0.5 },
     ai: { speed: 7, charge: { every: 7, windup: 1.6, mult: 2.6, text: 'Slam!' } },
     affinity: { earth: 'resist', physical: 0.7, ice: 'weak', water: 'weak' },
     blurb: 'Slow and armored. Winds up huge slams; Freeze or Stun interrupts them.',
   },
   panda: {
-    py: 'xióng māo', zh: '熊猫', name: 'Panda', sprite: 'panda', element: 'physical',
+    stance: 'aggressive', kbRes: 0.25, py: 'xióng māo', zh: '熊猫', name: 'Panda', sprite: 'panda', element: 'physical',
     stats: { maxHp: 118, atk: 7, def: 2, aspd: 0.8 },
     ai: { charge: { every: 6, windup: 1.2, mult: 2.2, text: 'Rolling!' } },
     affinity: { fire: 'weak', wind: 'resist' },
     blurb: 'Adorable. Rolls into you at full speed.',
   },
   kite: {
-    py: 'fēng zheng', zh: '风筝', name: 'Kite Spirit', sprite: 'kite', element: 'wind', flying: true,
+    stance: 'aggressive', py: 'fēng zheng', zh: '风筝', name: 'Kite Spirit', sprite: 'kite', element: 'wind', flying: true,
     stats: { maxHp: 54, atk: 5, aspd: 1.1, dodge: 0.15 },
     ai: { range: 34, speed: 15 },
     affinity: { wind: 'resist', lightning: 'weak', fire: 'weak' },
     blurb: 'A runaway kite. Flies, dodges, shoots gusts.',
   },
   crab: {
-    py: 'páng xiè', zh: '螃蟹', name: 'Crab', sprite: 'crab', element: 'water',
+    kbRes: 0.3, py: 'páng xiè', zh: '螃蟹', name: 'Crab', sprite: 'crab', element: 'water',
     stats: { maxHp: 108, atk: 6, def: 4, aspd: 0.8 },
     ai: { shell: { every: 6, dur: 2.5, dr: 0.6 } },
     affinity: { fire: 'resist', water: 'resist', lightning: 'weak' },
     blurb: 'Pulls into its shell (−60% damage) every few seconds.',
   },
   turtle: {
-    py: 'wū guī', zh: '乌龟', name: 'Turtle', sprite: 'turtle', element: 'earth',
+    stance: 'defensive', kbRes: 0.5, py: 'wū guī', zh: '乌龟', name: 'Turtle', sprite: 'turtle', element: 'earth',
     stats: { maxHp: 150, atk: 5, def: 8, aspd: 0.6 },
     ai: { speed: 6, guard: { every: 7, amount: 0.15 } },
     affinity: { earth: 'resist', lightning: 'weak' },
     blurb: 'Slow, sturdy, shields its weakest friend.',
   },
   snowman: {
-    py: 'xuě rén', zh: '雪人', name: 'Snowman', sprite: 'snowman', element: 'ice',
+    kbRes: 0.3, py: 'xuě rén', zh: '雪人', name: 'Snowman', sprite: 'snowman', element: 'ice',
     stats: { maxHp: 100, atk: 6, def: 2, aspd: 0.8 },
     onHitStatus: { id: 'chill', dur: 2 },
     affinity: { ice: 0.25, fire: 'weak' },
     blurb: 'Its punches Chill. Nearly immune to ice; melts in fire.',
   },
   thunderbird: {
-    py: 'léi niǎo', zh: '雷鸟', name: 'Thunderbird', sprite: 'thunderbird', element: 'lightning', flying: true,
+    stance: 'defensive', py: 'léi niǎo', zh: '雷鸟', name: 'Thunderbird', sprite: 'thunderbird', element: 'lightning', flying: true,
     stats: { maxHp: 70, atk: 6, aspd: 1 },
     ai: { range: 38, speed: 15 },
     onHitStatus: { id: 'shock', dur: 2 },
@@ -102,14 +104,14 @@ export const ENEMIES = {
     blurb: 'Regenerates on corrupted ground. Light purifies it.',
   },
   lantern: {
-    py: 'dēng long', zh: '灯笼', name: 'Lantern Spirit', sprite: 'lantern', element: 'light',
+    stance: 'defensive', py: 'dēng long', zh: '灯笼', name: 'Lantern Spirit', sprite: 'lantern', element: 'light',
     stats: { maxHp: 80, atk: 5, aspd: 0.9 },
     ai: { range: 34, hex: { every: 7, status: 'dazzle', dur: 3 } },
     affinity: { light: 'resist', dark: 'weak', water: 'weak' },
     blurb: 'Dazzles you so your attacks miss.',
   },
   zombie: {
-    py: 'jiāng shī', zh: '僵尸', name: 'Hopping Zombie', sprite: 'zombie', element: 'dark',
+    stance: 'aggressive', py: 'jiāng shī', zh: '僵尸', name: 'Hopping Zombie', sprite: 'zombie', element: 'dark',
     stats: { maxHp: 70, atk: 7, aspd: 0.8 },
     ai: { speed: 9, rise: { pct: 0.5, text: 'Rises again!' } },
     onHitStatus: { id: 'curse', dur: 2 },
@@ -117,7 +119,7 @@ export const ENEMIES = {
     blurb: 'Hops after you and gets back up once. Burn it or finish it with fire or light to keep it down.',
   },
   wraith: {
-    py: 'zì líng', zh: '字灵', name: 'Word Wraith', sprite: 'wraith', element: 'dark', flying: true,
+    stance: 'aggressive', py: 'zì líng', zh: '字灵', name: 'Word Wraith', sprite: 'wraith', element: 'dark', flying: true,
     stats: { maxHp: 42, atk: 4, aspd: 1 },
     affinity: { light: 'weak' },
     blurb: 'A stolen word given form. Free it with light.',
@@ -132,7 +134,7 @@ export const ENEMIES = {
     blurb: 'Elite. Drains life and casts curses.',
   },
   knight: {
-    py: 'qí shì', zh: '骑士', name: 'Knight', sprite: 'knight', element: 'physical', elite: true,
+    kbRes: 0.4, kb: 3.5, py: 'qí shì', zh: '骑士', name: 'Knight', sprite: 'knight', element: 'physical', elite: true,
     stats: { maxHp: 170, atk: 8, def: 5, aspd: 0.7 },
     ai: { guard: { every: 8, amount: 0.12 }, charge: { every: 8, windup: 1.5, mult: 2.4, text: 'Lance charge!' }, onSpellHit: 'shield' },
     affinity: { physical: 0.7, lightning: 'weak' },

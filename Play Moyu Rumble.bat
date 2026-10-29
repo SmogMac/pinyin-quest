@@ -1,7 +1,7 @@
 @echo off
-title Pinyin Quest
+title Moyu Rumble
 cd /d "%~dp0"
-echo Starting Pinyin Quest... (keep this window open while you play, close it to stop)
+echo Starting Moyu Rumble... (keep this window open while you play, close it to stop)
 if not exist node_modules (
   echo First run: installing, this takes a minute...
   call npm install
