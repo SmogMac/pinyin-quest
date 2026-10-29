@@ -74,15 +74,20 @@ export function hydrate(data) {
     delete out.achievements.hero_huohuo;
   }
   delete out.cosmetics.robe;
-  // Two active spell slots (signature + one pickup): runs saved with three keep the signature and
-  // the most recently learned spell; the other is refunded as ink.
+  // Signature moves replaced active spells: every hero now has exactly one signature move, and
+  // pickup spells no longer exist. A run in progress carries on: each spell it found is refunded
+  // as ink, and a pending spell reward or spell in a shop becomes items (drafted on screen).
   const cur = out.adventure.current;
-  if (cur && Array.isArray(cur.spells) && cur.spells.length > 2) {
-    const dropped = cur.spells.slice(1, -1);
-    cur.spells = [cur.spells[0], cur.spells[cur.spells.length - 1]];
-    cur.ink = (cur.ink || 0) + 40 * dropped.length;
-    cur.notice = { kind: 'spellSlots', dropped };
+  if (cur && Array.isArray(cur.spells)) {
+    const found = cur.spells.length - 1;
+    delete cur.spells;
+    cur.ink = (cur.ink || 0) + 40 * Math.max(0, found);
+    cur.notice = { kind: 'signatures', refund: 40 * Math.max(0, found) };
   }
+  if (cur?.notice?.kind === 'spellSlots') cur.notice = { kind: 'signatures', refund: 40 * (cur.notice.dropped?.length || 0) };
+  if (cur?.reward?.kind === 'spell') cur.reward = { kind: 'items', choices: null, ink: cur.reward.ink || 0 };
+  if (cur?.shop?.stock) cur.shop.stock = cur.shop.stock.filter((x) => x.kind !== 'spell');
+  if (cur && Array.isArray(cur.items)) cur.items = cur.items.filter((id) => typeof id === 'string');
   return out;
 }
 

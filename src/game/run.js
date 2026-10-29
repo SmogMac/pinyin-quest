@@ -8,7 +8,6 @@
 //         map → rest | treasure | shrine | merchant | lesson | event → map
 import { RUN, SCORE } from './data/balance.js';
 import { ITEMS, RARITY_WEIGHT } from './data/items.js';
-import { SPELLS, SPELL_SLOTS, SIGNATURE_LOCKED } from './data/spells.js';
 import { BIOMES, ACT_BIOMES } from './data/biomes.js';
 import { synergiesCompletedBy, activeSynergies } from './data/synergies.js';
 import { heroDef, DEFAULT_HERO } from './data/heroes.js';
@@ -17,12 +16,12 @@ import { makeRng, buildHero } from './combat.js';
 export const RUN_VERSION = 2;
 
 export const NODE_INFO = {
-  battle: { py: 'zhàn dòu', zh: '战斗', name: 'Battle', desc: 'A fight. Win a passive item or spell.' },
+  battle: { py: 'zhàn dòu', zh: '战斗', name: 'Battle', desc: 'A fight. Win a passive item.' },
   elite: { py: 'jīng yīng', zh: '精英', name: 'Elite', desc: 'Dangerous foe, rare rewards.' },
   rest: { py: 'gōu huǒ', zh: '篝火', name: 'Campfire', desc: 'Heal, or study words for ink.' },
   treasure: { py: 'bǎo xiāng', zh: '宝箱', name: 'Treasure', desc: 'Choose a rare item.' },
   shrine: { py: 'shén miào', zh: '神庙', name: 'Shrine', desc: 'An elemental blessing.' },
-  merchant: { py: 'shāng rén', zh: '商人', name: 'Merchant', desc: 'Spend ink on items and spells.' },
+  merchant: { py: 'shāng rén', zh: '商人', name: 'Merchant', desc: 'Spend ink on passive items.' },
   lesson: { py: 'lǎo shī', zh: '老师', name: 'Teacher', desc: '5 questions: heal and earn ink.' },
   event: { py: 'qí yù', zh: '奇遇', name: 'Encounter', desc: 'Something strange happens…' },
   secret: { py: 'mì mì', zh: '秘密', name: 'Secret', desc: 'A hidden place, revealed by a word you know.' },
@@ -117,7 +116,6 @@ export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId
     floor: 0,
     hp: hero.maxHp,
     items: [],
-    spells: [def.signature],
     ink: 0,
     bonus: { spellPower: 0, maxHp: 0 },
     phase: 'biome',
@@ -133,8 +131,12 @@ export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId
   };
 }
 
+/** The signature move id(s) a run owns, for synergy checks (heroes have exactly one). */
+export const runSignatures = (run) => [heroDef(run.heroId).signature];
+export const runSynergies = (run) => activeSynergies(run.items, runSignatures(run));
+
 export function heroFor(run, accountLevel) {
-  const h = buildHero({ heroId: run.heroId, items: run.items, spells: run.spells, accountLevel });
+  const h = buildHero({ heroId: run.heroId, items: run.items, accountLevel });
   h.maxHp += run.bonus?.maxHp || 0;
   h.spellPower += run.bonus?.spellPower || 0;
   return h;
@@ -200,20 +202,25 @@ export function leaveNode(run) {
 }
 
 // ------------------------------------------------------------------ rewards
-/** Weighted draft of passive items, biased toward completing synergies and the biome's element. */
+/**
+ * Weighted draft of passive items, biased toward completing synergies, the biome's element and the
+ * hero's own signature items (items with `hero` are only offered to that hero).
+ */
 export function draftItems(run, pool, n = 3, { minRarity = null, r = rng(run) } = {}) {
   const owned = new Set(run.items);
   const def = heroDef(run.heroId);
   const biomeEl = Object.keys(BIOMES[run.biome]?.elementMods || {});
-  let candidates = pool.filter((id) => !owned.has(id) && ITEMS[id]);
+  const fits = (id) => ITEMS[id] && !owned.has(id) && (!ITEMS[id].hero || ITEMS[id].hero === run.heroId);
+  let candidates = pool.filter(fits);
   if (minRarity === 'rare') candidates = candidates.filter((id) => ITEMS[id].rarity !== 'common');
-  if (!candidates.length) candidates = pool.filter((id) => !owned.has(id));
+  if (!candidates.length) candidates = pool.filter(fits);
   const w = (id) => {
     const it = ITEMS[id];
     let x = RARITY_WEIGHT[it.rarity] || 5;
     if (def.poolBias?.[it.element]) x *= def.poolBias[it.element];
     if (biomeEl.includes(it.element)) x *= 1.3;
-    if (synergiesCompletedBy(id, run.items, run.spells).length) x *= 2;
+    if (it.hero) x *= 1.6; // signature items shape the build: they come up fairly often
+    if (synergiesCompletedBy(id, run.items, runSignatures(run)).length) x *= 2;
     return x;
   };
   const out = [];
@@ -226,13 +233,8 @@ export function draftItems(run, pool, n = 3, { minRarity = null, r = rng(run) } 
   return out;
 }
 
-export function offerSpell(run, unlockedSpellIds, r = rng(run)) {
-  const choices = unlockedSpellIds.filter((id) => !run.spells.includes(id));
-  return choices.length ? choices[Math.floor(r() * choices.length)] : null;
-}
-
 /** After a won battle, prepare the reward screen. Pools come from unlocks.js (vocabulary). */
-export function battleReward(run, { itemPool, spellPool }) {
+export function battleReward(run, { itemPool }) {
   const t = run.battle.type;
   const r = rng(run);
   const inkMult = run.items.includes('lucky_cat') ? 1.25 : 1;
@@ -245,8 +247,6 @@ export function battleReward(run, { itemPool, spellPool }) {
     const epics = itemPool.filter((id) => ITEMS[id].rarity === 'epic' && !run.items.includes(id));
     return { kind: 'items', choices: epics.length ? epics.slice(0, 1) : draftItems(run, itemPool, 2, { minRarity: 'rare', r }), ink };
   }
-  const spell = t === 'battle' && r() < RUN.spellOfferChance ? offerSpell(run, spellPool, r) : null;
-  if (spell) return { kind: 'spell', spell, ink };
   return {
     kind: 'items',
     choices: draftItems(run, itemPool, 3, { minRarity: t === 'elite' || t === 'guardian' ? 'rare' : null, r }),
@@ -257,25 +257,13 @@ export function battleReward(run, { itemPool, spellPool }) {
 /** Returns newly completed synergy ids. */
 export function takeItem(run, id, accountLevel) {
   if (run.items.includes(id)) return [];
-  const before = activeSynergies(run.items, run.spells);
+  const before = runSynergies(run);
   const maxBefore = maxHpOf(run, accountLevel);
   run.items.push(id);
   const maxAfter = maxHpOf(run, accountLevel);
   if (maxAfter > maxBefore) run.hp += maxAfter - maxBefore;
   run.hp = Math.min(run.hp, maxAfter);
-  return activeSynergies(run.items, run.spells).filter((s) => !before.includes(s));
-}
-
-export const replaceableSlots = (run) =>
-  run.spells.map((id, i) => ({ id, i, locked: SIGNATURE_LOCKED && SPELLS[id]?.signature })).filter((s) => !s.locked).map((s) => s.i);
-
-/** slot: index to replace, or null to add into a free slot. Returns newly completed synergies. */
-export function takeSpell(run, spellId, slot = null) {
-  const before = activeSynergies(run.items, run.spells);
-  if (run.spells.length < SPELL_SLOTS && slot === null) run.spells.push(spellId);
-  else if (slot !== null && replaceableSlots(run).includes(slot)) run.spells[slot] = spellId;
-  else return [];
-  return activeSynergies(run.items, run.spells).filter((s) => !before.includes(s));
+  return runSynergies(run).filter((s) => !before.includes(s));
 }
 
 export function resolveBattle(run, sim, accountLevel) {
@@ -321,16 +309,14 @@ export function enterBeyond(run) {
 }
 
 // ------------------------------------------------------------------ merchant & shrine
-export function openShop(run, itemPool, spellPool, { secret = false } = {}) {
+export function openShop(run, itemPool, { secret = false } = {}) {
   const r = rng(run);
-  const items = draftItems(run, itemPool, secret ? 4 : 3, { minRarity: secret ? 'rare' : null, r });
-  const spell = offerSpell(run, spellPool, r);
+  const items = draftItems(run, itemPool, secret ? 5 : 4, { minRarity: secret ? 'rare' : null, r });
   const disc = secret ? 0.8 : 1;
   run.shop = {
     secret,
     stock: [
       ...items.map((id) => ({ kind: 'item', id, price: Math.round(RUN.prices[ITEMS[id].rarity] * disc), sold: false })),
-      ...(spell ? [{ kind: 'spell', id: spell, price: Math.round(RUN.prices.spell * disc), sold: false }] : []),
       { kind: 'heal', id: 'heal', price: Math.round(RUN.prices.heal * disc), sold: false },
     ],
   };
@@ -339,7 +325,7 @@ export function openShop(run, itemPool, spellPool, { secret = false } = {}) {
 export function shrineOptions(run, itemPool) {
   const biome = BIOMES[run.biome];
   const element = Object.keys(biome.elementMods || {})[0] || 'light';
-  const gifts = itemPool.filter((id) => ITEMS[id].element === element && !run.items.includes(id));
+  const gifts = itemPool.filter((id) => ITEMS[id].element === element && !run.items.includes(id) && (!ITEMS[id].hero || ITEMS[id].hero === run.heroId));
   return { element, gift: gifts.length ? gifts[Math.floor(rng(run)() * gifts.length)] : null };
 }
 

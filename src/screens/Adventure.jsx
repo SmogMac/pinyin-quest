@@ -3,20 +3,21 @@ import { useStore, update, getState, flush } from '../store/store.js';
 import { levelInfo, addXp } from '../store/progress.js';
 import { pickAdventureTasks } from '../learn/adventurePicker.js';
 import {
-  chooseBiome, chooseNode, leaveNode, battleReward, takeItem, takeSpell, replaceableSlots, resolveBattle, afterReward,
-  enterLair, enterBeyond, openShop, shrineOptions, draftItems, heroFor, healRun, scoreOf, RUN_VERSION,
+  chooseBiome, chooseNode, leaveNode, battleReward, takeItem, resolveBattle, afterReward,
+  enterLair, enterBeyond, openShop, shrineOptions, draftItems, heroFor, healRun, scoreOf, RUN_VERSION, runSignatures, runSynergies,
 } from '../game/run.js';
 import { RUN } from '../game/data/balance.js';
 import { ITEMS } from '../game/data/items.js';
-import { SPELLS } from '../game/data/spells.js';
-import { SYNERGIES, activeSynergies, synergiesCompletedBy, synergiesWith } from '../game/data/synergies.js';
+import { SIGNATURES } from '../game/data/signatures.js';
+import { TEMPLATES } from '../learn/signaturePuzzles.js';
+import { SYNERGIES, synergiesCompletedBy, synergiesWith } from '../game/data/synergies.js';
 import { ENEMIES } from '../game/data/enemies.js';
 import { BIOMES } from '../game/data/biomes.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import { heroDef } from '../game/data/heroes.js';
 import { EVENTS } from '../game/data/events.js';
 import { STORY } from '../game/data/story.js';
-import { unlockedItems, unlockedSpells, actBiomeOptions, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
+import { unlockedItems, actBiomeOptions, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
 import { checkAchievements, selectedHero, heroUnlocked } from '../game/achievements.js';
 import { getWord } from '../learn/vocab.js';
 import StudyCard from '../components/StudyCard.jsx';
@@ -24,7 +25,7 @@ import BattleScreen from '../components/BattleScreen.jsx';
 import ScrollMap from '../components/ScrollMap.jsx';
 import Sprite, { ItemIcon } from '../components/Sprite.jsx';
 import { TopBar, Bar, Button, Modal, Confetti, Pinyin, Hanzi, CnName } from '../components/ui.jsx';
-import { AudioButtons } from '../components/AudioButtons.jsx';
+import SigIcon from '../components/SigIcon.jsx';
 import Icon from '../assets/icons/Icons.jsx';
 import { play } from '../audio/sfx.js';
 import { speak, stopSpeech } from '../audio/speech.js';
@@ -33,11 +34,17 @@ import Bi from '../components/Bi.jsx';
 import { ConfirmNewRun, ConfirmAbandon } from '../components/ConfirmDialog.jsx';
 import HeroShowcase from '../components/HeroShowcase.jsx';
 import { activeRun, startRun, abandonRun, finishRun as endRunIn } from '../game/runManager.js';
-import { SPELL_SLOTS } from '../game/data/spells.js';
 
 const mutate = (fn) => update((s) => s.adventure.current && fn(s.adventure.current, s));
 const accountLevelOf = (s) => levelInfo(s.profile.xp).level;
 const worldColorOf = (s) => Math.min(1, learnedWords(s).size / 250);
+/** Display name of a synergy requirement (a passive item or a signature move). */
+const reqDef = (id) => ITEMS[id] || SIGNATURES[id] || { py: id, en: id };
+/** Synergies this hero could ever complete (signature-specific ones need that hero). */
+const possibleFor = (run, sy) => {
+  const sig = runSignatures(run);
+  return sy.requires.every((r) => (ITEMS[r] ? !ITEMS[r].hero || ITEMS[r].hero === run.heroId : sig.includes(r)));
+};
 
 export default function Adventure({ go, params = {} }) {
   const s = useStore();
@@ -111,20 +118,12 @@ export default function Adventure({ go, params = {} }) {
     }
     checkAchievements();
   };
-  const grantSpell = (id, slot) => {
-    let fresh = [];
-    update((x) => {
-      const r = x.adventure.current;
-      if (!r) return;
-      fresh = takeSpell(r, id, slot);
-      x.adventure.discovered.spells[id] = (x.adventure.discovered.spells[id] || 0) + 1;
-      for (const sid of fresh) x.adventure.synergies[sid] = (x.adventure.synergies[sid] || 0) + 1;
-      // the spell's name is now taught: it can appear in syllable puzzles
-      x.gameWords[SPELLS[id].zh] ||= { seen: 0, ok: 0, bad: 0 };
-    });
-    play('reveal');
-    if (fresh.length) setSynergyPopup(fresh);
-  };
+  // runs saved before the signature redesign may be waiting on a spell reward: offer items instead
+  useEffect(() => {
+    if (run?.reward && run.reward.kind === 'items' && !run.reward.choices) {
+      mutate((r) => (r.reward.choices = draftItems(r, unlockedItems(getState()), 3)));
+    }
+  }, [run?.reward]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (outdated) return <OutdatedRun go={go} />;
   if (!run || !entered)
@@ -135,7 +134,7 @@ export default function Adventure({ go, params = {} }) {
   const maxHp = heroFor(run, accountLevel).maxHp;
   const inBattle = (run.phase === 'battle' && Boolean(run.battle)) || Boolean(held);
   const battleKey = held?.key ?? run.battle?.seed;
-  const pools = () => ({ itemPool: unlockedItems(getState()), spellPool: unlockedSpells(getState()) });
+  const pools = () => ({ itemPool: unlockedItems(getState()) });
 
   return (
     <div className={`screen adventure phase-${run.phase}`}>
@@ -144,21 +143,21 @@ export default function Adventure({ go, params = {} }) {
           title={run.biome ? BIOMES[run.biome].py : `Act ${run.act}`}
           onBack={() => setEntered(false)}
           right={
-            <button type="button" className="icon-btn" onClick={() => setInventory(true)} aria-label="Items, spells and synergies">
+            <button type="button" className="icon-btn" onClick={() => setInventory(true)} aria-label="Signature move, items and synergies">
               <Icon name="chest" />
             </button>
           }
         />
       )}
       {!inBattle && !['victory', 'defeat', 'complete'].includes(run.phase) && <RunHud run={run} maxHp={maxHp} onInventory={() => setInventory(true)} />}
-      {!inBattle && run.notice?.kind === 'spellSlots' && (
+      {!inBattle && run.notice?.kind === 'signatures' && (
         <div className="card notice-card">
           <b>
-            <Bi k="spells" inline /> · now two slots
+            <Bi k="signature" inline /> · one move per hero
           </b>
           <p className="small">
-            You now hold your signature spell plus one spell found on the road. Your extra spell ({run.notice.dropped.map((id) => SPELLS[id]?.py).join(', ')}) was traded for{' '}
-            {40 * run.notice.dropped.length} 墨 ink.
+            Spells are gone: {heroDef(run.heroId).py} now has a single signature move, {SIGNATURES[heroDef(run.heroId).signature].en}, with its own Mandarin
+            minigame. Passive items do the rest.{run.notice.refund ? ` The spells you had found were traded for ${run.notice.refund} 墨 ink.` : ''}
           </p>
           <Button variant="secondary" onClick={() => mutate((r) => delete r.notice)}>
             <Bi k="continue" />
@@ -186,7 +185,7 @@ export default function Adventure({ go, params = {} }) {
               const t = chooseNode(r, id);
               if (t === 'merchant' || (t === 'secret' && r.node?.secret === 'merchant')) {
                 const p = pools();
-                openShop(r, p.itemPool, p.spellPool, { secret: t === 'secret' });
+                openShop(r, p.itemPool, { secret: t === 'secret' });
               }
               if (t === 'treasure') r.reward = { kind: 'items', choices: draftItems(r, pools().itemPool, 2, { minRarity: 'rare' }), free: true };
               if (t === 'event') r.event = { id: EVENTS[Math.floor(Math.random() * EVENTS.length)].id };
@@ -246,10 +245,6 @@ export default function Adventure({ go, params = {} }) {
             if (id) grantItem(id);
             mutate((r) => afterReward(r));
           }}
-          onSpell={(id, slot) => {
-            if (id) grantSpell(id, slot);
-            mutate((r) => afterReward(r));
-          }}
         />
       )}
       {!held && run.phase === 'treasure' && run.reward && (
@@ -283,7 +278,7 @@ export default function Adventure({ go, params = {} }) {
       )}
       {run.phase === 'event' && <EventView run={run} onLevelUp={setLevelUp} grantItem={grantItem} />}
       {run.phase === 'shrine' && <ShrineView run={run} grantItem={grantItem} accountLevel={accountLevel} />}
-      {run.phase === 'merchant' && run.shop && <MerchantView run={run} grantItem={grantItem} grantSpell={grantSpell} accountLevel={accountLevel} />}
+      {run.phase === 'merchant' && run.shop && <MerchantView run={run} grantItem={grantItem} accountLevel={accountLevel} />}
       {!held && run.phase === 'victory' && <VictoryView run={run} go={go} onLevelUp={setLevelUp} />}
       {!held && (run.phase === 'defeat' || run.phase === 'complete') && <EndView run={run} go={go} onLevelUp={setLevelUp} />}
 
@@ -389,7 +384,7 @@ function AdventureStart({ go, onCodex, codex, closeCodex, children }) {
   // show the hero of the run in progress, otherwise the one picked on Home
   const heroId = activeRun(s)?.heroId || selectedHero(s);
   const h = heroDef(heroId);
-  const sig = SPELLS[h.signature];
+  const sig = SIGNATURES[h.signature];
   const cx = useMemo(() => codexSummary(s), [s]);
   return (
     <div className="screen adventure-start">
@@ -404,16 +399,18 @@ function AdventureStart({ go, onCodex, codex, closeCodex, children }) {
           Mò lóng <span className="muted small">(墨龙, the Ink Dragon)</span> stole the world’s words.
         </h2>
         <p className="muted small">
-          Your hero fights on their own. You cast two spells, your hero’s signature and one you find on the road, by solving quick Mandarin puzzles <b>while the battle keeps going</b>. Collect passive
-          items, discover synergies, and pick your route across a scroll map. Learning more words unlocks new items, spells and lands.
+          Your hero fights on their own. Each hero has one <b>signature move</b>, powered by their own Mandarin minigame, which you solve <b>while the battle keeps going</b>. Passive items
+          transform how they fight: collect them, discover synergies, and pick your route across a scroll map. Learning more words unlocks new items and lands.
         </p>
         <div className="adv-hero-line">
-          <ItemIcon kind="spell" id={h.signature} def={sig} size={40} />
+          <SigIcon id={h.signature} size={44} />
           <div>
             <b>
-              {h.py} · signature spell <Pinyin text={sig.py} /> ({sig.en})
+              {h.py} · <Pinyin text={sig.py} /> ({sig.en})
             </b>
-            <p className="small muted">{sig.desc}</p>
+            <p className="small muted">
+              {sig.desc} <span className="sig-focus">Practises: {TEMPLATES[sig.template].focus}</span>
+            </p>
           </div>
         </div>
         {children}
@@ -432,8 +429,8 @@ function AdventureStart({ go, onCodex, codex, closeCodex, children }) {
             <span>/{cx.items.length} items</span>
           </div>
           <div className="sum-tile">
-            <b>{cx.spells.filter((i) => i.unlocked).length}</b>
-            <span>/{cx.spells.length} spells</span>
+            <b>{Object.keys(a.discovered.items || {}).length}</b>
+            <span>items found</span>
           </div>
           <div className="sum-tile">
             <b>{Object.keys(a.synergies).length}</b>
@@ -459,7 +456,7 @@ function OutdatedRun({ go }) {
       <TopBar title="Adventure" onBack={() => go('home')} />
       <div className="card center">
         <h2>The world has changed!</h2>
-        <p className="muted">Adventure Mode was rebuilt with spells, passive items and a new map, so your unfinished run was retired. Your words, levels and heroes are all kept.</p>
+        <p className="muted">Adventure Mode was rebuilt with signature moves, passive items and a new map, so your unfinished run was retired. Your words, levels and heroes are all kept.</p>
         <Button
           className="wide"
           onClick={() =>
@@ -490,10 +487,8 @@ function RunHud({ run, maxHp, onInventory }) {
         <span className="ink-dot">墨</span>
         <b>{run.ink}</b>
       </div>
-      <button type="button" className="run-upgrades" onClick={onInventory} aria-label="View items and spells">
-        {run.spells.map((id) => (
-          <ItemIcon key={id} kind="spell" id={id} def={SPELLS[id]} size={30} />
-        ))}
+      <button type="button" className="run-upgrades" onClick={onInventory} aria-label="View signature move and items">
+        <SigIcon id={heroDef(run.heroId).signature} size={30} />
         <span className="divider" />
         {run.items.slice(-6).map((id) => (
           <ItemIcon key={id} id={id} def={ITEMS[id]} size={26} />
@@ -549,15 +544,16 @@ function BiomeSelect({ act, onChoose }) {
 // ------------------------------------------------------------------------------ rewards
 function ItemCard({ id, run, onClick, price, disabled }) {
   const it = ITEMS[id];
-  const completes = synergiesCompletedBy(id, run.items, run.spells);
-  const partners = synergiesWith(id).filter((x) => x.other.some((o) => run.items.includes(o) || run.spells.includes(o)) && !completes.includes(x.id));
+  const sigs = runSignatures(run);
+  const completes = synergiesCompletedBy(id, run.items, sigs);
+  const partners = synergiesWith(id).filter((x) => x.other.some((o) => run.items.includes(o) || sigs.includes(o)) && !completes.includes(x.id));
   const el = ELEMENTS[it.element];
   return (
     <button type="button" className={`upgrade-card rarity-${it.rarity}`} style={{ '--el': el.color, '--el-glow': el.glow }} onClick={onClick} disabled={disabled}>
       <CnName def={it} className="uc-name" />
       <ItemIcon id={id} def={it} size={58} />
       <span className="uc-level">
-        {it.category} · {it.rarity}
+        {it.hero ? `${heroDef(it.hero).py} only` : it.category} · {it.rarity}
       </span>
       <span className="uc-desc">{it.desc}</span>
       <span className="uc-tags">
@@ -604,105 +600,15 @@ function ItemChoice({ run, choices, onPick }) {
   );
 }
 
-function RewardView({ run, onItem, onSpell }) {
+function RewardView({ run, onItem }) {
   const r = run.reward;
   return (
     <div className="reward-wrap">
-      <div className="ribbon">{r.kind === 'spell' ? <Bi k="newSpell" /> : <Bi k="reward" py="jiǎng lì · xuǎn zé" en="Reward: choose one" />}</div>
+      <div className="ribbon">
+        <Bi k="reward" py="jiǎng lì · xuǎn zé" en="Reward: choose one" />
+      </div>
       {r.ink ? <p className="center gold-text">+{r.ink} 墨 ink</p> : null}
-      {r.kind === 'items' ? <ItemChoice run={run} choices={r.choices} onPick={onItem} /> : <SpellOffer run={run} spellId={r.spell} onDecide={onSpell} />}
-    </div>
-  );
-}
-
-/** Teach the new spell's name, show how it interacts with the build, and replace or reject. */
-function SpellOffer({ run, spellId, onDecide, price }) {
-  const sp = SPELLS[spellId];
-  const el = ELEMENTS[sp.element];
-  const free = run.spells.length < SPELL_SLOTS;
-  const replaceable = replaceableSlots(run);
-  const [decided, setDecided] = useState(false);
-  const decide = (slot, take = true) => {
-    if (decided) return;
-    setDecided(true);
-    onDecide(take ? spellId : null, slot);
-  };
-  const completes = synergiesCompletedBy(spellId, run.items, run.spells);
-  const related = run.items.filter((id) => {
-    const it = ITEMS[id];
-    return it.category === 'spell' || it.element === sp.element;
-  });
-  return (
-    <div className="spell-offer">
-      <div className="card spell-card" style={{ '--el': el.color }}>
-        <div className="spell-card-head">
-          <ItemIcon kind="spell" id={spellId} def={sp} size={64} />
-          <div>
-            <Pinyin text={sp.py} className="pinyin-lg" />
-            <Hanzi text={sp.zh} className="hanzi-sm" />
-            <p className="gloss-lg left">{sp.en}</p>
-          </div>
-        </div>
-        <AudioButtons text={sp.zh} />
-        <p className="small">
-          <span className="element-tag" style={{ '--el': el.color }}>
-            {el.py} · {el.name}
-          </span>{' '}
-          Cooldown {sp.cd}s · {'★'.repeat(sp.tier)} puzzle difficulty
-        </p>
-        <p>{sp.desc}</p>
-        <p className="small muted">You’ll cast it by remembering its name, “{sp.py}”, among other quick puzzles.</p>
-        {(related.length > 0 || completes.length > 0) && (
-          <div className="interactions">
-            <b className="small">With your build</b>
-            {completes.map((sid) => (
-              <p key={sid} className="small combo-line">
-                COMBO → {SYNERGIES[sid].py} ({SYNERGIES[sid].en}): {SYNERGIES[sid].desc}
-              </p>
-            ))}
-            {related.map((id) => (
-              <p key={id} className="small">
-                <b>{ITEMS[id].py}</b> ({ITEMS[id].en}): {ITEMS[id].desc}
-              </p>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="card">
-        <h3 className="sum-sub">
-          <Bi k="spells" en="Your spells: signature + one pickup" />
-        </h3>
-        {run.spells.map((id, i) => (
-          <div key={id} className="spell-row">
-            <ItemIcon kind="spell" id={id} def={SPELLS[id]} size={36} />
-            <div>
-              <b>
-                {SPELLS[id].py} · {SPELLS[id].en}
-              </b>
-              <p className="small muted">{SPELLS[id].desc}</p>
-            </div>
-            {!free && replaceable.includes(i) ? (
-              <Button variant="secondary" disabled={decided} onClick={() => decide(i)}>
-                <Bi k="replace" />
-              </Button>
-            ) : (
-              SPELLS[id].signature && (
-                <span className="seal-tag">
-                  印 <Bi k="signature" inline />
-                </span>
-              )
-            )}
-          </div>
-        ))}
-        {free && (
-          <Button className="wide" disabled={decided} onClick={() => decide(null)}>
-            <Bi k="equip" py={`zhuāng bèi · ${sp.py}`} en={`Equip in your pickup slot${price ? ` · ${price} 墨` : ''}`} />
-          </Button>
-        )}
-        <button type="button" className="link-btn" onClick={() => decide(null, false)} disabled={decided}>
-          <Bi k="leave" en={free ? 'Leave it' : 'Keep my current spell'} inline />
-        </button>
-      </div>
+      {r.choices && <ItemChoice run={run} choices={r.choices} onPick={onItem} />}
     </div>
   );
 }
@@ -922,7 +828,7 @@ function ShrineView({ run, grantItem, accountLevel }) {
             <Icon name="sparkle" size={30} />
           </span>
           <b>Blessing</b>
-          <small>All spells +15% power for this run</small>
+          <small>Your signature move +15% power for this run</small>
         </button>
         <button
           type="button"
@@ -946,16 +852,11 @@ function ShrineView({ run, grantItem, accountLevel }) {
   );
 }
 
-function MerchantView({ run, grantItem, grantSpell, accountLevel }) {
+function MerchantView({ run, grantItem, accountLevel }) {
   const shop = run.shop;
-  const [offer, setOffer] = useState(null); // stock index of a spell being considered
   const buy = (i) => {
     const st = shop.stock[i];
     if (st.sold || run.ink < st.price) return;
-    if (st.kind === 'spell') {
-      setOffer(i);
-      return;
-    }
     mutate((r) => {
       r.ink -= st.price;
       r.shop.stock[i].sold = true;
@@ -964,26 +865,6 @@ function MerchantView({ run, grantItem, grantSpell, accountLevel }) {
     if (st.kind === 'item') grantItem(st.id);
     play('pick');
   };
-  if (offer !== null) {
-    const st = shop.stock[offer];
-    return (
-      <SpellOffer
-        run={run}
-        spellId={st.id}
-        price={st.price}
-        onDecide={(id, slot) => {
-          if (id) {
-            mutate((r) => {
-              r.ink -= st.price;
-              r.shop.stock[offer].sold = true;
-            });
-            grantSpell(id, slot);
-          }
-          setOffer(null);
-        }}
-      />
-    );
-  }
   return (
     <div className="merchant-view">
       <div className="ribbon">{shop.secret ? 'mì mì shāng rén · Secret merchant' : 'shāng rén · Merchant'}</div>
@@ -998,27 +879,13 @@ function MerchantView({ run, grantItem, grantSpell, accountLevel }) {
             </div>
           ) : (
             <button key={i} type="button" className={`shop-line ${st.sold ? 'sold' : ''}`} disabled={st.sold || run.ink < st.price} onClick={() => buy(i)}>
-              {st.kind === 'spell' ? (
-                <>
-                  <ItemIcon kind="spell" id={st.id} def={SPELLS[st.id]} size={40} />
-                  <span>
-                    <b>
-                      Spell: {SPELLS[st.id].py} · {SPELLS[st.id].en}
-                    </b>
-                    <small>{SPELLS[st.id].desc}</small>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="node-icon node-rest">
-                    <Icon name="heart" size={22} />
-                  </span>
-                  <span>
-                    <b>Tea and rest</b>
-                    <small>Heal 30% HP</small>
-                  </span>
-                </>
-              )}
+              <span className="node-icon node-rest">
+                <Icon name="heart" size={22} />
+              </span>
+              <span>
+                <b>Tea and rest</b>
+                <small>Heal 30% HP</small>
+              </span>
               <span className="price-tag">{st.sold ? 'sold' : `${st.price} 墨`}</span>
             </button>
           ),
@@ -1117,7 +984,7 @@ function EndView({ run, go, onLevelUp }) {
 }
 
 function RunStats({ run }) {
-  const syn = activeSynergies(run.items, run.spells);
+  const syn = runSynergies(run);
   return (
     <>
       <div className="stat-grid">
@@ -1127,7 +994,7 @@ function RunStats({ run }) {
         </div>
         <div className="sum-tile">
           <b>{run.stats.casts}</b>
-          <span>spells cast</span>
+          <span>signature moves</span>
         </div>
         <div className="sum-tile">
           <b>{run.stats.kills}</b>
@@ -1139,9 +1006,7 @@ function RunStats({ run }) {
         </div>
       </div>
       <div className="end-build">
-        {run.spells.map((id) => (
-          <ItemIcon key={id} kind="spell" id={id} def={SPELLS[id]} size={34} />
-        ))}
+        <SigIcon id={heroDef(run.heroId).signature} size={34} />
         {run.items.map((id) => (
           <ItemIcon key={id} id={id} def={ITEMS[id]} size={30} />
         ))}
@@ -1165,11 +1030,11 @@ function SynergyPopup({ ids, onClose }) {
       <Confetti />
       {ids.map((id) => (
         <div key={id} className="synergy-row">
-          <ItemIcon kind="synergy" id={id} def={{ element: ITEMS[SYNERGIES[id].requires[0]]?.element || SPELLS[SYNERGIES[id].requires[0]]?.element, icon: 'sparkle', rarity: 'epic' }} size={56} />
+          <ItemIcon kind="synergy" id={id} def={{ element: reqDef(SYNERGIES[id].requires[0]).element, icon: 'sparkle', rarity: 'epic' }} size={56} />
           <div>
             <CnName def={{ ...SYNERGIES[id], name: SYNERGIES[id].en }} speakable />
             <p>{SYNERGIES[id].desc}</p>
-            <small className="muted">{SYNERGIES[id].requires.map((r) => (ITEMS[r] || SPELLS[r]).py).join(' + ')}</small>
+            <small className="muted">{SYNERGIES[id].requires.map((r) => reqDef(r).py).join(' + ')}</small>
           </div>
         </div>
       ))}
@@ -1183,8 +1048,11 @@ function SynergyPopup({ ids, onClose }) {
 function InventoryModal({ run, accountLevel, onClose }) {
   const hero = heroFor(run, accountLevel);
   const def = heroDef(run.heroId);
-  const syn = activeSynergies(run.items, run.spells);
-  const possible = Object.entries(SYNERGIES).filter(([id, sy]) => !syn.includes(id) && sy.requires.some((r) => run.items.includes(r) || run.spells.includes(r)));
+  const sigId = def.signature;
+  const sig = SIGNATURES[sigId];
+  const syn = runSynergies(run);
+  const owned = [...run.items, sigId];
+  const possible = Object.entries(SYNERGIES).filter(([id, sy]) => !syn.includes(id) && possibleFor(run, sy) && sy.requires.some((r) => owned.includes(r)));
   const [confirm, setConfirm] = useState(false);
   const pct = (n) => `${Math.round(n * 100)}%`;
   return (
@@ -1197,7 +1065,7 @@ function InventoryModal({ run, accountLevel, onClose }) {
         <span>CRIT {pct(hero.crit)}</span>
         {hero.dodge > 0 && <span>DODGE {pct(hero.dodge)}</span>}
         {hero.block > 0 && <span>BLOCK {pct(hero.block)}</span>}
-        {hero.spellPower > 0 && <span>SPELL +{pct(hero.spellPower)}</span>}
+        {hero.spellPower > 0 && <span>SIGNATURE +{pct(hero.spellPower)}</span>}
         <span>墨 {run.ink}</span>
       </div>
       <div className="build-row">
@@ -1207,18 +1075,18 @@ function InventoryModal({ run, accountLevel, onClose }) {
           <p className="small">{def.passive.desc}</p>
         </div>
       </div>
-      <h3 className="sum-sub">Spells</h3>
-      {run.spells.map((id) => (
-        <div key={id} className="build-row">
-          <ItemIcon kind="spell" id={id} def={SPELLS[id]} size={38} />
-          <div>
-            <CnName def={{ ...SPELLS[id], name: SPELLS[id].en }} speakable />
-            <p className="small">
-              {SPELLS[id].desc} <span className="muted">({SPELLS[id].cd}s)</span>
-            </p>
-          </div>
+      <h3 className="sum-sub">
+        <Bi k="signature" en="Signature move" inline />
+      </h3>
+      <div className="build-row">
+        <SigIcon id={sigId} size={40} />
+        <div>
+          <CnName def={{ ...sig, name: sig.en }} speakable />
+          <p className="small">
+            {sig.desc} <span className="muted">({sig.cd}s cooldown · practises {TEMPLATES[sig.template].focus.toLowerCase()})</span>
+          </p>
         </div>
-      ))}
+      </div>
       <h3 className="sum-sub">Passive items ({run.items.length})</h3>
       {run.items.length === 0 && <p className="muted small">Win battles to collect passive items.</p>}
       <div className="build-list">
@@ -1251,7 +1119,7 @@ function InventoryModal({ run, accountLevel, onClose }) {
           <summary>Possible synergies ({possible.length})</summary>
           {possible.map(([id, sy]) => (
             <p key={id} className="small">
-              <b>{sy.py}</b> ({sy.en}): {sy.requires.map((r) => `${(ITEMS[r] || SPELLS[r]).py}${run.items.includes(r) || run.spells.includes(r) ? ' ✓' : ''}`).join(' + ')}
+              <b>{sy.py}</b> ({sy.en}): {sy.requires.map((r) => `${reqDef(r).py}${owned.includes(r) ? ' ✓' : ''}`).join(' + ')}
             </p>
           ))}
         </details>
@@ -1278,14 +1146,15 @@ function CodexModal({ onClose }) {
   const cx = useMemo(() => codexSummary(s), [s]);
   const [tab, setTab] = useState('items');
   const found = s.adventure.discovered;
-  const list = tab === 'items' ? cx.items : tab === 'spells' ? cx.spells : cx.biomes;
+  const moves = Object.entries(SIGNATURES).map(([id, m]) => ({ id, ...m, unlocked: true, desc: `${heroDef(m.hero).py}: ${m.desc} Practises ${TEMPLATES[m.template].focus.toLowerCase()}.` }));
+  const list = tab === 'items' ? cx.items : tab === 'moves' ? moves : cx.biomes;
   return (
     <Modal onClose={onClose} title="Codex" className="codex-modal">
       <p className="small muted">Learning words unlocks what can appear in your adventures (never guaranteed). You know {cx.learned} words.</p>
       <div className="filter-row">
         {[
           ['items', `Items ${cx.items.filter((x) => x.unlocked).length}/${cx.items.length}`],
-          ['spells', `Spells ${cx.spells.filter((x) => x.unlocked).length}/${cx.spells.length}`],
+          ['moves', `Signature moves ${moves.length}`],
           ['lands', `Lands ${cx.biomes.filter((x) => x.unlocked).length}/${cx.biomes.length}`],
         ].map(([k, l]) => (
           <button key={k} type="button" className={`chip ${tab === k ? 'on' : ''}`} onClick={() => setTab(k)}>
@@ -1296,11 +1165,11 @@ function CodexModal({ onClose }) {
       <div className="codex-list">
         {list.map((x) => (
           <div key={x.id} className={`codex-row ${x.unlocked ? '' : 'locked'}`}>
-            {tab === 'lands' ? <Icon name="mountain" size={26} /> : <ItemIcon kind={tab === 'spells' ? 'spell' : 'item'} id={x.id} def={x} size={32} />}
+            {tab === 'lands' ? <Icon name="mountain" size={26} /> : tab === 'moves' ? <SigIcon id={x.id} size={32} /> : <ItemIcon id={x.id} def={x} size={32} />}
             <div>
               <b>
                 {x.py} <span className="muted">· {x.en || x.name}</span>
-                {(found.items[x.id] || found.spells[x.id]) && <span className="found-tag">found</span>}
+                {found.items[x.id] && <span className="found-tag">found</span>}
               </b>
               <p className="small">{x.unlocked ? x.desc : `Learn ${requirementHint(x.requires || x.unlock) || 'more'} to unlock.`}</p>
             </div>

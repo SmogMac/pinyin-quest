@@ -1,6 +1,7 @@
 // Encounter events ("qí yù"). Each asks one question about a word you already know; the answer
 // decides the reward. Wrong answers still teach the word (the review schedule updates).
-// reward kinds: item (random unlocked item, optionally of the word's element) · ink · heal · maxHp · spellPower
+// reward kinds: item (random unlocked item, optionally of the word's element) · ink · heal · maxHp
+//              · spellPower (signature power)
 
 export const EVENTS = [
   {
@@ -28,7 +29,7 @@ export const EVENTS = [
     id: 'word_shrine',
     py: 'zì miào', zh: '字庙', title: 'A Shrine of Words',
     text: 'Faded characters float above an altar. One of them flickers, almost remembered.',
-    success: { text: 'The word blazes back to life, and your spells resonate with it.', reward: { kind: 'spellPower', amount: 0.1 } },
+    success: { text: 'The word blazes back to life, and your signature move resonates with it.', reward: { kind: 'spellPower', amount: 0.1 } },
     failure: { text: 'The word fades. You’ll recognise it next time.', reward: { kind: 'ink', amount: 10 } },
   },
   {

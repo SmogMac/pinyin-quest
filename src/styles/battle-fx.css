@@ -1611,39 +1611,6 @@
   animation: burst 0.3s ease-out forwards;
 }
 
-/* effectiveness in the hit itself: big bright burst when weak, small grey puff when resisted */
-.fx-impact.eff-weak > i {
-  width: 60px;
-  height: 60px;
-  margin: -30px;
-}
-.fx-impact.eff-weak > b {
-  width: 84px;
-  height: 84px;
-  margin: -42px;
-  --ip: #fff6a0;
-}
-.fx-impact.eff-resist > i {
-  width: 20px;
-  height: 20px;
-  margin: -10px;
-  background: radial-gradient(circle, rgba(200, 200, 210, 0.8) 20%, transparent 70%);
-}
-.fx-impact.eff-resist > b {
-  display: none;
-}
-.float-weakhit {
-  color: #fff27a;
-  font-size: 1.55rem;
-  text-shadow:
-    0 2px 0 #6a3a00,
-    0 0 10px rgba(255, 220, 80, 0.9);
-}
-.float-resisted {
-  color: #b9b9c6;
-  font-size: 0.95rem;
-}
-
 /* subtle camera punch on the heaviest impacts (no zooming around) */
 .stage2.punch .bg-stack {
   animation: punch 0.22s ease-out;

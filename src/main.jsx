@@ -4,6 +4,7 @@ import App from './app/App.jsx';
 import './styles/app.css';
 import './styles/adventure.css';
 import './styles/battle-fx.css';
+import './styles/signature.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

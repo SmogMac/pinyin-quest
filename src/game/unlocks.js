@@ -1,8 +1,7 @@
 // Vocabulary-driven unlocks. Learning a word (met and answered correctly at least once)
-// permanently adds matching items, spells and biomes to the pool of possible discoveries.
+// permanently adds matching items and biomes to the pool of possible discoveries.
 // It never grants them directly: what you actually find in a run is still random.
 import { ITEMS } from './data/items.js';
-import { SPELLS, DISCOVERABLE_SPELLS } from './data/spells.js';
 import { BIOMES, ACT_BIOMES } from './data/biomes.js';
 import { RUN } from './data/balance.js';
 import { getWord } from '../learn/vocab.js';
@@ -31,11 +30,6 @@ export function unlockedItems(save) {
   return Object.keys(ITEMS).filter((id) => isUnlocked(ITEMS[id].requires, learned));
 }
 
-export function unlockedSpells(save) {
-  const learned = learnedWords(save);
-  return DISCOVERABLE_SPELLS.filter((id) => isUnlocked(SPELLS[id].requires, learned));
-}
-
 export function biomeUnlocked(id, save) {
   const b = BIOMES[id];
   if (!b) return false;
@@ -51,9 +45,8 @@ export function actBiomeOptions(act, save) {
 export function codexSummary(save) {
   const learned = learnedWords(save);
   const items = Object.entries(ITEMS).map(([id, it]) => ({ id, ...it, unlocked: isUnlocked(it.requires, learned) }));
-  const spells = DISCOVERABLE_SPELLS.map((id) => ({ id, ...SPELLS[id], unlocked: isUnlocked(SPELLS[id].requires, learned) }));
   const biomes = Object.entries(BIOMES).map(([id, b]) => ({ id, ...b, unlocked: biomeUnlocked(id, save) }));
-  return { items, spells, biomes, learned: learned.size };
+  return { items, biomes, learned: learned.size };
 }
 
 /** Learned words to show on Word Wraiths (stolen words). */

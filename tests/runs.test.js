@@ -25,18 +25,18 @@ function playedSave() {
   chooseBiome(r, 'bamboo');
   chooseNode(r, reachableNodes(r)[0].id); // into a battle
   r.items.push('ember_tip', 'heavy_hand');
-  r.spells.push('huoqiu');
   r.ink = 77;
   return s;
 }
 const permanent = (s) => JSON.stringify({ words: s.words, gameWords: s.gameWords, profile: s.profile, achievements: s.achievements, cosmetics: s.cosmetics, settings: s.settings, a: { ...s.adventure, current: undefined, runs: undefined, abandoned: undefined, bestFloor: undefined, bestScore: undefined } });
 
-test('a new run starts clean: base hero, signature spell only, empty pickup slot, no items or battle', () => {
+test('a new run starts clean: base hero with their signature move, no items or battle', () => {
   for (const heroId of Object.keys(HEROES)) {
     const s = playedSave();
     const r = startRun(s, { heroId, accountLevel: 10, seed: 7 });
     assert.equal(r.heroId, heroId);
-    assert.deepEqual(r.spells, [HEROES[heroId].signature], 'signature + empty pickup slot');
+    assert.equal(r.spells, undefined, 'no spells: the signature move belongs to the hero');
+    assert.ok(HEROES[heroId].signature);
     assert.deepEqual(r.items, []);
     assert.equal(r.phase, 'biome');
     assert.equal(r.battle ?? null, null, 'no stale battle');
@@ -69,7 +69,7 @@ test('starting a new run over an unfinished one replaces it and keeps permanent 
   assert.notEqual(r, old);
   assert.equal(permanent(s), before);
   assert.deepEqual(r.items, [], 'no items carried over');
-  assert.deepEqual(r.spells, ['leiting'], 'no pickup spell carried over');
+  assert.equal(r.heroId, 'lei');
 });
 
 test('finishing a run records it and clears it', () => {

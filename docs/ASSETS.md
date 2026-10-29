@@ -69,9 +69,13 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 
 Enemy definitions in `src/game/data/enemies.js` reference sprites through their `sprite` field, so a new enemy just needs a new manifest key.
 
-### Attack and spell visuals
+### Signature move icons
 
-Each hero's `attack.fx` in `heroes.js` picks how basic attacks look: melee `slash` (sword arc), `dagger` (crossing cuts) or `chain` (ball and chain slam); ranged `orb`, `dart` or `fire`. Elemental projectiles, impacts and lightning bolts are drawn per element, and spells get cast effects by id (`SPELL_FX` in `BattleScreen.jsx`). All of it is CSS in `src/styles/battle-fx.css` and animates only transform and opacity.
+Each hero's signature button shows painted art from `public/assets/signatures/<signature id>.webp` (200×200, transparent corners), listed in `SIGNATURE_ICONS` in `src/assets/manifest.js`. The cooldown is drawn over the art in CSS (a dark clockwise sweep plus the seconds left), so the art itself needs no states. A move without an entry falls back to the drawn SVG in `SigIcon.jsx`.
+
+### Attack and signature visuals
+
+Each hero's `attack.fx` in `heroes.js` picks how basic attacks look: melee `slash` (sword arc), `dagger` (crossing cuts) or `chain` (ball and chain slam); ranged `orb`, `dart` or `fire`. Elemental projectiles, impacts and lightning bolts are drawn per element, and each signature move has its own effects (`sigFx` in `BattleScreen.jsx`, styles in `src/styles/signature.css`). All of it is CSS and animates only transform and opacity.
 
 ### Effect layers
 
@@ -98,7 +102,7 @@ Glyph names are listed in `src/assets/icons/Icons.jsx`. Badge colours come from 
 
 ## Effects
 
-Spell effects are CSS (`.fx-*` classes in `app.css`) coloured by element: `projectile`, `burst`, `slash`, `rays`, `bubble` and `sparkles`. `BattleScreen.jsx` picks the effect per spell in its `cast` handler. To use image effects, render an `<img>` inside the `.fx` element for that ability.
+Effects are CSS (`.fx-*` / `.sp-*` classes) coloured by element. `BattleScreen.jsx` picks them per event (`sig`, `fruit`, `zone`, `wallHit`, …). To use image effects, render an `<img>` inside the `.fx` element for that ability.
 
 ## Naming conventions
 

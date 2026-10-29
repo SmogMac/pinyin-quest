@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { SPRITES, ABILITY_ICONS, SPELL_ICONS } from '../assets/manifest.js';
+import { SPRITES, ABILITY_ICONS } from '../assets/manifest.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import Icon from '../assets/icons/Icons.jsx';
 
@@ -81,10 +81,10 @@ export function AbilityIcon({ id, element, size = 44, level }) {
   );
 }
 
-/** Icon for a passive item, spell or synergy (glyph from data, coloured by element). */
+/** Icon for a passive item or synergy (glyph from data, coloured by element). */
 export function ItemIcon({ kind = 'item', def, id, size = 40, badge }) {
   const el = ELEMENTS[def?.element] || ELEMENTS.physical;
-  const override = kind === 'spell' ? SPELL_ICONS[id] : ABILITY_ICONS[id];
+  const override = ABILITY_ICONS[id];
   const glyph = override?.glyph || def?.icon || 'sparkle';
   return (
     <div className={`ability-icon kind-${kind} rarity-${def?.rarity || 'common'}`} style={{ width: size, height: size, '--el': el.color, '--el-glow': el.glow }}>

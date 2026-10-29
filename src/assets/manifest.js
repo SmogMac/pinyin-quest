@@ -100,19 +100,21 @@ export const NODE_ICONS = {
   secretboss: 'moon',
 };
 
-// Spell icons (glyph from Icons.jsx, coloured by the spell's element). Replace with { src }.
-export const SPELL_ICONS = {
-  jiayou: { glyph: 'heart' }, badao: { glyph: 'slash' }, zhishi: { glyph: 'book' }, dianhuo: { glyph: 'flame' }, xuanfeng: { glyph: 'wind' }, leiting: { glyph: 'bolt' },
-  huoqiu: { glyph: 'flame' }, dongtian: { glyph: 'snow' }, shandian: { glyph: 'bolt' }, xiayu: { glyph: 'drop' },
-  qiang: { glyph: 'mountain' }, heiye: { glyph: 'moon' }, dafeng: { glyph: 'wind' }, yangguang: { glyph: 'sun' },
-  dahai: { glyph: 'wave' }, dizhen: { glyph: 'mountain' }, xixue: { glyph: 'drop' }, xingxing: { glyph: 'star' },
-  kuaipao: { glyph: 'wind' },
-};
-
 // Spell effect styles keyed by element; the BattleScreen draws these with CSS.
 // Set `src` to an image/animated WebP to replace the procedural effect.
 export const EFFECTS = {
   projectile: { size: 26 },
   burst: { size: 90 },
   slash: { size: 70 },
+};
+
+// Signature move icons (the button the player presses; the cooldown is drawn over them).
+// Keyed by signature id (data/signatures.js). Missing entries fall back to the drawn SVG icon.
+export const SIGNATURE_ICONS = {
+  fruit_salad: 'assets/signatures/fruit_salad.webp',
+  patient_blade: 'assets/signatures/patient_blade.webp',
+  burning_passion: 'assets/signatures/burning_passion.webp',
+  deny_danger: 'assets/signatures/deny_danger.webp',
+  go_all_out: 'assets/signatures/go_all_out.webp',
+  knockback: 'assets/signatures/knockback.webp',
 };

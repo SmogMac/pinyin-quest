@@ -5,13 +5,12 @@ import fs from 'node:fs';
 import { Battle, buildHero, simulateBattle } from '../src/game/combat.js';
 import { ITEMS } from '../src/game/data/items.js';
 import { SYNERGIES, activeSynergies } from '../src/game/data/synergies.js';
-import { SPELLS, DISCOVERABLE_SPELLS } from '../src/game/data/spells.js';
+import { SIGNATURES } from '../src/game/data/signatures.js';
 import { ENEMIES } from '../src/game/data/enemies.js';
 import { BIOMES } from '../src/game/data/biomes.js';
 import { HEROES } from '../src/game/data/heroes.js';
 import { COMBAT } from '../src/game/data/balance.js';
 import { toneVariants, withTone, toneOf } from '../src/learn/pinyinTools.js';
-import { matchesShape } from '../src/learn/shapes.js';
 
 const vocab = JSON.parse(fs.readFileSync(new URL('../src/data/vocab.json', import.meta.url)));
 const vocabIds = new Set(vocab.map((w) => w.id));
@@ -24,80 +23,77 @@ const run = (b, seconds) => {
 };
 
 test('content meets the minimums', () => {
-  assert.ok(Object.keys(ITEMS).length >= 40, `items: ${Object.keys(ITEMS).length}`);
-  assert.ok(DISCOVERABLE_SPELLS.length >= 12, `spells: ${DISCOVERABLE_SPELLS.length}`);
-  assert.ok(Object.keys(SYNERGIES).length >= 20, `synergies: ${Object.keys(SYNERGIES).length}`);
+  assert.ok(Object.keys(ITEMS).length >= 50, `items: ${Object.keys(ITEMS).length}`);
+  assert.ok(Object.keys(SYNERGIES).length >= 25, `synergies: ${Object.keys(SYNERGIES).length}`);
   assert.ok(Object.values(BIOMES).filter((b) => b.terrain?.length || b.events?.length || b.elementMods).length >= 4);
-  const elements = new Set([...Object.values(SPELLS).map((s) => s.element)]);
-  for (const el of ['fire', 'ice', 'water', 'earth', 'lightning', 'wind', 'dark', 'light']) assert.ok(elements.has(el), `no spell for ${el}`);
-  for (const h of Object.values(HEROES)) assert.ok(SPELLS[h.signature]?.signature, `${h.en} needs a signature spell`);
+  const elements = new Set(Object.values(ITEMS).map((s) => s.element));
+  for (const el of ['fire', 'ice', 'water', 'earth', 'lightning', 'wind', 'dark', 'light']) assert.ok(elements.has(el), `no item for ${el}`);
+  for (const h of Object.values(HEROES)) assert.ok(SIGNATURES[h.signature], `${h.en} needs a signature move`);
+  // every hero has signature-specific items
+  for (const id of Object.keys(HEROES)) assert.ok(Object.values(ITEMS).filter((i) => i.hero === id).length >= 4, `${id} signature items`);
 });
 
 test('every vocabulary requirement is a real word in the list', () => {
   const reqs = [
     ...Object.values(ITEMS).flatMap((i) => i.requires || []),
-    ...Object.values(SPELLS).flatMap((s) => s.requires || []),
     ...Object.values(BIOMES).flatMap((b) => b.unlock || []),
   ];
   const missing = [...new Set(reqs.filter((w) => !vocabIds.has(w)))];
   // each item/spell needs at least one requirement that exists, or it could never unlock
-  for (const [id, it] of [...Object.entries(ITEMS), ...Object.entries(SPELLS)]) {
+  for (const [id, it] of Object.entries(ITEMS)) {
     if (it.requires?.length) assert.ok(it.requires.some((w) => vocabIds.has(w)), `${id} can never unlock (${it.requires})`);
   }
   if (missing.length) console.log('optional requirement words not in the list (ok, alternatives exist):', missing.join(' '));
 });
 
-test('combat continues while a spell puzzle is open; one puzzle at a time', () => {
-  const b = new Battle({ hero: hero({ spells: ['jiayou', 'huoqiu'] }), enemies: ['slime', 'slime'], seed: 3 });
+test('combat continues while the signature puzzle is open; one puzzle at a time', () => {
+  const b = new Battle({ hero: hero(), enemies: ['slime', 'slime'], seed: 3 });
   run(b, 4);
-  assert.equal(b.spells[0].state, 'ready');
-  assert.ok(b.beginCast(0));
-  assert.equal(b.casting, 0);
-  assert.equal(b.beginCast(1), false, 'cannot open a second puzzle');
+  assert.equal(b.sig.state, 'ready');
+  assert.ok(b.beginCast());
+  assert.equal(b.casting, true);
+  assert.equal(b.beginCast(), false, 'cannot open a second puzzle');
   const t0 = b.t;
   const hp0 = b.foes()[0].hp;
   run(b, 3);
-  assert.ok(b.t > t0 + 2.9, 'time advances while casting');
+  assert.ok(b.t > t0 + 2.9, 'time advances while solving');
   assert.ok(b.foes()[0]?.hp !== hp0 || b.result, 'the hero keeps attacking during the puzzle');
-  assert.equal(b.spells[0].state, 'casting', 'spell does not go on cooldown until resolved');
+  assert.equal(b.sig.state, 'casting', 'no cooldown until resolved');
 });
 
-test('cancel keeps the spell ready; failure fizzles into cooldown; success casts', () => {
-  const b = new Battle({ hero: hero({ spells: ['jiayou', 'huoqiu'] }), enemies: ['golem'], seed: 5 });
+test('cancel keeps the move ready; a wrong answer fizzles into cooldown; success fires it', () => {
+  const b = new Battle({ hero: hero(), enemies: ['golem'], seed: 5 });
   run(b, 4);
-  b.beginCast(1);
-  b.cancelCast(1);
-  assert.equal(b.spells[1].state, 'ready');
-  assert.equal(b.casting, null);
-  b.beginCast(1);
-  b.finishCast(1, false);
-  assert.equal(b.spells[1].state, 'cooldown');
-  assert.ok(b.spells[1].cdLeft > 0);
-  run(b, 9);
-  assert.equal(b.spells[1].state, 'ready');
+  b.beginCast();
+  b.cancelCast();
+  assert.equal(b.sig.state, 'ready');
+  assert.equal(b.casting, false);
+  b.beginCast();
+  b.finishCast(false);
+  assert.equal(b.sig.state, 'cooldown');
+  assert.ok(Math.abs(b.sig.cdLeft - SIGNATURES.fruit_salad.cd) < 1e-9, 'full cooldown after a fizzle');
+  run(b, SIGNATURES.fruit_salad.cd + 0.2);
+  assert.equal(b.sig.state, 'ready');
   const hp = b.foes()[0].hp;
-  b.beginCast(1);
-  const events = [];
-  const r = b.finishCast(1, true);
-  events.push(...b.events);
+  b.beginCast();
+  const r = b.finishCast(true, { choice: 'apple' });
   assert.ok(r.ok);
-  assert.ok(b.foes()[0].hp < hp, 'fireball dealt damage');
-  assert.ok(b.foes()[0].statuses.burn, 'fireball burns');
+  assert.ok(b.foes()[0].hp < hp, 'the apple hit');
+  assert.equal(b.sig.state, 'cooldown');
 });
 
-test('elemental affinities change real damage', () => {
+test('no elemental resistances or weaknesses: every element deals the same to every enemy', () => {
   const hit = (enemy, element) => {
-    const b = new Battle({ hero: hero(), enemies: [enemy], seed: 1 });
+    const b = new Battle({ hero: hero(), enemies: [enemy], biome: 'bamboo', seed: 1 });
+    b.biome = { ...b.biome, elementMods: {} }; // biomes may favour an element for everyone; enemies never do
     const f = b.foes()[0];
     return b.damage(b.hero, f, 40, { element, kind: 'proc', canCrit: false, noReact: true });
   };
-  const normal = hit('slime', 'fire');
-  const resisted = hit('slime', 'water');
-  const weak = hit('slime', 'lightning');
-  assert.ok(resisted < normal && normal < weak, `${resisted} < ${normal} < ${weak}`);
-  // bosses can never be immune
-  const boss = new Battle({ hero: hero(), enemies: ['wyrm'], seed: 1 });
-  assert.ok(boss.damage(boss.hero, boss.foes()[0], 40, { element: 'dark', kind: 'proc', canCrit: false }) > 0);
+  for (const enemy of ['slime', 'snowman', 'crab', 'golem', 'wyrm', 'thunderbird']) {
+    const base = hit(enemy, 'physical');
+    for (const el of ['fire', 'ice', 'water', 'earth', 'lightning', 'dark', 'light']) assert.equal(hit(enemy, el), base, `${enemy} vs ${el}`);
+    assert.equal(ENEMIES[enemy].affinity, undefined);
+  }
 });
 
 test('elemental reactions fire through the engine', () => {
@@ -135,7 +131,8 @@ test('every passive item runs in battle without errors', () => {
   console.error = (...a) => errors.push(a.join(' '));
   try {
     for (const id of Object.keys(ITEMS)) {
-      const h = buildHero({ heroId: 'xinyi', items: [id], spells: ['jiayou', 'huoqiu', 'shandian'] });
+      const heroId = ITEMS[id].hero || 'xinyi';
+      const h = buildHero({ heroId, items: [id] });
       const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['slime', 'crab', 'bat'], biome: 'coast', floor: 4, seed: 9, autoCast: { delay: 1, success: 0.8 } });
       assert.ok(['win', 'lose'].includes(r.result), id);
     }
@@ -152,11 +149,13 @@ test('every synergy activates and runs without errors', () => {
   try {
     for (const [sid, sy] of Object.entries(SYNERGIES)) {
       const items = sy.requires.filter((r) => ITEMS[r]);
-      const spells = ['jiayou', ...sy.requires.filter((r) => SPELLS[r] && r !== 'jiayou')].slice(0, 3);
-      const heroId = Object.keys(HEROES).find((h) => sy.requires.includes(HEROES[h].signature)) || 'xinyi';
-      const sp = heroId === 'xinyi' ? spells : [HEROES[heroId].signature, ...spells.filter((x) => x !== 'jiayou')].slice(0, 3);
-      assert.ok(activeSynergies(items, sp).includes(sid), `${sid} should activate`);
-      const h = buildHero({ heroId, items, spells: sp });
+      for (const r of sy.requires) assert.ok(ITEMS[r] || SIGNATURES[r], `${sid} requires unknown ${r}`);
+      const heroId =
+        Object.keys(HEROES).find((h) => sy.requires.includes(HEROES[h].signature)) || items.map((i) => ITEMS[i].hero).find(Boolean) || 'xinyi';
+      const heroItems = items.map((i) => ITEMS[i].hero).filter(Boolean);
+      assert.ok(heroItems.every((x) => x === heroId), `${sid} mixes items of different heroes`);
+      assert.ok(activeSynergies(items, [HEROES[heroId].signature]).includes(sid), `${sid} should activate`);
+      const h = buildHero({ heroId, items });
       const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['slime', 'slime', 'bat'], biome: 'bamboo', floor: 3, seed: 4, autoCast: { delay: 1, success: 1 } });
       assert.ok(['win', 'lose'].includes(r.result));
     }
@@ -167,12 +166,16 @@ test('every synergy activates and runs without errors', () => {
 });
 
 test('absurd builds stay bounded (no infinite chains)', () => {
-  const items = Object.keys(ITEMS);
-  const h = buildHero({ heroId: 'ruizhe', items, spells: ['zhishi', 'shandian', 'huoqiu'] });
-  const start = Date.now();
-  const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['wordeater'], biome: 'beyond', floor: 18, seed: 1, autoCast: { delay: 0.5, success: 1 } });
-  assert.ok(Date.now() - start < 8000, 'simulation finished quickly');
-  assert.ok(['win', 'lose'].includes(r.result));
+  for (const heroId of Object.keys(HEROES)) {
+    const items = Object.keys(ITEMS).filter((id) => !ITEMS[id].hero || ITEMS[id].hero === heroId);
+    const h = buildHero({ heroId, items });
+    const start = Date.now();
+    const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['wordeater'], biome: 'beyond', floor: 18, seed: 1, autoCast: { delay: 0.5, success: 1 } });
+    assert.ok(Date.now() - start < 8000, `${heroId}: simulation finished quickly`);
+    assert.ok(['win', 'lose'].includes(r.result));
+    const r2 = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['slime', 'slime', 'golem', 'bat', 'goblin'], biome: 'coast', floor: 10, seed: 3, autoCast: { delay: 0.2, success: 1 } });
+    assert.ok(['win', 'lose'].includes(r2.result), `${heroId} crowd`);
+  }
 });
 
 test('enemies use behaviours: charge telegraphs, freezing interrupts, bosses change phase', () => {
@@ -190,15 +193,12 @@ test('enemies use behaviours: charge telegraphs, freezing interrupts, bosses cha
   assert.ok(boss.events.some((e) => e.type === 'phase') || boss.result === 'lose');
 });
 
-test('tone variants and shape recognition', () => {
+test('tone helpers', () => {
   const v = toneVariants('huǒ qiú', 3);
   assert.equal(v.length, 3);
   for (const x of v) assert.notEqual(x, 'huǒ qiú');
   assert.equal(withTone('lü', 3), 'lǚ');
   assert.equal(toneOf('qiú'), 2);
-  const circle = Array.from({ length: 48 }, (_, i) => ({ x: 100 + 70 * Math.cos((i / 48) * 2 * Math.PI), y: 100 + 70 * Math.sin((i / 48) * 2 * Math.PI) }));
-  assert.ok(matchesShape(circle, 'circle').match);
-  assert.ok(!matchesShape(circle, 'triangle').match);
 });
 
 test('hero passives and sprites load into battle', () => {
@@ -208,13 +208,13 @@ test('hero passives and sprites load into battle', () => {
     assert.ok(b.hooks.some((x) => x.passive), `${id} passive hooks registered`);
     assert.equal(typeof b.hero.def, 'number', 'def is the defence stat');
   }
-  // Xin Yi heals on a successful cast
+  // Xin Yi heals on a successful signature
   const b = new Battle({ hero: buildHero({ heroId: 'xinyi' }), heroHp: 50, enemies: ['golem'], seed: 1 });
   run(b, 5);
   const hp = b.hero.hp;
-  b.beginCast(0);
-  b.finishCast(0, true);
-  assert.ok(b.hero.hp > hp, 'Good Cheer + Cheer On heal');
+  b.beginCast();
+  b.finishCast(true, { choice: 'grape' });
+  assert.ok(b.hero.hp > hp, 'Good Cheer heals');
   // Mei opens with a sword draw
   const m = new Battle({ hero: buildHero({ heroId: 'mei' }), enemies: ['golem'], seed: 1 });
   const ev = run(m, 1);

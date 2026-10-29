@@ -15,10 +15,9 @@ export const ELEMENTS = {
 };
 export const COMBAT_ELEMENTS = ['fire', 'ice', 'water', 'earth', 'lightning', 'wind', 'dark', 'light'];
 
-// Affinity multipliers used by enemy definitions (weak/normal/resist/immune).
-export const AFFINITY = { weak: 1.5, normal: 1, resist: 0.5, immune: 0 };
-// Bosses can never be fully immune or heavily resistant, so no build is hard-locked.
-export const BOSS_MIN_AFFINITY = 0.6;
+// Elements give attacks their look, their status effect and their reactions. There are no
+// elemental resistances or weaknesses: no enemy takes less from fire because it lives in water.
+// What changes damage is the target's current state (Wet + Lightning, Frozen + heavy impact, …).
 
 // Status effects. `dur` is the default duration (s); engine applies effects by id.
 export const STATUSES = {
@@ -30,7 +29,13 @@ export const STATUSES = {
   curse: { py: 'zǔ zhòu', zh: '诅咒', name: 'Curse', element: 'dark', color: '#9b6bff', dur: 5, desc: 'Takes 15% more damage; hitting it drains life.' },
   stun: { py: 'yūn', zh: '晕', name: 'Stun', element: 'earth', color: '#e8c48a', dur: 1, desc: 'Cannot act.' },
   dazzle: { py: 'yǎn huā', zh: '眼花', name: 'Dazzle', element: 'light', color: '#fff0a0', dur: 3, desc: 'Attacks miss 35% of the time.' },
+  bleed: { py: 'liú xuè', zh: '流血', name: 'Bleed', element: 'physical', color: '#e0445e', dur: 4, desc: 'Loses health every 0.5s.' },
+  slow: { py: 'huǎn màn', zh: '缓慢', name: 'Slow', element: 'water', color: '#7aa7d8', dur: 3, desc: 'Moves 45% slower.' },
+  weaken: { py: 'xū ruò', zh: '虚弱', name: 'Weaken', element: 'dark', color: '#c6d64a', dur: 5, desc: 'Deals 30% less damage.' },
+  mark: { py: 'biāo jì', zh: '标记', name: 'Marked', element: 'light', color: '#ff9bd2', dur: 5, desc: 'Takes 20% more damage from you.' },
 };
+// Statuses that deal damage over time (element of the ticks).
+export const DOT_STATUSES = { burn: 'fire', bleed: 'physical' };
 
 // Elemental reactions: damage of `element` hitting a target that has status `has`.
 // The first matching reaction applies. `consume` removes statuses. Effects are run by the engine
@@ -38,10 +43,10 @@ export const STATUSES = {
 export const REACTIONS = [
   { id: 'conduct', py: 'dǎo diàn', zh: '导电', name: 'Conduct', element: 'lightning', has: 'wet', mult: 1.5, consume: ['wet'], desc: 'Lightning on Wet: +50% and chains to every other Wet enemy.' },
   { id: 'melt', py: 'róng huà', zh: '融化', name: 'Melt', element: 'fire', has: 'frozen', mult: 2, consume: ['frozen'], desc: 'Fire on Frozen: double damage, leaves the target Wet.' },
-  { id: 'shatter', py: 'fěn suì', zh: '粉碎', name: 'Shatter', element: 'earth', has: 'frozen', mult: 2.5, consume: ['frozen'], desc: 'Earth on Frozen: ×2.5 damage.' },
+  { id: 'shatter', py: 'fěn suì', zh: '粉碎', name: 'Shatter', element: 'earth', has: 'frozen', mult: 2.5, consume: ['frozen'], desc: 'Earth or any heavy impact (a big knockback or wall slam) on Frozen: Shatter for bonus damage.' },
   { id: 'steam', py: 'zhēng qì', zh: '蒸汽', name: 'Steam', element: 'fire', has: 'wet', mult: 1.2, consume: ['wet'], desc: 'Fire on Wet: blinding steam (Dazzle).' },
   { id: 'wildfire', py: 'yě huǒ', zh: '野火', name: 'Wildfire', element: 'wind', has: 'burn', mult: 1.2, consume: [], desc: 'Wind on Burning: spreads Burn to every enemy.' },
-  { id: 'purge', py: 'jìng huà', zh: '净化', name: 'Purify', element: 'light', has: 'curse', mult: 2, consume: ['curse'], desc: 'Light on Cursed: double damage and heals you.' },
+  { id: 'purge', py: 'jìng huà', zh: '净化', name: 'Purify', element: 'light', has: 'curse', mult: 2, consume: ['curse'], desc: 'Light on Cursed: double damage, a purifying explosion hits nearby enemies, and you heal.' },
   { id: 'plasma', py: 'bào zhà', zh: '爆炸', name: 'Explosion', element: 'lightning', has: 'burn', mult: 1.3, consume: ['burn'], desc: 'Lightning on Burning: explodes onto nearby enemies.' },
   { id: 'eclipse', py: 'rì shí', zh: '日食', name: 'Eclipse', element: 'dark', has: 'dazzle', mult: 1.6, consume: ['dazzle'], desc: 'Dark on Dazzled: +60% and Curse.' },
 ];

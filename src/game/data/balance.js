@@ -15,12 +15,11 @@ export const RUN = {
   actHealPct: 1, // beating a guardian fully heals you for the next act
   restHealPct: 0.4,
   lessonHealPct: 0.04, // per correct answer at a teacher node
-  spellOfferChance: 0.3, // chance a battle reward is a spell instead of passives
   inkPerBattle: [14, 22],
   inkPerElite: 40,
-  inkPerCast: 3, // successful spellcast
+  inkPerCast: 3, // successful signature move
   inkPerAnswer: 8, // correct answer at teacher/rest/event nodes
-  prices: { common: 55, rare: 90, epic: 150, spell: 80, heal: 40 },
+  prices: { common: 55, rare: 90, epic: 150, heal: 40 },
   questions: { lesson: 5, rest: 3, event: 1 },
   maxNewWordsPerQuiz: 2, // new words are always taught first with a teaching card
 };

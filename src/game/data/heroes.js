@@ -1,7 +1,7 @@
 // Playable heroes. `sprite` is a key in src/assets/manifest.js. Names are shown pinyin first.
-// Each hero has: base stats · a basic attack style · a signature spell (in data/spells.js, starts
-// in a locked slot) · a passive (hooks run by the combat engine, like items; passives are never
-// silenced). `quizHealPct` is used by run.js for teacher/rest questions.
+// Each hero has: base stats · a basic attack style · exactly one signature move (data/signatures.js,
+// with its own Mandarin minigame; it can never be replaced) · a passive (hooks run by the combat
+// engine, like items; passives are never silenced). `quizHealPct` is used for teacher/rest questions.
 // attack.fx picks the attack visuals: melee 'slash' | 'dagger' | 'chain', ranged 'orb' | 'dart' | 'fire'.
 // passive.meter { key, max, color } shows a charge meter over the hero (read from the hook state).
 // attack.kb is how far basic attacks push (world units); stats.speedPct / kbRes shape positioning.
@@ -12,14 +12,14 @@ export const HEROES = {
     blurb: 'Always smiling, always learning. Her good mood is contagious, and it keeps her on her feet.',
     stats: { maxHp: 135, atk: 14, def: 2, aspd: 0.9, crit: 0.05, critDmg: 1.5, dodge: 0 },
     attack: { range: 48, element: 'physical', style: 'Ranged qi orbs', fx: 'orb', kb: 1.5 },
-    signature: 'jiayou',
-    strength: 'Forgiving: heals from every successful cast.',
-    weakness: 'Average damage until her build comes together.',
+    signature: 'fruit_salad',
+    strength: 'Versatile: every fruit does something different, and each success heals her.',
+    weakness: 'Unpredictable; average damage until her build comes together.',
     passive: {
       id: 'good_cheer', py: 'kāi xīn', zh: '开心', en: 'Good Cheer', quizHealPct: 0.04,
-      desc: 'Every successful spellcast heals 6% HP; the first each battle also grants a 15 shield. Correct answers outside battle heal 4%.',
+      desc: 'Every successful Fruit Salad! heals 6% HP; the first each battle also grants a 15 shield. Correct answers outside battle heal 4%.',
       hooks: {
-        onCast(b, c, s) {
+        onSignature(b, c, s) {
           if (c.echo) return;
           b.heal(b.hero, b.hero.maxHp * 0.06);
           if (!s.firstDone) {
@@ -33,15 +33,15 @@ export const HEROES = {
   },
   mei: {
     py: 'Méi', zh: '梅', en: 'Mei', title: 'Silent Blade', sprite: 'mei',
-    blurb: 'A quiet swordswoman. She strikes first, and every spell she weaves sharpens her blade.',
+    blurb: 'A quiet swordswoman. She strikes first, and every Patient Blade sharpens her next cut.',
     stats: { maxHp: 125, atk: 16, def: 2, aspd: 0.85, crit: 0.12, critDmg: 1.6, dodge: 0.05, speedPct: 0.15 },
     attack: { range: 11, element: 'physical', style: 'Melee sword', fx: 'slash', kb: 3.5 },
-    signature: 'badao',
-    strength: 'Huge burst; rewards casting often.',
+    signature: 'patient_blade',
+    strength: 'Huge burst that hits the whole battlefield.',
     weakness: 'Fragile and must fight up close.',
     passive: {
       id: 'plum_blossom', py: 'méi huā', zh: '梅花', en: 'Plum Blossom',
-      desc: 'Opens each battle with a sword draw for 200% damage. After each spell, her next attack is a guaranteed crit that also cuts every other enemy for 50%.',
+      desc: 'Opens each battle with a sword draw for 200% damage. After each Patient Blade, her next attack is a guaranteed crit that also cuts every other enemy for 50%.',
       hooks: {
         onBattleStart(b) {
           b.schedule(0.4, () => {
@@ -49,10 +49,10 @@ export const HEROES = {
             if (!t) return;
             b.emit({ type: 'cast', spell: 'iaido', element: 'dark' });
             b.label(b.hero, 'bá dāo!', 'good');
-            b.damage(b.hero, t, b.hero.atk * 2, { element: 'physical', kind: 'spell' });
+            b.damage(b.hero, t, b.hero.atk * 2, { element: 'physical', kind: 'proc', canCrit: true });
           });
         },
-        onCast: (b, c, s) => !c.echo && (s.petal = true),
+        onSignature: (b, c, s) => !c.echo && (s.petal = true),
         onAttack(b, p, s) {
           if (!s.petal) return;
           s.petal = false;
@@ -74,12 +74,12 @@ export const HEROES = {
     blurb: 'Has read every book and is terrified of all of them. Fights with scrolls, and panics brilliantly.',
     stats: { maxHp: 125, atk: 12, def: 2, aspd: 1.0, crit: 0.05, critDmg: 1.5, dodge: 0 },
     attack: { range: 50, element: 'physical', style: 'Ranged paper darts', fx: 'dart', kb: 1 },
-    signature: 'zhishi',
-    strength: 'Spells grow stronger with varied builds; panic saves him.',
-    weakness: 'Weak basic attacks.',
+    signature: 'deny_danger',
+    strength: 'Controls space: shields himself and throws enemies far away; panic saves him.',
+    weakness: 'Weak basic attacks; his signature deals almost no damage.',
     passive: {
       id: 'nervous_genius', py: 'jǐn zhāng', zh: '紧张', en: 'Nervous Genius',
-      desc: 'Well-read: every different element among his items and spells makes his spells 10% stronger. Panic: the first time he drops below half HP each battle, all spell cooldowns reset and he attacks 30% faster.',
+      desc: 'Well-read: every different element among his items makes Deny Danger! 10% stronger. Panic: the first time he drops below half HP each battle, his signature recharges instantly and he attacks 30% faster.',
       hooks: {
         onBattleStart(b, p, s) {
           const els = new Set();
@@ -87,10 +87,9 @@ export const HEROES = {
             const e = ITEM_ELEMENT[id];
             if (e && e !== 'physical') els.add(e);
           }
-          for (const sp of b.spells) if (sp.def) els.add(sp.def.element);
           s.mult = 1 + 0.1 * els.size;
         },
-        modSpellPower: (b, c, s) => (c.power *= s.mult || 1),
+        modSignature: (b, c, s) => (c.power *= s.mult || 1),
         onLowHp(b) {
           b.label(b.hero, 'jǐn zhāng!!', 'enemy');
           b.resetCooldowns();
@@ -105,9 +104,9 @@ export const HEROES = {
     blurb: 'A stern old master who keeps a flame in his palm and has no patience for slow learners, or for enemies.',
     stats: { maxHp: 135, atk: 14, def: 2, aspd: 1.0, crit: 0.05, critDmg: 1.5, dodge: 0, speedPct: -0.05 },
     attack: { range: 46, element: 'fire', style: 'Ranged fire bolts', fx: 'fire', kb: 2 },
-    signature: 'dianhuo',
+    signature: 'burning_passion',
     strength: 'Fire everywhere; Burn builds come naturally and hit harder.',
-    weakness: 'Fire-resistant enemies (crabs, turtles) slow him down.',
+    weakness: 'Slow-moving, and needs his Burning Passion to really get going.',
     poolBias: { fire: 2 },
     passive: {
       id: 'perfect_heat', py: 'huǒ hou', zh: '火候', en: 'Perfect Heat',
@@ -136,8 +135,8 @@ export const HEROES = {
     blurb: 'Smiles like she knows something you don’t. Blades drift where the wind takes them, and luck always seems to be on her side.',
     stats: { maxHp: 125, atk: 12, def: 2, aspd: 1.25, crit: 0.15, critDmg: 1.7, dodge: 0.17, speedPct: 0.3 },
     attack: { range: 11, element: 'physical', style: 'Twin daggers', fx: 'dagger', kb: 1.5 },
-    signature: 'xuanfeng',
-    strength: 'Dodges a lot; every dodge sets up a critical strike.',
+    signature: 'go_all_out',
+    strength: 'Dodges a lot; short, explosive frenzies of guaranteed crits.',
     weakness: 'Lowest health; relies on luck and speed.',
     passive: {
       id: 'lucky_streak', py: 'yùn qi', zh: '运气', en: 'Lucky Streak',
@@ -173,8 +172,8 @@ export const HEROES = {
     blurb: 'Cocky, impatient and always spoiling for a fight. Swings a ball and chain and dares the storm to keep up.',
     stats: { maxHp: 160, atk: 18, def: 5, aspd: 0.7, crit: 0.05, critDmg: 1.6, dodge: 0, speedPct: -0.1, kbRes: 0.35 },
     attack: { range: 20, element: 'physical', style: 'Ball and chain (slow, heavy, hits around the target, knocks foes far back)', fx: 'chain', kb: 7 },
-    signature: 'leiting',
-    strength: 'Heavy hits that splash; every few swings unleash lightning.',
+    signature: 'knockback',
+    strength: 'Heavy hits that splash; controls the whole battlefield with Knockback!.',
     weakness: 'Slow swings; must get in close.',
     passive: {
       id: 'static_temper', py: 'pí qi', zh: '脾气', en: 'Static Temper',

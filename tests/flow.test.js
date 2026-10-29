@@ -1,10 +1,9 @@
-// Battle completion, two spell slots, Lei, save migration and route-map regression tests.
+// Battle completion, signature moves, Lei, save migration and route-map regression tests.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Battle, buildHero } from '../src/game/combat.js';
 import { COMBAT } from '../src/game/data/balance.js';
-import { SPELL_SLOTS } from '../src/game/data/spells.js';
-import { generateActMap, newRun, takeSpell, replaceableSlots } from '../src/game/run.js';
+import { generateActMap, newRun } from '../src/game/run.js';
 import { hydrate } from '../src/store/store.js';
 
 const ends = (evs) => evs.filter((e) => e.type === 'end');
@@ -17,16 +16,15 @@ function play(b, seconds) {
 }
 const battle = (enemies, opts = {}) => new Battle({ hero: buildHero({ heroId: 'xinyi', ...opts }), enemies, seed: 3, ...opts.battle });
 
-test('victory: final enemy killed by a spell outside a step is delivered by drain()', () => {
+test('victory: final enemy killed by a signature move outside a step is delivered by drain()', () => {
   const b = battle(['slime']);
   play(b, 1);
   const e = b.foes()[0];
   e.hp = 1;
-  b.spells[0].state = 'ready';
-  b.beginCast(0);
-  // Cheer On does no damage, so force the kill the way a damaging spell would
-  b.damage(b.hero, e, 999, { element: 'fire', kind: 'spell' });
-  b.finishCast(0, true);
+  b.sig.state = 'ready';
+  b.beginCast();
+  b.finishCast(true, { choice: 'apple' }); // an apple to the face
+  assert.equal(b.result, 'win');
   assert.equal(b.result, 'win');
   const evs = b.drain();
   assert.equal(ends(evs).length, 1, 'exactly one end event, available without another step');
@@ -95,40 +93,70 @@ test('safety net: a unit left at 0 HP is resolved on the next tick', () => {
   assert.equal(b.result, 'win');
 });
 
-test('two spell slots: signature is locked, one pickup slot', () => {
-  assert.equal(SPELL_SLOTS, 2);
+test('a run has no spells: the hero brings exactly one signature move', () => {
   const run = newRun({ seed: 5, heroId: 'lei' });
-  assert.deepEqual(run.spells, ['leiting']);
-  takeSpell(run, 'huoqiu');
-  assert.deepEqual(run.spells, ['leiting', 'huoqiu']);
-  takeSpell(run, 'dafeng'); // full and no slot chosen: rejected
-  assert.deepEqual(run.spells, ['leiting', 'huoqiu']);
-  assert.deepEqual(replaceableSlots(run), [1], 'only the pickup slot can be replaced');
-  takeSpell(run, 'dafeng', 0); // signature can't be replaced
-  takeSpell(run, 'dafeng', 1);
-  assert.deepEqual(run.spells, ['leiting', 'dafeng']);
+  assert.equal(run.spells, undefined);
+  const b = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['slime'], seed: 1 });
+  assert.equal(b.sig.id, 'knockback');
+  assert.equal(b.spells, undefined, 'no spell slots exist');
 });
 
-test('saved runs with three spells migrate to two (extra refunded as ink)', () => {
-  const s = hydrate({ adventure: { current: { spells: ['jiayou', 'huoqiu', 'shandian'], ink: 5 } } });
-  assert.deepEqual(s.adventure.current.spells, ['jiayou', 'shandian']);
-  assert.equal(s.adventure.current.ink, 45);
-  assert.equal(s.adventure.current.notice.kind, 'spellSlots');
+test('saved runs with pickup spells migrate: spells removed, refunded as ink, nothing else lost', () => {
+  const s = hydrate({
+    words: { 你好: { ok: 3 } },
+    adventure: { dragonWins: 2, current: { v: 2, heroId: 'xinyi', spells: ['jiayou', 'huoqiu'], ink: 5, items: ['ember_tip'], reward: { kind: 'spell', spell: 'dafeng', ink: 12 }, shop: { stock: [{ kind: 'spell', id: 'x' }, { kind: 'item', id: 'vitality' }] } } },
+  });
+  const cur = s.adventure.current;
+  assert.equal(cur.spells, undefined);
+  assert.equal(cur.ink, 45, 'one found spell refunded');
+  assert.equal(cur.notice.kind, 'signatures');
+  assert.deepEqual(cur.items, ['ember_tip']);
+  assert.equal(cur.reward.kind, 'items', 'a pending spell reward becomes an item choice');
+  assert.deepEqual(cur.shop.stock.map((x) => x.kind), ['item'], 'spells leave the shop');
+  assert.equal(s.words['你好'].ok, 3, 'learning progress intact');
+  assert.equal(s.adventure.dragonWins, 2, 'story progress intact');
+  // the migrated run can be played
+  const b = new Battle({ hero: buildHero({ heroId: cur.heroId, items: cur.items }), enemies: ['slime'], seed: 1 });
+  assert.equal(b.sig.id, 'fruit_salad');
 });
 
-test('Lei: Static Temper charges on hits and bursts with lightning; Thunder Crash shocks', () => {
+test('Lei: Static Temper still bursts; Knockback! flings enemies to the far wall without damage', () => {
   const b = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['golem', 'golem'], seed: 2 });
   const evs = play(b, 25);
   assert.ok(evs.some((e) => e.type === 'burst'), 'a charged swing releases a burst');
-  assert.ok(evs.some((e) => e.type === 'hit' && e.element === 'lightning' && e.kind === 'proc'));
-  const c = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['golem'], seed: 2 });
+  const c = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['slime', 'goblin'], seed: 2 });
   play(c, 1);
-  c.spells[0].state = 'ready';
-  c.beginCast(0);
-  c.finishCast(0, true);
-  const ev = c.drain();
-  assert.ok(ev.some((e) => e.type === 'slam'));
-  assert.ok(c.foes().every((f) => f.statuses.shock));
+  const hp = c.foes().map((f) => f.hp);
+  const x0 = c.foes().map((f) => f.x);
+  c.sig.state = 'ready';
+  c.beginCast();
+  c.finishCast(true);
+  const out = [...c.drain()];
+  for (let i = 0; i < 30; i++) out.push(...c.step(COMBAT.dt));
+  assert.deepEqual(c.foes().map((f) => f.hp), hp, 'no direct damage');
+  c.foes().forEach((f, i) => assert.ok(f.x > x0[i] + 10, `enemy ${i} flew back (${x0[i].toFixed(0)} → ${f.x.toFixed(0)})`));
+  assert.ok(c.foes().some((f) => f.x > COMBAT.worldW - 15), 'reaches the far wall');
+  assert.ok(out.some((e) => e.type === 'wallHit'), 'slams into it');
+  // enemies slide, they don't teleport
+  const d = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['slime'], seed: 2 });
+  const s0 = d.foes()[0].x;
+  d.sig.state = 'ready';
+  d.beginCast();
+  d.finishCast(true);
+  for (let i = 0; i < 9; i++) d.step(COMBAT.dt); // swing wind-up (0.35s) + one tick
+  assert.ok(d.foes()[0].x - s0 < 20, 'still travelling, not teleported');
+});
+
+test('Lei: bosses are pushed less, but still meaningfully', () => {
+  const b = new Battle({ hero: buildHero({ heroId: 'lei' }), enemies: ['wyrm'], seed: 2 });
+  const boss = b.foes()[0];
+  boss.x = 60;
+  b.sig.state = 'ready';
+  b.beginCast();
+  b.finishCast(true);
+  for (let i = 0; i < 40; i++) b.step(COMBAT.dt);
+  const moved = boss.x - 60;
+  assert.ok(moved >= 10 && moved < COMBAT.worldW - 63, `boss moved ${moved.toFixed(1)}`);
 });
 
 test('route maps: every node is connected and no two routes cross', () => {

@@ -2,12 +2,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { playRun } from './sim.js';
+import { ITEMS } from '../src/game/data/items.js';
 
 test('runs follow the act structure and finish', () => {
   for (let s = 1; s <= 30; s++) {
     const { run } = playRun(s * 97);
     assert.ok(['victory', 'defeat'].includes(run.phase), `ended in ${run.phase}`);
-    assert.ok(run.spells.length >= 1 && run.spells.length <= 2, 'signature + at most one pickup');
+    assert.equal(run.spells, undefined, 'no spells: the signature move comes from the hero');
+    for (const id of run.items) assert.ok(!ITEMS[id].hero || ITEMS[id].hero === run.heroId, `${id} belongs to another hero`);
     assert.equal(new Set(run.items).size, run.items.length, 'items are unique');
   }
 });
@@ -39,16 +41,17 @@ test('balance: winnable but not trivial, battles are short, bosses take longer',
   }
   console.table(report);
   for (const [h, x] of Object.entries(report)) {
-    assert.ok(x.dragonWinRate > 0.2 && x.dragonWinRate < 0.9, `${h} dragon win rate ${x.dragonWinRate}`);
+    // target: every hero beats the dragon in at least ~45% of runs (small samples wobble a little)
+    assert.ok(x.dragonWinRate >= 0.4 && x.dragonWinRate < 0.9, `${h} dragon win rate ${x.dragonWinRate}`);
     assert.ok(Number(x.battle) < 30, `${h} normal battles ${x.battle}s`);
   }
 });
 
-test('more successful casting wins more often', () => {
+test('solving more signature puzzles wins more often', () => {
   const rate = (castSuccess) => {
     let w = 0;
     for (let s = 1; s <= 50; s++) if (playRun(s * 31, { castSuccess }).run.phase === 'victory') w++;
     return w / 50;
   };
-  assert.ok(rate(1) > rate(0.3), 'spells matter');
+  assert.ok(rate(1) > rate(0.3), 'signature moves matter');
 });

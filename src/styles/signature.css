@@ -1,0 +1,934 @@
+/* Signature moves: the one big button, the per-hero puzzle sheets, and each move's own effects.
+   Everything animates with transforms/opacity only and respects Reduced Motion. */
+
+/* ---------- the signature button ---------- */
+.sig-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 82px;
+  padding: 6px 18px 6px 8px;
+  border: none;
+  border-radius: 22px;
+  color: #fff;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 0.1s;
+}
+.sig-btn.ready {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--el) 45%, transparent), rgba(255, 255, 255, 0.06));
+}
+.sig-btn.ready {
+  box-shadow: 0 0 0 3px var(--el), 0 0 20px var(--el);
+  animation: sig-ready 1.6s ease-in-out infinite;
+}
+@keyframes sig-ready {
+  50% {
+    box-shadow: 0 0 0 3px var(--el), 0 0 34px var(--el);
+  }
+}
+.sig-btn.ready .sig-btn-icon {
+  animation: sig-bob 1.6s ease-in-out infinite;
+}
+@keyframes sig-bob {
+  50% {
+    transform: translateY(-2px) scale(1.05);
+  }
+}
+.sig-btn.casting {
+  box-shadow: 0 0 0 3px #fff;
+}
+.sig-btn.corrupted {
+  box-shadow: 0 0 0 3px #6b3fb0;
+}
+.sig-btn.corrupted .sig-art {
+  filter: hue-rotate(60deg) saturate(0.6);
+}
+.sig-btn:disabled {
+  cursor: default;
+}
+.sig-btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+.sig-btn-icon {
+  position: relative;
+  flex: none;
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+}
+.sig-btn-icon > * {
+  grid-area: 1 / 1;
+}
+.sig-art {
+  display: block;
+  flex: none;
+  object-fit: contain;
+}
+.sig-btn-icon .sig-art {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+  transition: filter 0.2s;
+}
+.sig-btn:not(.ready) .sig-art {
+  filter: grayscale(0.75) brightness(0.7);
+}
+/* the cooldown: a dark sweep over the icon that uncovers it clockwise as it recharges
+   (inset to the icon's own rounded frame) */
+.sig-cd-sweep {
+  width: 92%;
+  height: 92%;
+  border-radius: 20%;
+  background: conic-gradient(transparent var(--cd), rgba(10, 4, 24, 0.68) var(--cd));
+  pointer-events: none;
+}
+.sig-btn-icon .sig-btn-cd {
+  margin: 0;
+  font-size: 1.55rem;
+  text-shadow: 0 0 4px #000, 0 2px 2px #000;
+}
+.sig-btn-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.sig-btn-py {
+  font-family: var(--font-pinyin);
+  font-weight: 800;
+  font-size: 1.15rem;
+  text-shadow: 0 1px 2px #000;
+}
+.sig-btn-text small {
+  opacity: 0.8;
+  font-weight: 700;
+}
+.sig-btn-cd,
+.sig-btn-go {
+  z-index: 1;
+  margin-left: auto;
+  font-weight: 900;
+  font-size: 1.3rem;
+  text-shadow: 0 1px 2px #000;
+}
+.sig-btn-go {
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--el);
+  color: #1b1030;
+  text-shadow: none;
+}
+.sig-btn-buff {
+  position: absolute;
+  left: 88px;
+  right: 18px;
+  bottom: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.sig-btn-buff i {
+  display: block;
+  height: 100%;
+  background: var(--el-glow);
+  transform-origin: left;
+}
+.sig-btn kbd {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  margin: 0;
+  font-size: 0.6rem;
+}
+.reduced-motion .sig-btn.ready,
+.reduced-motion .sig-btn.ready .sig-btn-icon {
+  animation: none;
+}
+.sig-icon {
+  display: block;
+  overflow: visible;
+}
+.momentum-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 4px;
+  border-radius: 999px;
+  background: rgba(255, 138, 28, 0.18);
+  color: #ffb36b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.momentum.inline {
+  position: static;
+  width: 12px;
+  height: 15px;
+}
+.momentum.granted .chev-fill {
+  stroke: #ffd34a;
+}
+
+/* ---------- puzzle sheets ---------- */
+.sig-sheet .cast-spell {
+  gap: 8px;
+}
+.sig-teach {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #fff4cc;
+  font-size: 0.85rem;
+}
+.sig-emoji {
+  font-size: clamp(3.4rem, 15vw, 4.6rem);
+  line-height: 1.1;
+  filter: drop-shadow(0 4px 0 rgba(43, 29, 78, 0.15));
+  animation: pop-in 0.25s ease-out;
+}
+.sig-figure {
+  width: 64px;
+  height: 92px;
+}
+.sig-number {
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem, 14vw, 4.4rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+  min-width: 1.6em;
+  text-align: center;
+}
+.cast-opt .opt-py {
+  display: block;
+  font-family: var(--font-pinyin);
+}
+.cast-opt .opt-en,
+.cast-opt .opt-zh,
+.sig-chip .opt-en,
+.sig-chip .opt-zh {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.sig-numbers {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.sig-numbers .cast-opt {
+  min-height: 46px;
+  padding: 6px 2px;
+}
+.teach-glow {
+  box-shadow: 0 0 0 3px var(--el) inset, 0 0 16px var(--el) !important;
+  animation: teach 1.1s ease-in-out infinite;
+}
+@keyframes teach {
+  50% {
+    transform: scale(1.04);
+  }
+}
+.cast-opt:disabled:not(.right):not(.wrong):not(.teach-glow) {
+  opacity: 0.55;
+}
+.sig-multi {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+@media (min-width: 560px) {
+  .sig-multi {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.sig-chip {
+  position: relative;
+  border: none;
+  border-radius: 14px;
+  min-height: 56px;
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 1.05rem;
+  box-shadow: 0 0 0 2px var(--paper-edge) inset, 0 3px 0 var(--paper-edge);
+}
+.sig-chip .opt-py {
+  font-family: var(--font-pinyin);
+}
+.sig-chip.on {
+  background: #ffe9d6;
+  box-shadow: 0 0 0 3px var(--el) inset, 0 3px 0 var(--el);
+}
+.sig-chip.right {
+  background: #dff8e6;
+  box-shadow: 0 0 0 3px var(--green) inset;
+}
+.sig-chip.wrong {
+  background: #ffe1e4;
+  box-shadow: 0 0 0 3px var(--red) inset;
+}
+.sig-chip.neutral {
+  opacity: 0.6;
+}
+.chip-mark {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-style: normal;
+}
+.sig-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0;
+  font-family: var(--font-pinyin);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.sig-blank {
+  min-width: 84px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 3px dashed var(--paper-edge);
+  text-align: center;
+  color: var(--ink-soft);
+  transition: transform 0.12s;
+}
+.sig-blank.hover {
+  border-color: var(--el);
+  transform: scale(1.08);
+}
+.sig-blank.filled {
+  border-style: solid;
+  border-color: var(--el);
+  color: var(--ink);
+  background: #fff;
+}
+.sig-blank.right {
+  border-color: var(--green);
+  background: #dff8e6;
+}
+.sig-blank.wrong {
+  border-color: var(--red);
+  background: #ffe1e4;
+}
+.sig-tiles {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 0 2px;
+}
+.sig-tile {
+  position: relative;
+  border: none;
+  border-radius: 14px;
+  min-width: 96px;
+  min-height: 56px;
+  padding: 8px 18px;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-pinyin);
+  font-weight: 800;
+  font-size: 1.3rem;
+  box-shadow: 0 0 0 2px var(--el) inset, 0 4px 0 var(--paper-edge);
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.sig-tile.used {
+  opacity: 0.35;
+}
+.sig-why {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.tone-clue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--el);
+  box-shadow: 0 0 0 2px var(--paper-edge) inset;
+}
+.tone-clue svg {
+  width: 40px;
+  height: 38px;
+}
+.tone-clue small {
+  color: var(--ink);
+  font-weight: 800;
+}
+.sig-focus {
+  display: block;
+  margin-top: 2px;
+  font-weight: 700;
+  color: var(--gold, #c9a227);
+}
+
+/* ---------- hero auras while a signature buff runs ---------- */
+.unit2.aura-fire::before,
+.unit2.aura-frenzy::before,
+.unit2.aura-fruit::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 110%;
+  height: 88%;
+  translate: -50% 0;
+  border-radius: 50% 50% 40% 40%;
+  pointer-events: none;
+  z-index: -1;
+}
+.unit2.aura-fire::before {
+  background: radial-gradient(ellipse at 50% 85%, rgba(255, 210, 90, 0.75), rgba(255, 110, 40, 0.45) 45%, transparent 72%);
+  animation: aura-flicker 0.5s ease-in-out infinite alternate;
+}
+.unit2.aura-fire .sprite {
+  filter: drop-shadow(0 0 6px #ff7a3d) drop-shadow(0 0 2px #ffd36b);
+}
+.unit2.aura-fire .sprite.st-shoot {
+  animation-duration: 0.18s;
+}
+@keyframes aura-flicker {
+  from {
+    transform: scale(0.94, 0.9);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.05, 1.08);
+    opacity: 1;
+  }
+}
+.unit2.aura-frenzy::before {
+  background: repeating-linear-gradient(100deg, transparent 0 14px, rgba(160, 255, 220, 0.5) 14px 17px);
+  mask: radial-gradient(ellipse, #000 40%, transparent 70%);
+  animation: frenzy-streak 0.3s linear infinite;
+}
+.unit2.aura-frenzy .sprite {
+  filter: drop-shadow(-6px 0 0 rgba(98, 224, 180, 0.45)) drop-shadow(0 0 5px #62e0b4);
+}
+.unit2.aura-frenzy .sprite.st-attack {
+  animation-duration: 0.15s;
+}
+@keyframes frenzy-streak {
+  to {
+    background-position: -34px 0;
+  }
+}
+.unit2.aura-fruit::before {
+  height: 50%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 220, 120, 0.5), transparent 70%);
+}
+.reduced-motion .unit2::before,
+.calm .unit2::before {
+  animation: none !important;
+}
+.unit2.is-decoy {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+/* ---------- ground zones ---------- */
+.zone-fx {
+  position: absolute;
+  bottom: 10%;
+  height: 7%;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  animation: zone-in 0.25s ease-out;
+}
+@keyframes zone-in {
+  from {
+    transform: scaleX(0.2);
+    opacity: 0;
+  }
+}
+.zk-peel {
+  background: radial-gradient(ellipse, rgba(255, 230, 90, 0.55), transparent 70%);
+}
+.zk-peel span {
+  font-size: 1.4rem;
+  transform: rotate(-20deg) translateY(30%);
+}
+.zk-flame {
+  background: radial-gradient(ellipse at 50% 70%, rgba(255, 200, 80, 0.85), rgba(255, 90, 30, 0.55) 45%, transparent 72%);
+  animation: aura-flicker 0.35s ease-in-out infinite alternate;
+}
+.zk-ink {
+  background: radial-gradient(ellipse, rgba(60, 30, 110, 0.75), rgba(155, 107, 255, 0.3) 55%, transparent 75%);
+}
+.zk-barrier {
+  bottom: 12%;
+  height: 46%;
+  border-radius: 10px;
+  background: linear-gradient(90deg, transparent, rgba(255, 225, 74, 0.55), transparent);
+  box-shadow: 0 0 18px rgba(255, 225, 74, 0.6);
+  animation: barrier 0.25s steps(2) infinite;
+}
+@keyframes barrier {
+  50% {
+    opacity: 0.6;
+  }
+}
+.reduced-motion .zone-fx {
+  animation: none;
+}
+
+/* ---------- Xinyi: fruit ---------- */
+.p-fruit > i {
+  font-style: normal;
+  font-size: 1.9em;
+  line-height: 1;
+  animation: fruit-arc var(--dur) ease-out forwards, fruit-spin var(--dur) linear forwards;
+}
+.p-fruit.big > i {
+  font-size: 2.2em;
+}
+.p-fruit.small > i {
+  font-size: 1.6em;
+}
+.p-fruit > i::after {
+  display: none;
+}
+@keyframes fruit-arc {
+  50% {
+    translate: 0 -46px;
+  }
+}
+@keyframes fruit-spin {
+  to {
+    rotate: 540deg;
+  }
+}
+.fx-nom {
+  position: absolute;
+  bottom: 52%;
+  width: 0;
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.fx-nom i {
+  position: absolute;
+  left: 0;
+  font-style: normal;
+  font-size: 2rem;
+  translate: -50% 0;
+  animation: nom 0.9s ease-in forwards;
+}
+.fx-nom b {
+  position: absolute;
+  left: 14px;
+  top: -20px;
+  font-size: 0.8rem;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+  animation: rise-fade 0.9s ease-out 0.35s both;
+}
+@keyframes nom {
+  0% {
+    transform: translateY(-30px) scale(0.6);
+  }
+  30% {
+    transform: translateY(-36px) scale(1.15);
+  }
+  60% {
+    transform: translateY(6px) scale(0.9);
+    clip-path: inset(0 0 0 0);
+  }
+  80% {
+    clip-path: inset(0 0 0 45%);
+  }
+  100% {
+    transform: translateY(14px) scale(0.4);
+    clip-path: inset(0 0 0 100%);
+    opacity: 0;
+  }
+}
+.sprite.st-eat {
+  transform-origin: 50% 100%;
+  animation: eat 0.6s ease-in-out;
+}
+@keyframes eat {
+  20%,
+  60% {
+    transform: scale(1.04, 0.96) rotate(-3deg);
+  }
+  40%,
+  80% {
+    transform: scale(0.98, 1.04) rotate(3deg);
+  }
+}
+.sprite.st-throw {
+  transform-origin: 50% 100%;
+  animation: throw 0.38s ease-out;
+}
+@keyframes throw {
+  30% {
+    transform: translateX(-6px) rotate(-10deg);
+  }
+  60% {
+    transform: translateX(10px) rotate(8deg) scale(1.05);
+  }
+}
+.fx-splash,
+.fx-wallhit {
+  position: absolute;
+  bottom: 20%;
+  width: 0;
+  height: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.fx-splash i {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50% 50% 50% 0;
+  background: #ff5a6e;
+  box-shadow: 0 0 0 2px #3fbf5a;
+  animation: splash 0.8s ease-out forwards;
+}
+.fx-splash i:nth-child(1) {
+  --dx: -40px;
+}
+.fx-splash i:nth-child(2) {
+  --dx: 6px;
+}
+.fx-splash i:nth-child(3) {
+  --dx: 44px;
+}
+@keyframes splash {
+  50% {
+    transform: translate(var(--dx), -40px) rotate(90deg);
+  }
+  to {
+    transform: translate(calc(var(--dx) * 1.3), 0) rotate(180deg);
+    opacity: 0;
+  }
+}
+.sp-sparkle > i {
+  width: 9px;
+  height: 9px;
+  margin-left: calc((var(--i) - 2.5) * 11px);
+  top: -70px;
+  background: #fff3a0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: rise-fade 0.7s ease-out calc(var(--i) * 40ms) both;
+}
+
+/* ---------- Mei: composed stance, then a great arc ---------- */
+.sprite.st-stance {
+  transform-origin: 50% 100%;
+  animation: stance 0.46s ease-in forwards;
+}
+@keyframes stance {
+  to {
+    transform: translateX(-6px) scale(1.04, 0.9);
+    filter: brightness(1.15);
+  }
+}
+.sp-glint > i:first-child {
+  width: 22px;
+  height: 22px;
+  top: -80px;
+  margin-left: 8px;
+  background: #fff;
+  clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
+  animation: glint 0.45s ease-in-out both;
+}
+@keyframes glint {
+  from {
+    transform: scale(0) rotate(0);
+  }
+  60% {
+    transform: scale(1.4) rotate(90deg);
+  }
+  to {
+    transform: scale(0) rotate(180deg);
+  }
+}
+.sp-bladearc > i,
+.sp-bladewave > i {
+  width: 110cqw;
+  height: 70cqw;
+  max-height: 340px;
+  margin-left: -55cqw;
+  top: -150px;
+  border-radius: 50%;
+  border-top: 6px solid #fff;
+  filter: drop-shadow(0 0 10px #ff6a8a) drop-shadow(0 0 3px #fff);
+  clip-path: inset(0 0 55% 0);
+  animation: blade-arc 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) calc(var(--i) * 70ms) both;
+}
+.sp-bladearc > i:nth-child(2) {
+  border-top-color: #ff9ab0;
+  top: -130px;
+}
+.sp-bladearc > i:nth-child(3) {
+  border-top-width: 2px;
+  top: -170px;
+}
+.sp-bladewave > i {
+  border-top-color: #9ff0d2;
+  filter: drop-shadow(0 0 10px #62e0b4);
+}
+@keyframes blade-arc {
+  from {
+    transform: rotate(-35deg) scale(0.7);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: rotate(18deg) scale(1.05);
+    opacity: 0;
+  }
+}
+
+/* ---------- Huojin: the flame of passion bursting up ---------- */
+.sp-passion > i {
+  width: 18px;
+  height: 30px;
+  margin-left: calc((var(--i) - 2.5) * 14px);
+  top: -20px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: radial-gradient(circle at 50% 70%, #fff3a0, #ffb340 45%, #ff5a1f 80%);
+  animation: flame-rise 1s ease-out calc(var(--i) * 70ms) both;
+}
+@keyframes flame-rise {
+  from {
+    transform: translateY(10px) scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-110px) scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* ---------- Ruizhe: unroll the scroll, then repel ---------- */
+.sp-scroll > i:first-child {
+  width: 78px;
+  height: 46px;
+  margin-left: -39px;
+  top: -140px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #c8955a 0 7px, #f6ecd2 7px calc(100% - 7px), #c8955a calc(100% - 7px));
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+  transform-origin: center;
+  animation: unroll 0.9s ease-out both;
+}
+.sp-scroll > i:nth-child(2) {
+  width: 120px;
+  height: 140px;
+  margin-left: -60px;
+  top: -130px;
+  border-radius: 50%;
+  border: 3px solid #f2d7a8;
+  background: radial-gradient(circle, transparent 55%, rgba(242, 215, 168, 0.45));
+  box-shadow: 0 0 18px #f2d7a8;
+  animation: dome 0.9s ease-out 0.15s both;
+}
+.sp-scroll > i:nth-child(3) {
+  display: none;
+}
+@keyframes unroll {
+  from {
+    transform: scaleX(0.1);
+  }
+  40%,
+  80% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1) translateY(-14px);
+    opacity: 0;
+  }
+}
+@keyframes dome {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+.sp-repel > i {
+  width: 40px;
+  height: 160px;
+  top: -150px;
+  margin-left: calc(var(--i) * 14px);
+  border-radius: 50%;
+  border-right: 5px solid #f2d7a8;
+  filter: drop-shadow(0 0 8px #c8955a);
+  animation: repel 0.75s ease-out calc(var(--i) * 80ms) both;
+}
+@keyframes repel {
+  from {
+    transform: translateX(0) scaleY(0.5);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(55cqw) scaleY(1.2);
+    opacity: 0;
+  }
+}
+
+/* ---------- Fuyun: frenzy ---------- */
+.sp-frenzy > i {
+  width: 70px;
+  height: 3px;
+  top: calc(-30px - var(--i) * 22px);
+  margin-left: -35px;
+  background: linear-gradient(90deg, transparent, #d3fff0, transparent);
+  animation: streak 0.5s ease-out calc(var(--i) * 60ms) both;
+}
+@keyframes streak {
+  from {
+    transform: translateX(-40px) scaleX(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(60px) scaleX(1.4);
+    opacity: 0;
+  }
+}
+.fx-impact.eff-frenzy > i {
+  width: 58px;
+  height: 58px;
+  margin: -29px;
+}
+.fx-impact.eff-frenzy > em {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  margin: -23px;
+  background: #d3fff0;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  animation: glint 0.35s ease-out both;
+}
+
+/* ---------- Lei: overhead swing, blast, wall slams ---------- */
+.sprite.st-windup {
+  transform-origin: 50% 100%;
+  animation: windup 0.38s ease-in forwards;
+}
+@keyframes windup {
+  to {
+    transform: translateX(-10px) rotate(-14deg) scale(0.95, 1.08);
+  }
+}
+.sp-swing > i:first-child {
+  width: 110px;
+  height: 110px;
+  margin-left: -55px;
+  top: -190px;
+  border-radius: 50%;
+  border: 4px dashed rgba(220, 220, 240, 0.85);
+  animation: swing 0.4s linear both;
+}
+.sp-swing > i:not(:first-child) {
+  display: none;
+}
+@keyframes swing {
+  from {
+    transform: rotate(0) scale(0.6);
+  }
+  to {
+    transform: rotate(540deg) scale(1);
+  }
+}
+.sp-quake > i {
+  width: 46px;
+  height: 46px;
+  margin-left: calc((var(--i) - 2) * 18cqw);
+  top: -40px;
+  border-radius: 50%;
+  border: 3px solid #ffe14a;
+  box-shadow: 0 0 14px #ffe14a;
+  animation: quake-ring 0.7s ease-out calc(var(--i) * 60ms) both;
+}
+@keyframes quake-ring {
+  from {
+    transform: scale(0.3, 0.15);
+    opacity: 1;
+  }
+  to {
+    transform: scale(2.4, 0.7);
+    opacity: 0;
+  }
+}
+.fx-wallhit i {
+  position: absolute;
+  width: 6px;
+  height: 26px;
+  background: #fff6c4;
+  box-shadow: 0 0 8px #ffe14a;
+  transform-origin: 50% 100%;
+  animation: wall-crack 0.45s ease-out forwards;
+}
+.fx-wallhit i:nth-child(1) {
+  rotate: -40deg;
+}
+.fx-wallhit i:nth-child(2) {
+  rotate: 10deg;
+}
+.fx-wallhit i:nth-child(3) {
+  rotate: 60deg;
+}
+@keyframes wall-crack {
+  from {
+    transform: translateY(-20px) scaleY(0.2);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-34px) scaleY(1.2);
+    opacity: 0;
+  }
+}
+.side-enemy .sprite.st-slammed {
+  transform-origin: 100% 100%;
+  animation: slammed 0.38s ease-out;
+}
+@keyframes slammed {
+  30% {
+    transform: scale(0.8, 1.1) translateX(4px);
+  }
+  60% {
+    transform: scale(1.06, 0.94);
+  }
+}
+.fx-melee.mirror {
+  scale: -1 1;
+}
+.fx2-ring.big {
+  width: 220px;
+  height: 220px;
+}

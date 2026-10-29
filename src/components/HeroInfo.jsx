@@ -1,8 +1,9 @@
 // Name, passive, starting stats and (if locked) unlock requirement for one hero.
 import { useStore } from '../store/store.js';
 import { HEROES } from '../game/data/heroes.js';
-import { SPELLS } from '../game/data/spells.js';
-import { ItemIcon } from './Sprite.jsx';
+import { SIGNATURES } from '../game/data/signatures.js';
+import { TEMPLATES } from '../learn/signaturePuzzles.js';
+import SigIcon from './SigIcon.jsx';
 import { heroUnlocked } from '../game/achievements.js';
 import { buildHero } from '../game/combat.js';
 import { levelInfo } from '../store/progress.js';
@@ -45,12 +46,14 @@ export default function HeroInfo({ heroId }) {
         <span>{h.passive.desc}</span>
       </div>
       <div className="hero-info-sig">
-        <ItemIcon kind="spell" id={h.signature} def={SPELLS[h.signature]} size={30} />
+        <SigIcon id={h.signature} size={34} />
         <span>
           <b>
-            {SPELLS[h.signature].py} · {SPELLS[h.signature].en}
+            {SIGNATURES[h.signature].py} · {SIGNATURES[h.signature].en}
           </b>{' '}
-          <span className="muted">signature spell · {h.attack.style}</span>
+          <span className="muted">
+            signature move · puzzle: {TEMPLATES[SIGNATURES[h.signature].template].focus.toLowerCase()} · {h.attack.style}
+          </span>
         </span>
       </div>
       <div className="hero-info-stats" aria-label="Starting stats">

@@ -1,10 +1,10 @@
 // Real-time battle: steps the combat engine at a fixed rate and renders units, attacks, statuses,
-// reactions and terrain at display rate. The player casts two spells (signature + pickup) by solving
-// Mandarin puzzles while the fight continues (optionally slowed in Relaxed Casting mode).
+// reactions and terrain at display rate. The player has one signature move: tapping it opens the
+// hero's own Mandarin minigame while the fight continues (optionally slowed in Relaxed Casting mode).
 //
 // Battle flow (one-way, safe against repeated events):
 //   FIGHTING  – the loop steps the engine; events are drained every frame (player actions emit
-//               outside of steps, e.g. a spell that kills the last enemy)
+//               outside of steps, e.g. a signature move that kills the last enemy)
 //   RESOLVED  – the engine has a result: the outcome is reported once via onResolve (the run is
 //               saved at this moment, so a reload never replays a finished fight) and the
 //               Victory/Defeat overlay is shown
@@ -14,27 +14,30 @@
 // maps world x to stage % and scales sprites to the stage width, separately from gameplay. Unit
 // positions are interpolated between the last two steps so motion is smooth at any display rate.
 // Static layers (backdrop, sprites, the puzzle sheet, effects) are memoised so a frame only
-// re-renders what moves. The field stays uncluttered: no enemy names, health bars or weakness
-// lists (tap an enemy or the eye button to inspect it); bosses get one bar at the top.
+// re-renders what moves. The field stays uncluttered: no enemy names or health bars (tap an enemy
+// or the eye button to inspect it); bosses get one bar at the top.
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Battle } from '../game/combat.js';
 import { COMBAT } from '../game/data/balance.js';
 import { ELEMENTS, STATUSES, TERRAIN } from '../game/data/elements.js';
 import { BIOMES } from '../game/data/biomes.js';
 import { ENEMIES } from '../game/data/enemies.js';
-import { SPELL_SLOTS } from '../game/data/spells.js';
+import { FRUITS, generateSigPuzzle } from '../learn/signaturePuzzles.js';
 import { heroFor } from '../game/run.js';
 import { wraithWords } from '../game/unlocks.js';
-import { generatePuzzle } from '../learn/puzzles.js';
 import { useStore, update, getState } from '../store/store.js';
 import { play } from '../audio/sfx.js';
-import Sprite, { ItemIcon } from './Sprite.jsx';
-import CastPuzzle from './CastPuzzle.jsx';
+import Sprite from './Sprite.jsx';
+import SignaturePuzzle from './SignaturePuzzle.jsx';
+import SigIcon from './SigIcon.jsx';
 import Bi from './Bi.jsx';
 import Icon from '../assets/icons/Icons.jsx';
 import { BgSky, BgFar, BgMid, BgGround, BgDecor } from '../assets/backgrounds/Backgrounds.jsx';
 
-const STATUS_GLYPH = { burn: 'flame', chill: 'snow', frozen: 'snow', wet: 'drop', shock: 'bolt', curse: 'skull', stun: 'star', dazzle: 'sun' };
+const STATUS_GLYPH = { burn: 'flame', chill: 'snow', frozen: 'snow', wet: 'drop', shock: 'bolt', curse: 'skull', stun: 'star', dazzle: 'sun', bleed: 'drop', slow: 'turtle', weaken: 'x', mark: 'eye' };
+const FRUIT_EMOJI = Object.fromEntries(FRUITS.map((f) => [f.id, f.emoji]));
+// signature buffs that show an aura on the hero and a timer under the button
+const SIG_AURA = { passion: 'aura-fire', frenzy: 'aura-frenzy', mango: 'aura-fruit', pear: 'aura-fruit', roar: 'aura-fire' };
 /** World x → stage percent (the camera). */
 const P = (x) => (x * 100) / COMBAT.worldW;
 // sprite size relative to the old 100-unit field: the wider world is shown zoomed out
@@ -42,28 +45,8 @@ const CAM_BASE = 100 / COMBAT.worldW;
 const MAX_FX = 48;
 const MAX_FLOATS = 24;
 const MELEE_FX = new Set(['slash', 'dagger', 'chain']);
-// spell id -> cast effect (CSS `.sp-<kind>`); `at`: where it plays
-const SPELL_FX = {
-  jiayou: { kind: 'cheer', at: 'hero' },
-  badao: { kind: 'iaido', at: 'field' },
-  dianhuo: { kind: 'flames', at: 'foes' },
-  xuanfeng: { kind: 'whirl', at: 'hero' },
-  huoqiu: { kind: 'windup', at: 'hero' },
-  dongtian: { kind: 'nova', at: 'hero' },
-  xiayu: { kind: 'rain', at: 'hero' },
-  qiang: { kind: 'wall', at: 'hero' },
-  heiye: { kind: 'night', at: 'field' },
-  dafeng: { kind: 'gust', at: 'hero' },
-  yangguang: { kind: 'rays', at: 'hero' },
-  dahai: { kind: 'wave', at: 'field' },
-  dizhen: { kind: 'quake', at: 'field' },
-  xixue: { kind: 'drain', at: 'front' },
-  xingxing: { kind: 'star', at: 'front' },
-  kuaipao: { kind: 'speed', at: 'hero' },
-  zhishi: { kind: 'scrolls', at: 'hero' },
-};
-// number of particle elements per spell effect
-const SPELL_PARTS = { rain: 10, wall: 3, flames: 3, cheer: 6, scrolls: 3, speed: 4, whirl: 3, gust: 3, drain: 4, quake: 5, nova: 2, iaido: 2 };
+// number of particle elements per effect (CSS `.sp-<kind>`)
+const SPELL_PARTS = { cheer: 6, gust: 3, iaido: 2, bladearc: 3, scroll: 3, repel: 3, frenzy: 4, quake: 5, swing: 3, passion: 6, sparkle: 6 };
 let fxSeq = 0;
 let puzzleSeq = 0;
 
@@ -128,10 +111,11 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   const meter = H.hdef.passive?.meter;
 
   const [, setFrame] = useState(0);
-  const [puzzle, setPuzzle] = useState(null); // { slot, puzzle, id }
+  const [puzzle, setPuzzle] = useState(null); // { puzzle, id }
   const puzzleRef = useRef(null);
   puzzleRef.current = puzzle;
-  const lastType = useRef(null);
+  const lastTarget = useRef(null);
+  const practiced = useRef(new Set()); // words already counted for spaced repetition this battle
   const stats = useRef({ casts: 0, fizzles: 0 });
   const vis = useRef({ floats: [], effects: [], unitFx: {}, flash: {}, impactAt: {}, dead: {}, banner: null, stageFx: null, shake: 0 });
   const alpha = useRef(1);
@@ -189,19 +173,55 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     v.impactAt[id] = t + 90;
     pushFx({ type: 'impact', el: element || 'physical', x: xOf(id), crit, eff, until: t + (crit || eff === 'weak' ? 420 : 320) });
   }
-  function spellFx(spell, element) {
-    const cfg = SPELL_FX[spell];
-    if (!cfg) return;
+  const calm = () => getState().settings.reducedMotion;
+  /** Each signature move has its own look (see signature.css). */
+  function sigFx(e) {
+    const v = vis.current;
     const t = now();
-    const color = ELEMENTS[element]?.color;
-    if (cfg.at === 'foes') for (const f of b.foes()) pushFx({ type: 'spell', kind: cfg.kind, x: P(f.x), color, until: t + 900 });
-    else if (cfg.at === 'front') {
-      const f = b.front();
-      pushFx({ type: 'spell', kind: cfg.kind, x: f ? P(f.x) : 60, from: P(H.x), color, until: t + 1500 });
-    } else if (cfg.at === 'field') {
-      pushFx({ type: 'spell', kind: cfg.kind, x: 50, color, until: t + 1000 });
-      if (cfg.kind === 'quake' && !getState().settings.reducedMotion) vis.current.shake = t + 600;
-    } else pushFx({ type: 'spell', kind: cfg.kind, x: P(H.x), color, until: t + 1000 });
+    switch (`${e.id}:${e.phase}`) {
+      case 'patient_blade:windup':
+        unitState('hero', 'stance', 460);
+        pushFx({ type: 'spell', kind: 'glint', x: xOf('hero'), until: t + 460 });
+        break;
+      case 'patient_blade:strike':
+      case 'patient_blade:wave':
+        unitState('hero', 'attack', 320);
+        pushFx({ type: 'spell', kind: e.phase === 'wave' ? 'bladewave' : 'bladearc', x: 50, from: xOf('hero'), until: t + 800 });
+        if (!calm()) v.punch = t + 200;
+        break;
+      case 'burning_passion:aura':
+        unitState('hero', 'cast', 520);
+        pushFx({ type: 'spell', kind: 'passion', x: xOf('hero'), color: ELEMENTS.fire.color, until: t + 1100 });
+        v.banner = { text: 'rè qíng rán shāo!', until: t + 1200, small: true };
+        break;
+      case 'deny_danger:scroll':
+        unitState('hero', 'cast', 520);
+        pushFx({ type: 'spell', kind: 'scroll', x: xOf('hero'), until: t + 900 });
+        break;
+      case 'deny_danger:repel':
+        pushFx({ type: 'spell', kind: 'repel', x: xOf('hero'), until: t + 800 });
+        if (!calm()) v.punch = t + 180;
+        break;
+      case 'go_all_out:frenzy':
+        unitState('hero', 'cast', 360);
+        pushFx({ type: 'spell', kind: 'frenzy', x: xOf('hero'), color: ELEMENTS.wind.color, until: t + 900 });
+        v.banner = { text: 'quán lì yǐ fù!', until: t + 1100, small: true };
+        break;
+      case 'knockback:swing':
+        unitState('hero', 'windup', 380);
+        pushFx({ type: 'spell', kind: 'swing', x: xOf('hero'), until: t + 420 });
+        break;
+      case 'knockback:blast':
+        unitState('hero', 'smash', 520);
+        pushFx({ type: 'slam', x: xOf('hero') + 6, pts: [zapPoints(), zapPoints(), zapPoints()], until: t + 700 });
+        pushFx({ type: 'spell', kind: 'quake', x: 50, until: t + 900 });
+        if (!calm()) {
+          v.shake = t + 450;
+          v.punch = t + 260;
+        }
+        break;
+      default:
+    }
   }
 
   function handle(events) {
@@ -212,6 +232,10 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           const from = xOf(e.src);
           const to = xOf(e.tgt);
           const t = now();
+          if (e.fruit) {
+            pushFx({ type: 'fruit', emoji: FRUIT_EMOJI[e.fruit] || '🍎', x: from, to, small: e.small, ms: 420, until: t + 420 });
+            break;
+          }
           if (e.src === 'hero' && heroMelee && !e.spell) {
             pushFx({ type: 'melee', style: heroFx, x: to, from, until: t + (heroFx === 'chain' ? 420 : 280) });
             break;
@@ -235,17 +259,16 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         case 'hit': {
           const x = xOf(e.tgt);
           // effectiveness shows in the hit itself (bigger burst / dull puff, number style), not as text
-          const eff = e.eff === 'weak' ? 'weak' : e.eff === 'resist' || e.eff === 'immune' ? 'resist' : null;
           if (e.amount > 0 || e.absorbed > 0) {
-            const kind = e.tgt === 'hero' ? 'taken' : e.crit ? 'crit' : eff === 'weak' ? 'weakhit' : eff === 'resist' ? 'resisted' : e.kind === 'dot' ? 'dot' : e.kind === 'spell' ? 'spell' : 'dmg';
-            if (e.amount > 0 && (e.kind !== 'dot' || e.amount >= 3)) float(x, e.crit ? `${e.amount}!` : `${e.amount}`, kind, eff ? null : e.element !== 'physical' ? ELEMENTS[e.element]?.color : null);
+            const kind = e.tgt === 'hero' ? 'taken' : e.crit ? 'crit' : e.kind === 'dot' ? 'dot' : e.kind === 'spell' ? 'spell' : 'dmg';
+            if (e.amount > 0 && (e.kind !== 'dot' || e.amount >= 3)) float(x, e.crit ? `${e.amount}!` : `${e.amount}`, kind, e.element !== 'physical' ? ELEMENTS[e.element]?.color : null);
           }
           if (e.kind !== 'dot' && e.amount > 0) {
             flash(e.tgt);
             unitState(e.tgt, 'hurt', 220);
           }
           if (e.kind === 'attack' || e.kind === 'spell') {
-            impact(e.tgt, e.element, e.crit, eff);
+            impact(e.tgt, e.element, e.crit, e.crit && b.buffActive('frenzy') ? 'frenzy' : null);
             play(e.crit ? 'crit' : 'hit');
           }
           break;
@@ -294,13 +317,47 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           break;
         case 'cast':
           if (e.enemy) pushFx({ type: 'burst', x: xOf('hero'), color: ELEMENTS[e.element]?.color || '#7a4dff', until: now() + 550 });
-          else if (e.spell === 'gust') pushFx({ type: 'spell', kind: 'gust', x: xOf('hero'), until: now() + 800 });
-          else {
-            unitState('hero', e.spell === 'leiting' ? 'smash' : 'cast', e.spell === 'leiting' ? 520 : 420);
+          else if (e.spell === 'gust') pushFx({ type: 'spell', kind: 'gust', x: xOf('hero'), color: ELEMENTS[e.element]?.color, until: now() + 800 });
+          else if (e.spell === 'wave' || e.spell === 'burst') pushFx({ type: 'ring', x: xOf('hero'), color: ELEMENTS[e.element]?.color, big: true, until: now() + 700 });
+          else if (e.spell === 'iaido') pushFx({ type: 'spell', kind: 'iaido', x: 50, until: now() + 700 });
+          else if (e.sig) {
             pushFx({ type: 'ring', x: xOf('hero'), color: ELEMENTS[e.element]?.color, until: now() + 600 });
-            if (!e.echo) spellFx(e.spell, e.element);
+            if (e.echo) float(xOf('hero'), 'huí shēng', 'proc');
             play('spell');
           }
+          break;
+        case 'sig':
+          sigFx(e);
+          break;
+        case 'fruit': {
+          const t = now();
+          const emoji = FRUIT_EMOJI[e.fruit] || '🍎';
+          if (e.thrown) {
+            unitState('hero', 'throw', 380);
+            pushFx({ type: 'fruit', emoji, x: xOf('hero'), to: e.tgt ? xOf(e.tgt) : xOf('hero') + 20, big: true, ms: 520, until: t + 560 });
+            if (e.fruit === 'watermelon' && e.tgt) pushFx({ type: 'splash', x: xOf(e.tgt), until: t + 900 });
+          } else {
+            unitState('hero', 'eat', 600);
+            pushFx({ type: 'nom', emoji, x: xOf('hero'), until: t + 1000 });
+          }
+          pushFx({ type: 'spell', kind: 'sparkle', x: xOf('hero'), until: t + 700 });
+          float(xOf('hero'), FRUITS.find((f) => f.id === e.fruit)?.py || '', 'good');
+          break;
+        }
+        case 'wallHit':
+          pushFx({ type: 'wallhit', x: xOf(e.tgt), until: now() + 500 });
+          unitState(e.tgt, 'slammed', 380);
+          if (!calm()) v.punch = now() + 140;
+          play('hit');
+          break;
+        case 'collide':
+          pushFx({ type: 'burst', x: xOf(e.tgt), color: '#fff3c4', until: now() + 320 });
+          break;
+        case 'mirror':
+          pushFx({ type: 'melee', style: 'slash', x: xOf(e.tgt), from: xOf(e.tgt) + 8, mirror: true, until: now() + 260 });
+          break;
+        case 'decoy':
+          pushFx({ type: 'whiff', x: xOf(e.tgt), until: now() + 300 });
           break;
         case 'slam':
           pushFx({ type: 'slam', x: xOf(e.tgt), pts: [zapPoints(), zapPoints(), zapPoints()], until: now() + 700 });
@@ -326,9 +383,13 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           break;
         case 'fizzle':
           float(xOf('hero'), 'shī bài · Fizzle', 'enemy');
+          unitState('hero', 'hurt', 300);
+          break;
+        case 'sigReady':
+          if (!puzzleRef.current) play('pick');
           break;
         case 'corrupt':
-          v.banner = { text: 'A spell was corrupted!', until: now() + 1600, small: true };
+          v.banner = { text: 'Your signature move was corrupted!', until: now() + 1600, small: true };
           break;
         case 'silence':
           v.banner = { text: `Passives silenced for ${e.dur}s`, until: now() + 1600, small: true };
@@ -424,51 +485,48 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     if (p.renderStart) p.renderMs = p.renderMs * 0.9 + (performance.now() - p.renderStart) * 0.1;
   });
 
-  // ---------------------------------------------------------------- spellcasting
-  const openCast = (slot) => {
-    if (endedRef.current || puzzleRef.current || !b.beginCast(slot)) return;
-    play('click');
-    const pz = generatePuzzle({ spellId: b.spells[slot].id, save: getState(), soundless: getState().settings.soundless, last: lastType.current });
-    lastType.current = pz.type;
-    setPuzzle({ slot, puzzle: pz, id: ++puzzleSeq });
+  // ---------------------------------------------------------------- signature move
+  // puzzle generation (learn/signaturePuzzles.js) → validation (SignaturePuzzle) → b.finishCast
+  // (effect, passives, cooldown) — combat never pauses in between
+  const newPuzzle = () => {
+    const pz = generateSigPuzzle(b.sig.def.template, { save: getState(), soundless: getState().settings.soundless, last: lastTarget.current });
+    lastTarget.current = pz.target;
+    return { puzzle: { ...pz, sigId: b.sig.id }, id: ++puzzleSeq };
   };
-  const onPuzzleDone = useCallback((ok) => {
-    const p = puzzleRef.current;
-    if (!p) return;
-    const res = b.finishCast(p.slot, ok);
+  const openCast = () => {
+    if (endedRef.current || puzzleRef.current || !b.beginCast()) return;
+    play('click');
+    setPuzzle(newPuzzle());
+  };
+  const onPuzzleDone = useCallback((ok, choice) => {
+    if (!puzzleRef.current) return;
+    const res = b.finishCast(ok, { choice });
     if (ok) stats.current.casts += 1;
     else stats.current.fizzles += 1;
-    if (res.retry && b.beginCast(p.slot)) {
-      const pz = generatePuzzle({ spellId: b.spells[p.slot].id, save: getState(), soundless: getState().settings.soundless, last: p.puzzle.type });
-      setPuzzle({ slot: p.slot, puzzle: pz, id: ++puzzleSeq });
+    if (res.retry && b.beginCast()) {
+      setPuzzle(newPuzzle());
       return;
     }
     setPuzzle(null);
-    pump(); // the spell may have ended the fight
+    pump(); // the move may have ended the fight
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const onPuzzleCancel = useCallback(() => {
-    const p = puzzleRef.current;
-    if (p) b.cancelCast(p.slot);
+    if (puzzleRef.current) b.cancelCast();
     setPuzzle(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const swapForSoundless = useCallback(() => {
-    const p = puzzleRef.current;
-    if (!p) return;
-    const pz = generatePuzzle({ spellId: b.spells[p.slot].id, save: getState(), soundless: true, last: p.puzzle.type });
-    setPuzzle({ slot: p.slot, puzzle: pz, id: ++puzzleSeq });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // keyboard: 1/2 cast (when no puzzle open)
+  // keyboard: Space or 1 opens the signature puzzle (when none is open)
   const openCastRef = useRef(openCast);
   openCastRef.current = openCast;
   useEffect(() => {
     const k = (e) => {
-      if (puzzleRef.current || e.target.tagName === 'INPUT') return;
-      const n = Number(e.key);
-      if (n >= 1 && n <= SPELL_SLOTS) openCastRef.current(n - 1);
+      if (puzzleRef.current || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+      if (e.key === '1' || e.key === ' ') {
+        e.preventDefault();
+        openCastRef.current();
+      }
     };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
@@ -492,6 +550,8 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   const boss = b.units.find((u) => u.side === 1 && (u.boss || u.edef?.guardian) && u.alive);
   const visibleUnits = b.units.filter((u) => u.alive || n - (v.dead[u.id] || 0) < 700);
   const meterVal = meter ? b.state(`passive:${H.heroId}`)[meter.key] || 0 : 0;
+  const sigBuff = H.buffs.find((x) => x.sig && x.until > b.t);
+  const auras = H.buffs.filter((x) => x.until > b.t && SIG_AURA[x.id]).map((x) => SIG_AURA[x.id]);
 
   return (
     <div className={`battle2 ${reduced ? 'calm' : ''}`}>
@@ -506,6 +566,11 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         <div className="zone-mark" aria-hidden="true" />
         {terrain.map((k) => (
           <div key={k} className={`terrain-tint terrain-${k}`} style={{ '--tc': TERRAIN[k].color }} />
+        ))}
+        {b.zones.map((z) => (
+          <div key={z.id} className={`zone-fx zk-${z.kind}`} style={{ left: `${P(z.x - z.w)}%`, width: `${P(z.w * 2)}%` }} aria-hidden="true">
+            {z.kind === 'peel' && <span>🍌</span>}
+          </div>
         ))}
         <div className="terrain-chips">
           {terrain.map((k) => (
@@ -534,11 +599,11 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           return (
             <div
               key={u.id}
-              className={`unit2 ${u.side === 0 ? 'side-hero' : 'side-enemy'} ${u.sprite === 'shade' ? 'is-shade' : ''} ${u.statuses.frozen ? 'is-frozen' : ''} ${u.charging ? 'is-charging' : ''} ${(v.flash[u.id] || 0) > n ? 'hit-flash' : ''}`}
+              className={`unit2 ${u.side === 0 ? 'side-hero' : 'side-enemy'} ${u.sprite === 'shade' ? 'is-shade' : ''} ${u.decoy ? 'is-decoy' : ''} ${u.statuses.frozen ? 'is-frozen' : ''} ${u.charging ? 'is-charging' : ''} ${(v.flash[u.id] || 0) > n ? 'hit-flash' : ''} ${isHero ? auras.join(' ') : ''}`}
               style={{ transform: `translateX(calc(${ix(u)}cqw - 50%))`, bottom: u.flying ? '30%' : '13%' }}
               onClick={u.side === 1 && u.alive ? () => setInspect(u.id) : undefined}
             >
-              {u.alive && u.momentum && <Momentum side={u.side} />}
+              {u.alive && u.momentum && <Momentum side={u.side} granted={!u.invading} />}
               {isHero && u.alive && (
                 <div className="unit-head hero-head">
                   {meter && (
@@ -598,7 +663,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           <button type="button" className="chip small" onClick={onInventory} aria-label="Items and synergies">
             <Icon name="chest" size={14} /> {run.items.length}
           </button>
-          <button type="button" className="chip small" onClick={() => setInspect('all')} aria-label="Inspect enemies: weaknesses and resistances">
+          <button type="button" className="chip small" onClick={() => setInspect('all')} aria-label="Inspect enemies">
             <Icon name="eye" size={14} />
           </button>
           {Object.keys(H.statuses).map((k) => (
@@ -606,6 +671,11 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
               <Icon name={STATUS_GLYPH[k]} size={12} />
             </span>
           ))}
+          {H.momentum && (
+            <span className="momentum-chip" title="Momentum: +25% attack speed">
+              <Momentum side={0} granted={!H.invading} inline /> <Bi py="shì tóu" en="Momentum" inline />
+            </span>
+          )}
           {b.silenced() && <span className="buff bad">Silenced</span>}
           <span className="spacer" />
           <button
@@ -623,58 +693,61 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
             </button>
           ))}
           {!ended && (
-            <button type="button" className="chip small" onClick={skip} title="Finish the fight instantly (no spells)">
+            <button type="button" className="chip small" onClick={skip} title="Finish the fight instantly (no signature moves)">
               <Icon name="skip" size={12} /> <Bi k="skip" inline />
             </button>
           )}
         </div>
-        <div className="spell-bar two">
-          {Array.from({ length: SPELL_SLOTS }, (_, slot) => {
-            const sp = b.spells[slot];
-            const kindLabel = <span className="slot-kind">{slot === 0 ? <Bi k="signature" inline /> : <Bi k="pickup" inline />}</span>;
-            if (!sp) {
-              return (
-                <div key={`e${slot}`} className="spell-btn empty" aria-label="Empty pickup slot">
-                  {kindLabel}
-                  <span className="spell-name">
-                    <Bi k="empty" />
-                  </span>
-                  <small className="empty-hint">Find spells on your route</small>
-                </div>
-              );
-            }
-            const ready = sp.state === 'ready' && !ended;
-            const casting = sp.state === 'casting';
-            const frac = sp.state === 'cooldown' ? 1 - sp.cdLeft / (sp.def.cd * (1 - (H.cdr || 0)) * (sp.corrupted ? 1.5 : 1)) : 1;
-            const el = ELEMENTS[sp.def.element];
-            return (
-              <button
-                key={sp.slot}
-                type="button"
-                className={`spell-btn ${slot === 0 ? 'sig' : 'pick'} ${ready ? 'ready' : ''} ${casting ? 'casting' : ''} ${sp.corrupted ? 'corrupted' : ''}`}
-                style={{ '--el': el.color, '--cd': `${Math.max(0, Math.min(1, frac)) * 360}deg` }}
-                disabled={!ready || Boolean(puzzle) || Boolean(ended)}
-                onClick={() => openCast(sp.slot)}
-                aria-label={`Cast ${sp.def.en}${ready ? '' : ' (recharging)'}`}
-              >
-                {kindLabel}
-                <span className="spell-dial" />
-                <ItemIcon kind="spell" id={sp.id} def={sp.def} size={38} />
-                {/* while a puzzle is open, show English names so the bar never reveals an answer */}
-                <span className="spell-name">{puzzle ? sp.def.en : sp.def.py}</span>
-                {sp.signature && <span className="seal" title="Signature spell">印</span>}
-                {!ready && !casting && <span className="spell-cd">{Math.ceil(sp.cdLeft)}</span>}
-                <kbd>{sp.slot + 1}</kbd>
-              </button>
-            );
-          })}
-        </div>
+        <SigButton b={b} ended={ended} puzzle={puzzle} buff={sigBuff} onOpen={openCast} />
       </div>
 
       {puzzle && !ended && (
-        <CastPuzzle key={puzzle.id} puzzle={puzzle.puzzle} onDone={onPuzzleDone} onCancel={onPuzzleCancel} onSoundlessSwap={swapForSoundless} />
+        <SignaturePuzzle key={puzzle.id} puzzle={puzzle.puzzle} sig={b.sig.def} practiced={practiced.current} onDone={onPuzzleDone} onCancel={onPuzzleCancel} />
       )}
     </div>
+  );
+}
+
+/**
+ * The one signature move button: hero-specific icon, cooldown dial, ready pulse, compact pinyin
+ * name, and a timer while one of its buffs is running.
+ */
+function SigButton({ b, ended, puzzle, buff, onOpen }) {
+  const sg = b.sig;
+  const def = sg.def;
+  const ready = sg.state === 'ready' && !ended;
+  const casting = sg.state === 'casting';
+  const full = b.sigCooldown();
+  const frac = sg.state === 'cooldown' ? 1 - sg.cdLeft / full : 1;
+  const el = ELEMENTS[def.element] || ELEMENTS.physical;
+  const left = buff ? Math.max(0, buff.until - b.t) : 0;
+  return (
+    <button
+      type="button"
+      className={`sig-btn ${ready ? 'ready' : ''} ${casting ? 'casting' : ''} ${sg.corrupted ? 'corrupted' : ''}`}
+      style={{ '--el': el.color, '--el-glow': el.glow, '--cd': `${Math.max(0, Math.min(1, frac)) * 360}deg` }}
+      disabled={!ready || Boolean(puzzle) || Boolean(ended)}
+      onClick={onOpen}
+      aria-label={`${def.en}${ready ? '' : ' (recharging)'}`}
+    >
+      {/* the cooldown sweeps over the move's own icon, with the seconds left on top */}
+      <span className="sig-btn-icon">
+        <SigIcon id={sg.id} size={68} />
+        {sg.state === 'cooldown' && <span className="sig-cd-sweep" />}
+        {!ready && !casting && <span className="sig-btn-cd">{Math.ceil(sg.cdLeft)}</span>}
+      </span>
+      <span className="sig-btn-text">
+        <span className="sig-btn-py">{def.py}</span>
+        <small>{def.en}</small>
+      </span>
+      {ready && !puzzle && <span className="sig-btn-go">GO</span>}
+      {left > 0 && (
+        <span className="sig-btn-buff" aria-label="Signature effect running">
+          <i style={{ transform: `scaleX(${Math.min(1, left / (buff.dur || 1))})` }} />
+        </span>
+      )}
+      <kbd>1</kbd>
+    </button>
   );
 }
 
@@ -758,9 +831,31 @@ const Effect = memo(function Effect({ e }) {
           <polyline className="zap-core" points={e.pts} />
         </svg>
       );
+    case 'fruit':
+      return (
+        <div className={`fxp p-fruit ${e.to >= e.x ? 'dir-r' : 'dir-l'} ${e.big ? 'big' : ''} ${e.small ? 'small' : ''}`} style={{ ...style, '--to': `${e.to - e.x}cqw`, '--dur': `${e.ms}ms` }}>
+          <i>{e.emoji}</i>
+        </div>
+      );
+    case 'nom':
+      return (
+        <div className="fx-nom" style={style}>
+          <i>{e.emoji}</i>
+          <b>nom!</b>
+        </div>
+      );
+    case 'splash':
+    case 'wallhit':
+      return (
+        <div className={`fx-${e.type}`} style={style}>
+          <i />
+          <i />
+          <i />
+        </div>
+      );
     case 'melee':
       return (
-        <div className={`fx-melee m-${e.style}`} style={style}>
+        <div className={`fx-melee m-${e.style} ${e.mirror ? 'mirror' : ''}`} style={style}>
           <i />
           <b />
         </div>
@@ -768,6 +863,7 @@ const Effect = memo(function Effect({ e }) {
     case 'impact':
       return (
         <div className={`fx-impact i-${e.el} ${e.crit ? 'crit' : ''} ${e.eff ? `eff-${e.eff}` : ''}`} style={style}>
+          {e.eff === 'frenzy' && <em />}
           <i />
           <b />
         </div>
@@ -812,7 +908,7 @@ const Effect = memo(function Effect({ e }) {
         </div>
       );
     default:
-      return <div className={`fx fx2-${e.type}`} style={style} />;
+      return <div className={`fx fx2-${e.type} ${e.big ? 'big' : ''}`} style={style} />;
   }
 });
 
@@ -831,9 +927,9 @@ function PerfOverlay({ p, fx, floats, units }) {
 
 /** Momentum: two stacked orange chevrons with a black outline, beside the character
  * (left of heroes, right of enemies), pulsing gently upward. */
-const Momentum = memo(function Momentum({ side }) {
+const Momentum = memo(function Momentum({ side, granted = false, inline = false }) {
   return (
-    <svg className={`momentum ${side === 0 ? 'left' : 'right'}`} viewBox="0 0 16 20" aria-label="Momentum" role="img">
+    <svg className={`momentum ${side === 0 ? 'left' : 'right'} ${granted ? 'granted' : ''} ${inline ? 'inline' : ''}`} viewBox="0 0 16 20" aria-label="Momentum" role="img">
       {[3, 10].map((y) => (
         <g key={y}>
           <path d={`M2.5 ${y + 6} L8 ${y + 0.8} L13.5 ${y + 6}`} className="chev-outline" />
@@ -844,7 +940,7 @@ const Momentum = memo(function Momentum({ side }) {
   );
 });
 
-/** Enemy inspection: weaknesses, resistances and traits live here, not on the battlefield. */
+/** Enemy inspection: traits and behaviour live here, not on the battlefield. */
 function EnemyPanel({ b, focus, onClose }) {
   const list = b.foes().sort((a, c) => (a.id === focus ? -1 : c.id === focus ? 1 : a.x - c.x));
   return (
@@ -859,9 +955,6 @@ function EnemyPanel({ b, focus, onClose }) {
       </div>
       {list.map((u) => {
         const def = ENEMIES[u.enemyId];
-        const aff = Object.entries(u.affinity || {}).filter(([el]) => ELEMENTS[el]);
-        const weak = aff.filter(([, m]) => m > 1);
-        const resist = aff.filter(([, m]) => m < 1);
         return (
           <div key={u.id} className={`ep-row ${u.id === focus ? 'on' : ''}`}>
             <div className="ep-name">
@@ -871,14 +964,12 @@ function EnemyPanel({ b, focus, onClose }) {
               </span>
             </div>
             <div className="ep-tags">
-              {weak.map(([el]) => (
-                <span key={el} className="aff weak" style={{ '--c': ELEMENTS[el].color }}>
-                  ▲ {ELEMENTS[el].py} · {ELEMENTS[el].name}
-                </span>
-              ))}
-              {resist.map(([el, m]) => (
-                <span key={el} className="aff resist" style={{ '--c': ELEMENTS[el].color }}>
-                  {m === 0 ? '✕' : '▼'} {ELEMENTS[el].py} · {ELEMENTS[el].name}
+              <span className="aff" style={{ '--c': ELEMENTS[u.attackElement]?.color }}>
+                attacks: {ELEMENTS[u.attackElement]?.py} · {ELEMENTS[u.attackElement]?.name}
+              </span>
+              {Object.keys(u.statuses).map((k) => (
+                <span key={k} className="aff" style={{ '--c': STATUSES[k].color }}>
+                  {STATUSES[k].py} · {STATUSES[k].name}
                 </span>
               ))}
               {u.kbRes > 0 && <span className="aff">sturdy: {Math.round(u.kbRes * 100)}% less knockback</span>}
