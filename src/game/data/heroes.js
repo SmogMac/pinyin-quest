@@ -2,13 +2,15 @@
 // Each hero has: base stats · a basic attack style · a signature spell (in data/spells.js, starts
 // in a locked slot) · a passive (hooks run by the combat engine, like items; passives are never
 // silenced). `quizHealPct` is used by run.js for teacher/rest questions.
+// attack.fx picks the attack visuals: melee 'slash' | 'dagger' | 'chain', ranged 'orb' | 'dart' | 'fire'.
+// passive.meter { key, max, color } shows a charge meter over the hero (read from the hook state).
 
 export const HEROES = {
   xinyi: {
     py: 'Xīn Yí', zh: '欣怡', en: 'Xin Yi', title: 'Cheerful Wanderer', sprite: 'xinyi',
     blurb: 'Always smiling, always learning. Her good mood is contagious, and it keeps her on her feet.',
     stats: { maxHp: 135, atk: 14, def: 2, aspd: 0.9, crit: 0.05, critDmg: 1.5, dodge: 0 },
-    attack: { range: 48, element: 'physical', style: 'Ranged qi orbs' },
+    attack: { range: 48, element: 'physical', style: 'Ranged qi orbs', fx: 'orb' },
     signature: 'jiayou',
     strength: 'Forgiving: heals from every successful cast.',
     weakness: 'Average damage until her build comes together.',
@@ -32,7 +34,7 @@ export const HEROES = {
     py: 'Méi', zh: '梅', en: 'Mei', title: 'Silent Blade', sprite: 'mei',
     blurb: 'A quiet swordswoman. She strikes first, and every spell she weaves sharpens her blade.',
     stats: { maxHp: 125, atk: 16, def: 2, aspd: 0.85, crit: 0.12, critDmg: 1.6, dodge: 0.05 },
-    attack: { range: 11, element: 'physical', style: 'Melee sword' },
+    attack: { range: 11, element: 'physical', style: 'Melee sword', fx: 'slash' },
     signature: 'badao',
     strength: 'Huge burst; rewards casting often.',
     weakness: 'Fragile and must fight up close.',
@@ -70,7 +72,7 @@ export const HEROES = {
     py: 'Ruì Zhé', zh: '睿哲', en: 'Ruizhe', title: 'Nervous Scholar', sprite: 'ruizhe',
     blurb: 'Has read every book and is terrified of all of them. Fights with scrolls, and panics brilliantly.',
     stats: { maxHp: 125, atk: 12, def: 2, aspd: 0.95, crit: 0.05, critDmg: 1.5, dodge: 0 },
-    attack: { range: 50, element: 'physical', style: 'Ranged paper darts' },
+    attack: { range: 50, element: 'physical', style: 'Ranged paper darts', fx: 'dart' },
     signature: 'zhishi',
     strength: 'Spells grow stronger with varied builds; panic saves him.',
     weakness: 'Weak basic attacks.',
@@ -101,7 +103,7 @@ export const HEROES = {
     py: 'Huǒ Jìn', zh: '火烬', en: 'Huojin', title: 'Grumpy Fire Master', sprite: 'huojin',
     blurb: 'A stern old master who keeps a flame in his palm and has no patience for slow learners, or for enemies.',
     stats: { maxHp: 130, atk: 13, def: 2, aspd: 1.0, crit: 0.05, critDmg: 1.5, dodge: 0 },
-    attack: { range: 46, element: 'fire', style: 'Ranged fire bolts' },
+    attack: { range: 46, element: 'fire', style: 'Ranged fire bolts', fx: 'fire' },
     signature: 'dianhuo',
     strength: 'Fire everywhere; Burn builds come naturally and hit harder.',
     weakness: 'Fire-resistant enemies (crabs, turtles) slow him down.',
@@ -131,7 +133,7 @@ export const HEROES = {
     py: 'Fú Yún', zh: '浮云', en: 'Fuyun', title: 'Lucky Assassin', sprite: 'fuyun',
     blurb: 'Smiles like she knows something you don’t. Blades drift where the wind takes them, and luck always seems to be on her side.',
     stats: { maxHp: 125, atk: 12, def: 2, aspd: 1.25, crit: 0.15, critDmg: 1.7, dodge: 0.2 },
-    attack: { range: 11, element: 'physical', style: 'Twin daggers' },
+    attack: { range: 11, element: 'physical', style: 'Twin daggers', fx: 'dagger' },
     signature: 'xuanfeng',
     strength: 'Dodges a lot; every dodge sets up a critical strike.',
     weakness: 'Lowest health; relies on luck and speed.',
@@ -163,6 +165,41 @@ export const HEROES = {
       },
     },
     unlock: { level: 10, text: 'Reach account level 10' },
+  },
+  lei: {
+    py: 'Léi', zh: '雷', en: 'Lei', title: 'Thunder Brawler', sprite: 'lei',
+    blurb: 'Cocky, impatient and always spoiling for a fight. Swings a ball and chain and dares the storm to keep up.',
+    stats: { maxHp: 160, atk: 18, def: 5, aspd: 0.7, crit: 0.05, critDmg: 1.6, dodge: 0 },
+    attack: { range: 20, element: 'physical', style: 'Ball and chain (slow, heavy, hits around the target)', fx: 'chain' },
+    signature: 'leiting',
+    strength: 'Heavy hits that splash; every few swings unleash lightning.',
+    weakness: 'Slow swings; must get in close.',
+    passive: {
+      id: 'static_temper', py: 'pí qi', zh: '脾气', en: 'Static Temper',
+      meter: { key: 'charge', max: 4, color: '#ffe14a' },
+      desc: 'His ball and chain also hits enemies next to the target for 40%. Each hit builds static charge; at 4 charges his next swing releases a lightning burst (100% attack as lightning to the target and everything nearby, plus Shock).',
+      hooks: {
+        onAttack(b, p, s) {
+          if ((s.charge || 0) < 4) return;
+          s.charge = 0;
+          s.burst = true;
+        },
+        onHit(b, p, s) {
+          if (p.sub) return;
+          for (const f of b.near(p.target, 12)) b.damage(b.hero, f, p.dealt * 0.4, { element: 'physical', kind: 'proc' });
+          if (s.burst) {
+            s.burst = false;
+            b.label(b.hero, 'pī lì!', 'good');
+            b.emit({ type: 'burst', tgt: p.target.id, element: 'lightning' });
+            for (const f of [p.target, ...b.near(p.target, 14)]) {
+              b.damage(b.hero, f, b.hero.atk, { element: 'lightning', kind: 'proc' });
+              b.applyStatus(f, 'shock', { dur: 2, src: b.hero });
+            }
+          } else s.charge = Math.min(4, (s.charge || 0) + 1);
+        },
+      },
+    },
+    unlock: { level: 12, text: 'Reach account level 12' },
   },
 };
 

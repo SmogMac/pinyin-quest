@@ -129,6 +129,7 @@ export default function Settings({ go }) {
         <Toggle label="Background music" desc="Gentle procedural music; quiets itself while Mandarin is spoken." value={st.music} onChange={(v) => set('music', v)} />
         <Slider label="Music volume" value={st.musicVol} onChange={(v) => set('musicVol', v)} />
         <Toggle label="Reduced motion" desc="Calmer animations and no screen shake." value={st.reducedMotion} onChange={(v) => set('reducedMotion', v)} />
+        <Toggle label="Performance overlay" desc="Show FPS, frame time and effect counts during battles." value={st.perfOverlay} onChange={(v) => set('perfOverlay', v)} />
         <Button variant="ghost" onClick={() => play('levelUp')}>
           Test sound
         </Button>

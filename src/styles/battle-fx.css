@@ -1,0 +1,1426 @@
+/* =====================================================================
+   Battle polish: attack/projectile/impact visuals per element, spell effects,
+   character states, damage flash, health bars, two-slot spell bar.
+   Everything that animates uses transform / opacity only (compositor-friendly).
+   ===================================================================== */
+
+/* ---------- units: positioned by transform (interpolated every frame) ---------- */
+.unit2 {
+  left: 0;
+  will-change: transform;
+}
+
+/* ---------- red damage flash (replaces the old white flash) ---------- */
+.st-hurt {
+  filter: none;
+}
+.unit2.hit-flash .sprite > * {
+  animation: red-flash 0.24s ease-out;
+}
+@keyframes red-flash {
+  0% {
+    filter: sepia(0.85) saturate(3.2) hue-rotate(-40deg) brightness(1.05);
+  }
+  100% {
+    filter: none;
+  }
+}
+.reduced-motion .unit2.hit-flash .sprite > * {
+  animation-duration: 0.16s;
+}
+
+/* ---------- character states ---------- */
+/* idle: gentle breathing (squash & stretch from the feet) */
+.sprite.st-idle {
+  transform-origin: 50% 100%;
+  animation: breathe 1.8s ease-in-out infinite;
+}
+@keyframes breathe {
+  50% {
+    transform: scale(1.025, 0.975);
+  }
+}
+.sprite.flying.st-idle {
+  animation: fly-bob 1.1s ease-in-out infinite;
+}
+.sprite.hopping.st-idle,
+.sprite.hopping.st-walk {
+  animation: hop 0.7s ease-in-out infinite;
+}
+/* walking: little bouncy steps */
+.sprite.st-walk {
+  transform-origin: 50% 100%;
+  animation: bouncy-walk 0.42s ease-in-out infinite;
+}
+@keyframes bouncy-walk {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.03, 0.97);
+  }
+  50% {
+    transform: translateY(-6px) scale(0.98, 1.03) rotate(-2deg);
+  }
+}
+/* melee: anticipation, lunge with squash, settle */
+.side-hero .sprite.st-attack {
+  transform-origin: 50% 100%;
+  animation: melee-r 0.28s ease-out;
+}
+@keyframes melee-r {
+  25% {
+    transform: translateX(-6px) scale(0.96, 1.04) rotate(-4deg);
+  }
+  55% {
+    transform: translateX(22px) scale(1.08, 0.94) rotate(6deg);
+  }
+}
+.side-enemy .sprite.st-attack {
+  transform-origin: 50% 100%;
+  animation: melee-l 0.28s ease-out;
+}
+@keyframes melee-l {
+  25% {
+    transform: translateX(6px) scale(0.96, 1.04) rotate(4deg);
+  }
+  55% {
+    transform: translateX(-20px) scale(1.08, 0.94) rotate(-6deg);
+  }
+}
+/* ranged: quick recoil */
+.sprite.st-shoot {
+  transform-origin: 50% 100%;
+  animation: recoil 0.28s ease-out;
+}
+@keyframes recoil {
+  30% {
+    transform: translateX(-7px) rotate(-5deg) scale(1.03, 0.97);
+  }
+}
+/* heavy (ball and chain): big wind-up, overhead swing, slam */
+.sprite.st-smash {
+  transform-origin: 50% 100%;
+  animation: smash 0.42s cubic-bezier(0.3, 0, 0.3, 1);
+}
+@keyframes smash {
+  35% {
+    transform: translateX(-10px) rotate(-12deg) scale(0.95, 1.08);
+  }
+  60% {
+    transform: translateX(18px) rotate(9deg) scale(1.1, 0.9);
+  }
+  80% {
+    transform: translateX(10px) scale(1.04, 0.96);
+  }
+}
+/* casting: crouch, then rise with energy */
+.sprite.st-cast {
+  transform-origin: 50% 100%;
+  animation: cast2 0.42s ease-out;
+}
+@keyframes cast2 {
+  25% {
+    transform: scale(1.06, 0.9);
+  }
+  60% {
+    transform: translateY(-10px) scale(0.96, 1.08);
+  }
+}
+/* dodge: hop back */
+.side-hero .sprite.st-dodge {
+  animation: dodge-r 0.34s ease-out;
+}
+@keyframes dodge-r {
+  45% {
+    transform: translate(-18px, -12px) rotate(-10deg);
+    opacity: 0.75;
+  }
+}
+.side-enemy .sprite.st-dodge {
+  animation: dodge-l 0.34s ease-out;
+}
+@keyframes dodge-l {
+  45% {
+    transform: translate(18px, -12px) rotate(10deg);
+    opacity: 0.75;
+  }
+}
+/* block: brace */
+.sprite.st-block {
+  transform-origin: 50% 100%;
+  animation: brace 0.32s ease-out;
+}
+@keyframes brace {
+  35% {
+    transform: translateX(-4px) scale(0.94, 1.04);
+  }
+}
+.fx2-guard {
+  bottom: 18%;
+  width: 70px;
+  height: 90px;
+  border-radius: 50%;
+  border: 3px solid #bfe6ff;
+  box-shadow: 0 0 16px #8fd0ff;
+  animation: burst 0.32s ease-out forwards;
+}
+.reduced-motion .sprite.st-walk,
+.reduced-motion .sprite.st-idle {
+  animation: none;
+}
+
+/* ---------- projectiles: wrapper travels, the inner shape carries the look ---------- */
+.fxp {
+  position: absolute;
+  bottom: 36%;
+  width: 0;
+  height: 0;
+  z-index: 5;
+  pointer-events: none;
+  font-size: 10px;
+  animation: travel var(--dur, 260ms) linear forwards;
+}
+.fxp.big {
+  font-size: 16px;
+}
+.fxp.small {
+  font-size: 7px;
+}
+@keyframes travel {
+  to {
+    transform: translateX(var(--to));
+  }
+}
+.fxp > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  transform: translate(-50%, -50%);
+}
+.fxp.dir-l > i {
+  scale: -1 1;
+}
+.fxp > i::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 55%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* qi orb (Xīn Yí, enemy shots) */
+.p-orb > i {
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 20%, #b8fff0 45%, #3fd6c0 70%, transparent 72%);
+  box-shadow: 0 0 1em #6ff0dc;
+}
+.p-orb > i::after {
+  width: 2.6em;
+  height: 0.7em;
+  border-radius: 1em;
+  background: linear-gradient(to left, rgba(160, 255, 235, 0.7), transparent);
+}
+/* paper dart (Ruì Zhé) */
+.p-dart > i {
+  width: 1.8em;
+  height: 0.9em;
+  background: linear-gradient(#fffdf4, #e8dcc0);
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 25% 50%);
+  animation: dart-wobble 0.16s ease-in-out infinite alternate;
+}
+@keyframes dart-wobble {
+  to {
+    transform: translate(-50%, -60%) rotate(4deg);
+  }
+}
+/* fire: flickering flame + ember trail */
+.p-fire > i {
+  width: 1.8em;
+  height: 1.5em;
+  border-radius: 50% 40% 40% 50%;
+  background: radial-gradient(circle at 60% 50%, #fff6c0 15%, #ffb347 40%, #ff5a1f 68%, transparent 72%);
+  box-shadow: 0 0 1.2em #ff7a2a;
+  animation: flicker 0.09s steps(2) infinite alternate;
+}
+@keyframes flicker {
+  to {
+    transform: translate(-50%, -50%) scale(1.12, 0.9);
+  }
+}
+.p-fire > i::after {
+  width: 3.4em;
+  height: 0.9em;
+  border-radius: 1em;
+  background:
+    radial-gradient(circle, #ffd27a 0.12em, transparent 0.2em) 0.4em 0.1em / 0.9em 0.6em,
+    linear-gradient(to left, rgba(255, 120, 40, 0.85), rgba(255, 60, 20, 0.2) 70%, transparent);
+}
+/* ice: crystalline shard + frost specks */
+.p-ice > i {
+  width: 2em;
+  height: 0.9em;
+  clip-path: polygon(0 50%, 55% 0, 100% 50%, 55% 100%);
+  background: linear-gradient(135deg, #fff, #bff0ff 40%, #4fb4ff);
+  filter: drop-shadow(0 0 0.3em #9fe8ff);
+}
+.fxp.p-ice > i {
+  filter: none;
+  box-shadow: none;
+}
+.p-ice > i::after {
+  width: 2.4em;
+  height: 1em;
+  right: 70%;
+  background: radial-gradient(circle, #e8fbff 0.1em, transparent 0.16em) 0 0 / 0.6em 0.5em;
+  opacity: 0.8;
+}
+/* water: droplet + splash trail */
+.p-water > i {
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50% 0 50% 50%;
+  rotate: 45deg;
+  background: radial-gradient(circle at 35% 35%, #fff 10%, #8fd8ff 35%, #2f8fe0 75%);
+  box-shadow: 0 0 0.6em #5ab8ff;
+}
+.p-water > i::after {
+  width: 2.2em;
+  height: 0.6em;
+  rotate: -45deg;
+  background: radial-gradient(circle, #9fdcff 0.18em, transparent 0.22em) 0 0 / 0.7em 0.6em;
+}
+/* earth: tumbling rock on an arc */
+.p-earth > i {
+  width: 1.6em;
+  height: 1.4em;
+  clip-path: polygon(20% 0, 75% 8%, 100% 45%, 82% 92%, 30% 100%, 0 60%);
+  background: linear-gradient(135deg, #c9a274, #8a6440 55%, #5b3f26);
+  animation: rock-arc var(--dur, 300ms) cubic-bezier(0.3, 0, 0.7, 1) forwards;
+}
+@keyframes rock-arc {
+  50% {
+    transform: translate(-50%, -260%) rotate(200deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(400deg);
+  }
+}
+/* wind: a curved, translucent gust */
+.p-wind > i {
+  width: 2.6em;
+  height: 2.6em;
+  border-radius: 50%;
+  border-right: 0.35em solid rgba(220, 255, 240, 0.9);
+  border-top: 0.12em solid rgba(220, 255, 240, 0.4);
+  animation: gust-swirl var(--dur, 300ms) linear forwards;
+}
+.p-wind > i::after {
+  right: 30%;
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  border-right: 0.22em solid rgba(200, 255, 230, 0.6);
+}
+@keyframes gust-swirl {
+  to {
+    transform: translate(-50%, -50%) rotate(-90deg) scale(1.3);
+    opacity: 0.4;
+  }
+}
+/* dark: smoky orb with a drifting trail */
+.p-dark > i {
+  width: 1.6em;
+  height: 1.6em;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1a0b2a 30%, #6a3fd0 62%, rgba(122, 77, 255, 0) 74%);
+  box-shadow: 0 0 0.9em rgba(122, 77, 255, 0.7);
+}
+.p-dark > i::after {
+  width: 3.2em;
+  height: 1.2em;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at right, rgba(60, 30, 100, 0.75), rgba(30, 10, 60, 0) 70%);
+}
+/* light: radiant golden streak */
+.p-light > i {
+  width: 3em;
+  height: 0.55em;
+  border-radius: 1em;
+  background: linear-gradient(to left, #fff 10%, #ffe58a 40%, rgba(255, 210, 80, 0));
+  box-shadow: 0 0 0.8em #ffd84a;
+}
+.p-physical > i {
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* ---------- lightning: instant jagged bolt ---------- */
+.fx-zap {
+  position: absolute;
+  bottom: calc(36% - 11px);
+  height: 22px;
+  overflow: visible;
+  z-index: 5;
+  pointer-events: none;
+  animation: zap 0.2s steps(4) forwards;
+}
+.fx-zap.big {
+  height: 34px;
+  bottom: calc(36% - 17px);
+}
+.fx-zap polyline,
+.slam-bolt polyline {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.zap-glow {
+  stroke: #ffe14a;
+  stroke-width: 7;
+  opacity: 0.45;
+}
+.zap-core {
+  stroke: #fffbe0;
+  stroke-width: 2.5;
+}
+@keyframes zap {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---------- melee swings ---------- */
+.fx-melee {
+  position: absolute;
+  bottom: 26%;
+  width: 0;
+  height: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.fx-melee > i,
+.fx-melee > b {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+/* sword arc (Méi) */
+.m-slash > i {
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -40px;
+  border-radius: 50%;
+  border-top: 5px solid rgba(255, 255, 255, 0.95);
+  border-right: 3px solid rgba(255, 255, 255, 0.5);
+  animation: arc-sweep 0.26s ease-out forwards;
+}
+@keyframes arc-sweep {
+  from {
+    transform: rotate(-110deg) scale(0.7);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(50deg) scale(1.05);
+    opacity: 0;
+  }
+}
+.m-slash > b,
+.m-dagger > b::after {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  background: radial-gradient(circle, #fff 20%, rgba(255, 255, 255, 0) 70%);
+  animation: pop 0.22s ease-out 0.08s both;
+}
+@keyframes pop {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+/* twin daggers (Fú Yún): two quick crossing cuts */
+.m-dagger > i,
+.m-dagger > b {
+  width: 44px;
+  height: 3px;
+  margin: -1.5px 0 0 -22px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, transparent, #fff 40%, #fff 60%, transparent);
+  box-shadow: 0 0 6px #e0f6ff;
+  transform-origin: center;
+}
+.m-dagger > i {
+  rotate: 35deg;
+  animation: cut 0.18s ease-out forwards;
+}
+.m-dagger > b {
+  rotate: -35deg;
+  animation: cut 0.18s ease-out 0.07s both;
+}
+@keyframes cut {
+  from {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  60% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1.1);
+    opacity: 0;
+  }
+}
+/* ball and chain (Léi): the ball arcs over and slams, ground shockwave */
+.m-chain > i {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #9a9aa6 10%, #3a3a44 45%, #15151c 80%);
+  box-shadow: 0 0 0 2px #0d0d12;
+  animation: ball-swing 0.3s cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
+}
+.m-chain > i::before {
+  content: '';
+  position: absolute;
+  right: 60%;
+  bottom: 60%;
+  width: 34px;
+  height: 0;
+  border-top: 3px dotted #8a8a96;
+  transform-origin: right center;
+  rotate: 35deg;
+}
+@keyframes ball-swing {
+  0% {
+    transform: translate(-46px, -60px) rotate(-40deg);
+  }
+  70% {
+    transform: translate(0, 4px) rotate(10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 4px) rotate(10deg);
+    opacity: 0;
+  }
+}
+.m-chain > b {
+  width: 70px;
+  height: 16px;
+  margin: 8px 0 0 -35px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 240, 200, 0.85);
+  animation: shock-ring 0.3s ease-out 0.2s both;
+}
+@keyframes shock-ring {
+  from {
+    transform: scale(0.2);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ---------- impacts ---------- */
+.fx-impact {
+  position: absolute;
+  bottom: 34%;
+  width: 0;
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.fx-impact > i,
+.fx-impact > b {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  border-radius: 50%;
+}
+.fx-impact > i {
+  width: 30px;
+  height: 30px;
+  margin: -15px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 15%, var(--ic, #fff) 40%, transparent 70%);
+  animation: pop 0.26s ease-out forwards;
+}
+.fx-impact > b {
+  width: 44px;
+  height: 44px;
+  margin: -22px;
+  background: radial-gradient(circle, var(--ip, #fff) 0.12em, transparent 0.2em) 0 0 / 11px 11px;
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 32%, #000 60%, transparent 70%);
+  mask: radial-gradient(circle, transparent 30%, #000 32%, #000 60%, transparent 70%);
+  animation: sparks 0.32s ease-out forwards;
+}
+@keyframes sparks {
+  from {
+    transform: scale(0.4) rotate(0);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.5) rotate(30deg);
+    opacity: 0;
+  }
+}
+.fx-impact.crit > i {
+  width: 52px;
+  height: 52px;
+  margin: -26px;
+}
+.fx-impact.crit > b {
+  width: 70px;
+  height: 70px;
+  margin: -35px;
+}
+.i-physical {
+  --ic: #fff3c8;
+  --ip: #fff;
+}
+.i-fire {
+  --ic: #ff7a2a;
+  --ip: #ffd27a;
+}
+.i-ice {
+  --ic: #9fe8ff;
+  --ip: #ffffff;
+}
+.i-water {
+  --ic: #3fa2ff;
+  --ip: #bfe6ff;
+}
+.i-earth {
+  --ic: #a07a4e;
+  --ip: #6b4a2c;
+}
+.i-earth > i {
+  background: radial-gradient(circle, rgba(220, 190, 150, 0.9) 20%, rgba(150, 110, 70, 0.6) 50%, transparent 70%);
+}
+.i-lightning {
+  --ic: #ffe14a;
+  --ip: #fffbe0;
+}
+.i-wind {
+  --ic: #b8ffe0;
+  --ip: #e8fff4;
+}
+.i-dark {
+  --ic: #7a4dff;
+  --ip: #2a1240;
+}
+.i-light {
+  --ic: #ffd84a;
+  --ip: #fff6c0;
+}
+
+/* ---------- Thunder Crash (léi tíng yī jī) & Static Temper burst ---------- */
+.fx-slam,
+.fx-tburst {
+  position: absolute;
+  bottom: 14%;
+  width: 0;
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.fx-slam > *,
+.fx-tburst > * {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+.slam-ball {
+  width: 30px;
+  height: 30px;
+  margin: -15px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffbe0 8%, #ffe14a 22%, #3a3a44 50%, #15151c 80%);
+  box-shadow: 0 0 18px #ffe14a;
+  animation: slam-drop 0.28s cubic-bezier(0.6, 0, 1, 0.6) forwards;
+}
+@keyframes slam-drop {
+  from {
+    transform: translate(-60px, -150px) rotate(-120deg);
+  }
+  to {
+    transform: translate(0, 0) rotate(0);
+  }
+}
+.slam-chain {
+  width: 80px;
+  height: 0;
+  margin-top: -2px;
+  border-top: 4px dotted #9a9aa6;
+  transform-origin: left center;
+  animation: chain-swing 0.28s cubic-bezier(0.6, 0, 1, 0.6) forwards;
+  opacity: 0.9;
+}
+@keyframes chain-swing {
+  from {
+    transform: translate(-90px, -150px) rotate(70deg);
+  }
+  to {
+    transform: translate(-80px, -40px) rotate(28deg);
+    opacity: 0;
+  }
+}
+.slam-ring {
+  width: 150px;
+  height: 34px;
+  margin: -17px 0 0 -75px;
+  border-radius: 50%;
+  border: 4px solid #ffe14a;
+  box-shadow: 0 0 20px #ffe14a, inset 0 0 12px #ffe14a;
+  animation: shock-ring 0.45s ease-out 0.26s both;
+}
+.slam-bolt {
+  width: 90px;
+  height: 20px;
+  margin-top: -10px;
+  overflow: visible;
+  transform-origin: left center;
+  transform: rotate(var(--r)) translateX(10px);
+  animation: bolt-flash 0.36s steps(3) 0.26s both;
+}
+.fx-tburst .slam-bolt {
+  width: 60px;
+  animation-delay: 0s;
+}
+@keyframes bolt-flash {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.stage2.shaking {
+  animation: stage-shake 0.3s linear;
+}
+@keyframes stage-shake {
+  20% {
+    transform: translate(-4px, 2px);
+  }
+  40% {
+    transform: translate(4px, -2px);
+  }
+  60% {
+    transform: translate(-3px, 1px);
+  }
+  80% {
+    transform: translate(2px, -1px);
+  }
+}
+.reduced-motion .stage2.shaking {
+  animation: none;
+}
+
+/* ---------- spell cast effects (.sp-*) ---------- */
+.fx-spell {
+  position: absolute;
+  bottom: 14%;
+  width: 0;
+  height: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.fx-spell > i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+}
+/* jiā yóu: sparkles and hearts lifting off */
+.sp-cheer > i {
+  width: 10px;
+  height: 10px;
+  margin-left: calc((var(--i) - 2.5) * 12px);
+  background: #ffd84a;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: rise-fade 0.9s ease-out calc(var(--i) * 50ms) both;
+}
+@keyframes rise-fade {
+  from {
+    transform: translateY(0) scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-90px) scale(1.2);
+    opacity: 0;
+  }
+}
+/* bá dāo: two long cuts across the field */
+.sp-iaido > i {
+  width: 88cqw;
+  height: 4px;
+  margin-left: -44cqw;
+  top: calc(-60px - var(--i) * 26px);
+  background: linear-gradient(90deg, transparent, #fff 20%, #ff6a8a 50%, #fff 80%, transparent);
+  box-shadow: 0 0 10px #ff6a8a;
+  rotate: calc(-8deg + var(--i) * 14deg);
+  transform-origin: left center;
+  animation: iaido 0.45s ease-out calc(var(--i) * 90ms) both;
+}
+@keyframes iaido {
+  from {
+    transform: scaleX(0);
+    opacity: 1;
+  }
+  55% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+/* diǎn huǒ: flame tongues under each enemy */
+.sp-flames > i {
+  width: 22px;
+  height: 34px;
+  margin: -34px 0 0 calc(-11px + (var(--i) - 1) * 14px);
+  border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
+  background: radial-gradient(ellipse at 50% 80%, #fff6c0 10%, #ffb347 35%, #ff5a1f 65%, transparent 72%);
+  transform-origin: 50% 100%;
+  animation: flame-up 0.8s ease-out calc(var(--i) * 70ms) both;
+}
+@keyframes flame-up {
+  from {
+    transform: scaleY(0.2);
+    opacity: 1;
+  }
+  50% {
+    transform: scaleY(1.2);
+    opacity: 1;
+  }
+  to {
+    transform: scaleY(0.6) translateY(-10px);
+    opacity: 0;
+  }
+}
+/* xuán fēng / dà fēng: swirling arcs */
+.sp-whirl > i,
+.sp-gust > i {
+  width: 90px;
+  height: 90px;
+  margin: -90px 0 0 -45px;
+  border-radius: 50%;
+  border-right: 5px solid rgba(220, 255, 240, 0.85);
+  border-left: 2px solid rgba(220, 255, 240, 0.35);
+  animation: whirl 0.7s ease-out calc(var(--i) * 80ms) both;
+}
+@keyframes whirl {
+  from {
+    transform: rotate(0) scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(-540deg) scale(1.2);
+    opacity: 0;
+  }
+}
+.sp-gust > i {
+  animation-name: gust-sweep;
+}
+@keyframes gust-sweep {
+  from {
+    transform: translateX(0) rotate(0) scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(46cqw) rotate(-200deg) scale(1.3);
+    opacity: 0;
+  }
+}
+/* huǒ qiú: energy gathering in the hand before the throw */
+.sp-windup > i {
+  width: 34px;
+  height: 34px;
+  margin: -90px 0 0 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c0 15%, #ffb347 45%, #ff5a1f 70%, transparent 72%);
+  animation: windup 0.35s ease-in forwards;
+}
+@keyframes windup {
+  from {
+    transform: scale(0.1);
+    opacity: 0.6;
+  }
+  80% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+/* dōng tiān (Winter Nova): stomp, expanding ice rings */
+.sp-nova > i {
+  width: 200px;
+  height: 46px;
+  margin: -23px 0 0 -100px;
+  border-radius: 50%;
+  border: 4px solid #bff0ff;
+  box-shadow: 0 0 16px #9fe8ff, inset 0 0 14px #9fe8ff;
+  background: radial-gradient(ellipse, rgba(220, 248, 255, 0.35), transparent 70%);
+  animation: nova 0.8s ease-out calc(var(--i) * 140ms) both;
+}
+@keyframes nova {
+  from {
+    transform: scale(0.1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+/* xià yǔ (Healing Rain): soft glowing droplets */
+.sp-rain > i {
+  width: 4px;
+  height: 14px;
+  border-radius: 4px;
+  margin-left: calc((var(--i) - 4.5) * 9px);
+  background: linear-gradient(transparent, #bfe6ff, #fff);
+  box-shadow: 0 0 6px #8fd0ff;
+  animation: rain-fall 0.7s ease-in calc(var(--i) * 45ms) both;
+}
+@keyframes rain-fall {
+  from {
+    transform: translateY(-150px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 0;
+  }
+}
+/* qiáng (Stone Wall): rocks rising from the ground in front of the hero */
+.sp-wall > i {
+  width: 24px;
+  height: 46px;
+  margin: -46px 0 0 calc(18px + var(--i) * 12px);
+  clip-path: polygon(15% 0, 85% 6%, 100% 100%, 0 100%);
+  background: linear-gradient(#b89068, #7a5636 60%, #4e3520);
+  transform-origin: 50% 100%;
+  animation: rock-rise 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) calc(var(--i) * 70ms) both;
+}
+@keyframes rock-rise {
+  from {
+    transform: scaleY(0);
+  }
+  25% {
+    transform: scaleY(1);
+  }
+  85% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleY(0.9);
+    opacity: 0;
+  }
+}
+/* hēi yè: the whole stage dims */
+.sp-night {
+  left: 0 !important;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: auto;
+}
+.sp-night > i {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at 30% 60%, transparent 20%, rgba(20, 8, 40, 0.75) 70%);
+  animation: night 1s ease-in-out both;
+}
+@keyframes night {
+  from,
+  to {
+    opacity: 0;
+  }
+  40%,
+  70% {
+    opacity: 1;
+  }
+}
+/* yáng guāng: rotating sun rays */
+.sp-rays > i {
+  width: 150px;
+  height: 150px;
+  margin: -110px 0 0 -75px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 216, 74, 0.8) 0 10deg, transparent 10deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 18%, #000 20%, #000 60%, transparent 70%);
+  mask: radial-gradient(circle, transparent 18%, #000 20%, #000 60%, transparent 70%);
+  animation: rays 0.8s ease-out forwards;
+}
+/* dà hǎi: a wave rolling across the field */
+.sp-wave {
+  left: 0 !important;
+}
+.sp-wave > i {
+  width: 70px;
+  height: 90px;
+  margin-top: -90px;
+  border-radius: 60% 40% 0 0 / 80% 80% 0 0;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.9), #5ab8ff 30%, #2f6fd0 80%);
+  animation: wave-roll 0.9s ease-in-out forwards;
+}
+@keyframes wave-roll {
+  from {
+    transform: translateX(-10cqw) scaleY(0.3);
+    opacity: 0.9;
+  }
+  40% {
+    transform: translateX(40cqw) scaleY(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateX(100cqw) scaleY(0.6);
+    opacity: 0;
+  }
+}
+/* dì zhèn: dust bursts along the ground (plus a stage shake) */
+.sp-quake > i {
+  width: 50px;
+  height: 30px;
+  margin: -24px 0 0 calc((var(--i) - 2) * 18cqw - 25px);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(200, 170, 130, 0.9) 20%, rgba(140, 100, 60, 0.5) 50%, transparent 70%);
+  animation: pop 0.7s ease-out calc(var(--i) * 60ms) both;
+}
+/* xī xuè: red wisps flowing from the enemy to the hero */
+.sp-drain > i {
+  width: 10px;
+  height: 10px;
+  margin: calc(-50px - var(--i) * 8px) 0 0 -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffb0c0 20%, #d0204a 70%, transparent 72%);
+  box-shadow: 0 0 8px #ff4a6a;
+  animation: drain 0.8s ease-in calc(var(--i) * 90ms) both;
+}
+@keyframes drain {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(var(--from)) translateY(-10px);
+    opacity: 0.2;
+  }
+}
+/* xīng xing: a star crashes down after a moment */
+.sp-star > i {
+  width: 40px;
+  height: 40px;
+  margin: -40px 0 0 -20px;
+  background: radial-gradient(circle, #fff 15%, #ffe58a 35%, transparent 60%);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: star-fall 1.4s cubic-bezier(0.6, 0, 1, 1) forwards;
+}
+@keyframes star-fall {
+  0% {
+    transform: translate(60px, -260px) rotate(0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    transform: translate(0, 0) rotate(360deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+/* kuài pǎo: speed lines */
+.sp-speed > i {
+  width: 40px;
+  height: 3px;
+  margin: calc(-30px - var(--i) * 14px) 0 0 -60px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, transparent, rgba(220, 255, 240, 0.9));
+  animation: speedline 0.5s ease-out calc(var(--i) * 60ms) both;
+}
+@keyframes speedline {
+  from {
+    transform: translateX(30px) scaleX(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-20px) scaleX(1.2);
+    opacity: 0;
+  }
+}
+/* zhī shi: scrolls spin up and fly */
+.sp-scrolls > i {
+  width: 16px;
+  height: 10px;
+  margin: -70px 0 0 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #c9a46a 0 3px, #fffdf4 3px 13px, #c9a46a 13px);
+  animation: scroll-fly 0.6s ease-out calc(var(--i) * 80ms) both;
+}
+@keyframes scroll-fly {
+  from {
+    transform: translate(0, 20px) rotate(0) scale(0.5);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(20px + var(--i) * 14px), calc(-30px + var(--i) * 12px)) rotate(400deg) scale(1);
+    opacity: 0;
+  }
+}
+
+/* ---------- health bars (transform-driven) ---------- */
+.hpbar {
+  position: relative;
+  width: 60px;
+  height: 6px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.28);
+}
+.hpbar > div {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+.hpbar-lag {
+  background: #ffe0a0;
+  transition: transform 0.5s ease-out 0.25s;
+}
+.hpbar-fill {
+  background: var(--red);
+}
+.hpbar-shield {
+  bottom: auto !important;
+  height: 45%;
+  background: rgba(150, 210, 255, 0.95);
+}
+.hpbar.hero {
+  width: 66px;
+  height: 11px;
+}
+.hpbar.hero .hpbar-fill {
+  background: linear-gradient(#7bff9a, #2fbf5a);
+}
+.hpbar.hero.low .hpbar-fill {
+  background: linear-gradient(#ffb36b, #ff5a4a);
+}
+.hpbar-num {
+  position: absolute;
+  inset: 0;
+  font-size: 9px;
+  line-height: 11px;
+  font-weight: 900;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 1px 0 #000, 0 0 3px #000;
+}
+.hero-head {
+  width: 76px;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+/* charge meter (e.g. Léi's Static Temper) */
+.meter-pips {
+  display: flex;
+  gap: 3px;
+}
+.meter-pips i {
+  width: 8px;
+  height: 8px;
+  rotate: 45deg;
+  border: 1.5px solid var(--mc);
+  background: rgba(0, 0, 0, 0.45);
+}
+.meter-pips i.on {
+  background: var(--mc);
+  box-shadow: 0 0 6px var(--mc);
+}
+.meter-pips.full i {
+  animation: meter-ready 0.5s ease-in-out infinite alternate;
+}
+@keyframes meter-ready {
+  to {
+    transform: scale(1.3);
+  }
+}
+
+/* ---------- boss bar ---------- */
+.boss-bar2 {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  z-index: 7;
+  padding: 4px 8px 6px;
+  border-radius: 10px;
+  background: linear-gradient(rgba(20, 8, 30, 0.82), rgba(20, 8, 30, 0.6));
+  box-shadow: 0 0 0 1.5px rgba(255, 90, 106, 0.6), 0 4px 14px rgba(0, 0, 0, 0.4);
+  color: #fff;
+}
+.bb-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.bb-name b {
+  font-family: var(--font-pinyin);
+  font-size: 0.95rem;
+}
+.bb-zh {
+  font-family: var(--font-hanzi);
+  opacity: 0.8;
+}
+.bb-name small {
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bb-num {
+  margin-left: auto;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+.bb-tag {
+  font-size: 0.62rem;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #c8272d;
+  align-self: center;
+}
+.bb-track {
+  position: relative;
+  height: 11px;
+  margin-top: 3px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.6);
+}
+.bb-track > div {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+}
+.bb-lag {
+  background: #ffe0a0;
+  transition: transform 0.6s ease-out 0.3s;
+}
+.bb-fill {
+  background: linear-gradient(#ff7a8a, #c8272d);
+}
+.bb-shield {
+  bottom: auto !important;
+  height: 40%;
+  background: rgba(150, 210, 255, 0.95);
+}
+.bb-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 255, 255, 0.85);
+}
+.bb-tick.passed {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ---------- two-slot spell bar ---------- */
+.spell-bar.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+.spell-btn .slot-kind {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+.spell-btn.sig {
+  border-radius: 18px 18px 18px 8px;
+}
+.spell-btn.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #fff;
+  opacity: 0.6;
+  min-height: 86px;
+  position: relative;
+}
+.empty-hint {
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+
+/* ---------- bilingual labels ---------- */
+.bi {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+.bi-py {
+  font-family: var(--font-pinyin);
+}
+.bi-en {
+  font-size: 0.62em;
+  font-weight: 600;
+  opacity: 0.78;
+  letter-spacing: 0;
+  font-family: var(--font-body, inherit);
+}
+.bi-zh {
+  font-family: var(--font-hanzi);
+  font-size: 0.8em;
+  opacity: 0.8;
+}
+.bi-inline {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35em;
+}
+.bi-inline .bi-en {
+  font-size: 0.8em;
+}
+.bi-inline .bi-en::before {
+  content: '· ';
+}
+.battle-result .bi-en {
+  font-size: 0.32em;
+  color: #fff;
+  text-shadow: 0 1px 0 #000;
+}
+.battle-result .btn .bi-en {
+  font-size: 0.7em;
+  text-shadow: none;
+}
+.btn .bi {
+  vertical-align: middle;
+}
+.section-title .bi,
+.end-view h1 .bi {
+  align-items: flex-start;
+}
+.end-view h1 .bi {
+  align-items: center;
+}
+
+/* ---------- perf overlay ---------- */
+.perf-overlay {
+  position: absolute;
+  left: 6px;
+  top: 52px;
+  z-index: 9;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #b8ffd0;
+  font: 10px/1.35 ui-monospace, Menlo, Consolas, monospace;
+  pointer-events: none;
+}
+
+/* ---------- route map ---------- */
+.scroll-hint {
+  text-align: center;
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #6a5a48;
+}
+.brush-path.closed {
+  stroke-dasharray: 2 8;
+  opacity: 0.16;
+}
+.brush-path.future {
+  stroke-dasharray: 3 6;
+  opacity: 0.5;
+}
+.brush-path.travelled {
+  stroke: #1a1612;
+}
+.brush-path.open {
+  stroke-width: 5;
+  opacity: 0.95;
+}
+.brush-flow {
+  fill: none;
+  stroke: #ffd9a0;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 6 14;
+  animation: ink-flow 1.1s linear infinite;
+  pointer-events: none;
+}
+@keyframes ink-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+.reduced-motion .brush-flow {
+  animation: none;
+}
+.map-node.closed {
+  opacity: 0.38;
+  filter: grayscale(1);
+}
+.map-node.closed.misty {
+  opacity: 0.25;
+}
+.notice-card {
+  border: 2px solid var(--gold);
+}
+
+/* pinyin must keep its lowercase tone-marked form even inside uppercase-styled headings */
+.ribbon .bi-py,
+.ribbon .bi-en,
+.section-title .bi-py {
+  text-transform: none;
+}
+.spell-bar.two .spell-btn {
+  padding-top: 18px;
+}

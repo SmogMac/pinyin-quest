@@ -41,6 +41,7 @@ export function defaultSave() {
       speaking: false,
       sessionMinutes: 5,
       battleSpeed: 1,
+      perfOverlay: false,
     },
     adventure: {
       runs: 0, wins: 0, bestFloor: 0, bestScore: 0, bosses: 0, kills: 0, synergies: {}, current: null,
@@ -51,7 +52,7 @@ export function defaultSave() {
 }
 
 // Merge a loaded/imported save over defaults so new fields appear after updates.
-function hydrate(data) {
+export function hydrate(data) {
   const base = defaultSave();
   if (!data || typeof data !== 'object') return base;
   const out = { ...base, ...data };
@@ -72,6 +73,15 @@ function hydrate(data) {
     delete out.achievements.hero_huohuo;
   }
   delete out.cosmetics.robe;
+  // Two active spell slots (signature + one pickup): runs saved with three keep the signature and
+  // the most recently learned spell; the other is refunded as ink.
+  const cur = out.adventure.current;
+  if (cur && Array.isArray(cur.spells) && cur.spells.length > 2) {
+    const dropped = cur.spells.slice(1, -1);
+    cur.spells = [cur.spells[0], cur.spells[cur.spells.length - 1]];
+    cur.ink = (cur.ink || 0) + 40 * dropped.length;
+    cur.notice = { kind: 'spellSlots', dropped };
+  }
   return out;
 }
 

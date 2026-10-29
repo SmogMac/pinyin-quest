@@ -633,6 +633,7 @@ export class Battle {
     this.castEffect(s.id, ctx);
     this.trigger('onCast', ctx);
     this.startCooldown(s);
+    this.settle();
     return { ok: true };
   }
   /** Runs a spell's effect (also used by echo/repeat items). */
@@ -782,9 +783,29 @@ export class Battle {
    *  (including events from casts/input that happened between steps). */
   step(dt) {
     this.advance(dt);
+    return this.drain();
+  }
+
+  /**
+   * Events emitted since the last call. Player actions (finishCast, skip) emit outside `step`,
+   * e.g. a spell that kills the last enemy, so the UI must drain every frame, not only after a step.
+   */
+  drain() {
     const out = this.events;
     this.events = [];
     return out;
+  }
+
+  /**
+   * Safety net run after every tick: a unit at 0 HP is always killed, and an empty enemy side
+   * always wins. Guarantees no battle can sit "finished but unresolved".
+   */
+  settle() {
+    if (this.result) return;
+    for (const u of this.units) if (u.alive && u.hp <= 0) this.kill(u, null);
+    if (this.result) return;
+    if (!this.hero.alive) this.finish('lose');
+    else if (!this.foes().length) this.finish('win');
   }
 
   advance(dt) {
@@ -947,6 +968,7 @@ export class Battle {
       } else if (u.atkTimer < 0) u.atkTimer = 0;
     }
 
+    this.settle();
     if (!this.result && this.t > COMBAT.maxDuration) this.finish('lose');
   }
 

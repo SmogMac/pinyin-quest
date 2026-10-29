@@ -5,7 +5,7 @@ export const ACCOUNT_HP_PER_LEVEL = 2;
 export const ACCOUNT_HP_CAP = 30;
 
 // Each passive item held adds this much basic-attack damage (keeps passive-only builds viable).
-export const COLLECTION_ATK_PER_ITEM = 0.05;
+export const COLLECTION_ATK_PER_ITEM = 0.06;
 
 export const RUN = {
   // rows per act (the last row of acts 1-2 is the biome guardian; act 3/4 end with the boss)
@@ -31,7 +31,7 @@ export const SCALING = {
   defPerFloor: 0.2, // flat def added per floor
   // global knobs applied to every enemy (bosses use their own)
   enemyHp: 1.0,
-  enemyAtk: 0.46,
+  enemyAtk: 0.43,
   bossHp: 0.85,
   bossAtk: 0.62,
 };

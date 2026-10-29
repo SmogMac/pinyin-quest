@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore, update, getState } from '../store/store.js';
 import { levelInfo, addXp } from '../store/progress.js';
 import { pickAdventureTasks } from '../learn/adventurePicker.js';
@@ -29,6 +29,8 @@ import Icon from '../assets/icons/Icons.jsx';
 import { play } from '../audio/sfx.js';
 import { speak, stopSpeech } from '../audio/speech.js';
 import { LevelUpOverlay } from './Learn.jsx';
+import Bi from '../components/Bi.jsx';
+import { SPELL_SLOTS } from '../game/data/spells.js';
 
 const mutate = (fn) => update((s) => s.adventure.current && fn(s.adventure.current, s));
 const accountLevelOf = (s) => levelInfo(s.profile.xp).level;
@@ -43,6 +45,17 @@ export default function Adventure({ go }) {
   const [codex, setCodex] = useState(false);
   const [synergyPopup, setSynergyPopup] = useState(null);
   const [story, setStory] = useState(null);
+  // A finished battle stays on screen (Victory/Defeat overlay) until Continue, while the saved
+  // run has already moved on to rewards, so a reload never replays a completed fight.
+  // Set through a ref first: saving the run re-renders synchronously, and the battle must not
+  // unmount (and restart as a new fight) in the render between the save and the state update.
+  const heldRef = useRef(null);
+  const [heldState, setHeldState] = useState(null); // { key, levelUp }
+  const held = heldState || heldRef.current;
+  const setHeld = (h) => {
+    heldRef.current = h;
+    setHeldState(h);
+  };
 
   useEffect(() => () => stopSpeech(), []);
 
@@ -105,7 +118,8 @@ export default function Adventure({ go }) {
   if (outdated) return <OutdatedRun go={go} />;
 
   const maxHp = heroFor(run, accountLevel).maxHp;
-  const inBattle = run.phase === 'battle';
+  const inBattle = run.phase === 'battle' || Boolean(held);
+  const battleKey = held?.key ?? run.battle?.seed;
   const pools = () => ({ itemPool: unlockedItems(getState()), spellPool: unlockedSpells(getState()) });
 
   return (
@@ -122,6 +136,20 @@ export default function Adventure({ go }) {
         />
       )}
       {!inBattle && !['victory', 'defeat', 'complete'].includes(run.phase) && <RunHud run={run} maxHp={maxHp} onInventory={() => setInventory(true)} />}
+      {!inBattle && run.notice?.kind === 'spellSlots' && (
+        <div className="card notice-card">
+          <b>
+            <Bi k="spells" inline /> · now two slots
+          </b>
+          <p className="small">
+            You now hold your signature spell plus one spell found on the road. Your extra spell ({run.notice.dropped.map((id) => SPELLS[id]?.py).join(', ')}) was traded for{' '}
+            {40 * run.notice.dropped.length} 墨 ink.
+          </p>
+          <Button variant="secondary" onClick={() => mutate((r) => delete r.notice)}>
+            <Bi k="continue" />
+          </Button>
+        </div>
+      )}
 
       {run.phase === 'biome' && (
         <BiomeSelect
@@ -134,7 +162,7 @@ export default function Adventure({ go }) {
         />
       )}
       {run.phase === 'lairIntro' && <div className="card center">The air smells of ink…</div>}
-      {run.phase === 'map' && run.map && (
+      {!held && run.phase === 'map' && run.map && (
         <ScrollMap
           run={run}
           onChoose={(id) => {
@@ -151,14 +179,20 @@ export default function Adventure({ go }) {
           }}
         />
       )}
-      {run.phase === 'battle' && (
+      {inBattle && (
         <BattleScreen
-          key={run.battle.seed}
+          key={battleKey}
           run={run}
           accountLevel={accountLevel}
           worldColor={worldColorOf(s)}
           onInventory={() => setInventory(true)}
-          onEnd={(res) => {
+          onContinue={() => {
+            if (held?.levelUp) setLevelUp(held.levelUp);
+            setHeld(null);
+          }}
+          onResolve={(res) => {
+            if (run.phase !== 'battle') return;
+            heldRef.current = { key: battleKey, levelUp: null };
             const type = run.battle.type;
             const won = res.result === 'win';
             const xp = won ? { battle: 5 + run.floor * 2, elite: 15 + run.floor * 2, guardian: 50, boss: run.battle.biome === 'beyond' ? 200 : 100, secretboss: 80 }[type] || 10 : 0;
@@ -183,15 +217,14 @@ export default function Adventure({ go }) {
               if (r.phase === 'reward') r.reward = battleReward(r, pools()) || null;
               if (r.phase === 'reward' && !r.reward) afterReward(r);
             });
-            if (xp) {
-              const out = addXp(xp);
-              if (out.levelUp) setLevelUp(out.levelUp);
-            }
+            let levelUp = null;
+            if (xp) levelUp = addXp(xp).levelUp || null;
+            setHeld({ key: battleKey, levelUp });
             checkAchievements();
           }}
         />
       )}
-      {run.phase === 'reward' && run.reward && (
+      {!held && run.phase === 'reward' && run.reward && (
         <RewardView
           run={run}
           onItem={(id) => {
@@ -204,9 +237,11 @@ export default function Adventure({ go }) {
           }}
         />
       )}
-      {run.phase === 'treasure' && run.reward && (
+      {!held && run.phase === 'treasure' && run.reward && (
         <div className="reward-wrap">
-          <div className="ribbon">bǎo xiāng · Treasure</div>
+          <div className="ribbon">
+            <Bi k="treasure" />
+          </div>
           <ItemChoice
             run={run}
             choices={run.reward.choices}
@@ -234,8 +269,8 @@ export default function Adventure({ go }) {
       {run.phase === 'event' && <EventView run={run} onLevelUp={setLevelUp} grantItem={grantItem} />}
       {run.phase === 'shrine' && <ShrineView run={run} grantItem={grantItem} accountLevel={accountLevel} />}
       {run.phase === 'merchant' && run.shop && <MerchantView run={run} grantItem={grantItem} grantSpell={grantSpell} accountLevel={accountLevel} />}
-      {run.phase === 'victory' && <VictoryView run={run} go={go} onLevelUp={setLevelUp} />}
-      {(run.phase === 'defeat' || run.phase === 'complete') && <EndView run={run} go={go} onLevelUp={setLevelUp} />}
+      {!held && run.phase === 'victory' && <VictoryView run={run} go={go} onLevelUp={setLevelUp} />}
+      {!held && (run.phase === 'defeat' || run.phase === 'complete') && <EndView run={run} go={go} onLevelUp={setLevelUp} />}
 
       {inventory && <InventoryModal run={run} accountLevel={accountLevel} onClose={() => setInventory(false)} />}
       {synergyPopup && <SynergyPopup ids={synergyPopup} onClose={() => setSynergyPopup(null)} />}
@@ -281,7 +316,7 @@ function AdventureStart({ go, accountLevel, onCodex, codex, closeCodex }) {
           Mò lóng <span className="muted small">(墨龙, the Ink Dragon)</span> stole the world’s words.
         </h2>
         <p className="muted small">
-          Your hero fights on their own. You cast up to 3 spells by solving quick Mandarin puzzles <b>while the battle keeps going</b>. Collect passive
+          Your hero fights on their own. You cast two spells, your hero’s signature and one you find on the road, by solving quick Mandarin puzzles <b>while the battle keeps going</b>. Collect passive
           items, discover synergies, and pick your route across a scroll map. Learning more words unlocks new items, spells and lands.
         </p>
         <div className="adv-hero-line">
@@ -294,7 +329,7 @@ function AdventureStart({ go, accountLevel, onCodex, codex, closeCodex }) {
           </div>
         </div>
         <Button className="wide big" onClick={start}>
-          <Icon name="swords" size={22} /> Begin as {h.py}
+          <Icon name="swords" size={22} /> <Bi k="start" py={`kāi shǐ · ${h.py}`} en={`Begin as ${h.en}`} />
         </Button>
         <p className="small muted center">Change hero by swiping the line-up on the Home screen.</p>
       </div>
@@ -395,7 +430,9 @@ function BiomeSelect({ act, onChoose }) {
   }
   return (
     <div className="biome-select">
-      <h2 className="section-title">Act {act}: choose your path</h2>
+      <h2 className="section-title">
+        <Bi k="route" py="xuǎn zé lù xiàn" en={`Act ${act}: choose your path`} />
+      </h2>
       <div className="biome-cards">
         {options.map(({ id, unlocked, fallback }) => {
           const b = BIOMES[id];
@@ -476,7 +513,7 @@ function ItemChoice({ run, choices, onPick }) {
         {!choices.length && <p className="muted center">Nothing left to find here.</p>}
       </div>
       <button type="button" className="link-btn" onClick={() => !chosen && onPick(null)}>
-        Take nothing
+        <Bi k="skip" en="Take nothing" inline />
       </button>
     </div>
   );
@@ -486,7 +523,7 @@ function RewardView({ run, onItem, onSpell }) {
   const r = run.reward;
   return (
     <div className="reward-wrap">
-      <div className="ribbon">{r.kind === 'spell' ? 'New spell!' : 'Choose one'}</div>
+      <div className="ribbon">{r.kind === 'spell' ? <Bi k="newSpell" /> : <Bi k="reward" py="jiǎng lì · xuǎn zé" en="Reward: choose one" />}</div>
       {r.ink ? <p className="center gold-text">+{r.ink} 墨 ink</p> : null}
       {r.kind === 'items' ? <ItemChoice run={run} choices={r.choices} onPick={onItem} /> : <SpellOffer run={run} spellId={r.spell} onDecide={onSpell} />}
     </div>
@@ -497,7 +534,7 @@ function RewardView({ run, onItem, onSpell }) {
 function SpellOffer({ run, spellId, onDecide, price }) {
   const sp = SPELLS[spellId];
   const el = ELEMENTS[sp.element];
-  const free = run.spells.length < 3;
+  const free = run.spells.length < SPELL_SLOTS;
   const replaceable = replaceableSlots(run);
   const [decided, setDecided] = useState(false);
   const decide = (slot, take = true) => {
@@ -547,7 +584,9 @@ function SpellOffer({ run, spellId, onDecide, price }) {
         )}
       </div>
       <div className="card">
-        <h3 className="sum-sub">Your spells (max 3)</h3>
+        <h3 className="sum-sub">
+          <Bi k="spells" en="Your spells: signature + one pickup" />
+        </h3>
         {run.spells.map((id, i) => (
           <div key={id} className="spell-row">
             <ItemIcon kind="spell" id={id} def={SPELLS[id]} size={36} />
@@ -559,21 +598,24 @@ function SpellOffer({ run, spellId, onDecide, price }) {
             </div>
             {!free && replaceable.includes(i) ? (
               <Button variant="secondary" disabled={decided} onClick={() => decide(i)}>
-                Replace
+                <Bi k="replace" />
               </Button>
             ) : (
-              SPELLS[id].signature && <span className="seal-tag">印 signature</span>
+              SPELLS[id].signature && (
+                <span className="seal-tag">
+                  印 <Bi k="signature" inline />
+                </span>
+              )
             )}
           </div>
         ))}
         {free && (
           <Button className="wide" disabled={decided} onClick={() => decide(null)}>
-            Learn {sp.py}
-            {price ? ` · ${price} 墨` : ''}
+            <Bi k="equip" py={`zhuāng bèi · ${sp.py}`} en={`Equip in your pickup slot${price ? ` · ${price} 墨` : ''}`} />
           </Button>
         )}
         <button type="button" className="link-btn" onClick={() => decide(null, false)} disabled={decided}>
-          Leave it
+          <Bi k="leave" en={free ? 'Leave it' : 'Keep my current spell'} inline />
         </button>
       </div>
     </div>
@@ -925,7 +967,9 @@ function VictoryView({ run, go, onLevelUp }) {
     <div className="end-view won">
       <Confetti count={40} />
       <div className="card pop-in">
-        <h1>mò lóng is defeated!</h1>
+        <h1>
+          <Bi k="victory" py="shèng lì!" en="mò lóng is defeated!" />
+        </h1>
         <p className="muted">The stolen words rain back down. 了不起！ (liǎobuqǐ, amazing!)</p>
         <RunStats run={run} />
         {canGoOn && (
@@ -948,7 +992,7 @@ function VictoryView({ run, go, onLevelUp }) {
               finishRun(run, true);
             }}
           >
-            End the run victorious
+            <Bi k="victory" py="jié shù · shèng lì" en="End the run victorious" />
           </Button>
           <Button variant="ghost" className="wide" onClick={() => go('home')}>
             Home (decide later)
@@ -975,18 +1019,18 @@ function EndView({ run, go, onLevelUp }) {
     <div className={`end-view ${won ? 'won' : 'lost'}`}>
       {won && <Confetti count={50} />}
       <div className="card pop-in">
-        <h1>{won ? 'tūn zì shòu is defeated!' : `${heroDef(run.heroId).py} needs rest…`}</h1>
+        <h1>{won ? <Bi k="victory" py="shèng lì!" en="tūn zì shòu is defeated!" /> : <Bi k="defeat" en={`${heroDef(run.heroId).py} needs rest…`} />}</h1>
         <p className="muted">{won ? 'Meaning floods back into the world.' : `You reached floor ${run.floor}. Every word you practised still counts.`}</p>
         <RunStats run={run} />
         <div className="summary-actions">
           <Button className="wide" onClick={() => done(null)}>
-            New run
+            <Bi k="tryAgain" en="New run" />
           </Button>
           <Button className="wide" variant="secondary" onClick={() => done('learn')}>
             Review these words
           </Button>
           <Button className="wide" variant="ghost" onClick={() => done('home')}>
-            Home
+            <Bi k="home" />
           </Button>
         </div>
       </div>

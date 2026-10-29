@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { SPRITES, ABILITY_ICONS, SPELL_ICONS } from '../assets/manifest.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import Icon from '../assets/icons/Icons.jsx';
@@ -25,7 +26,10 @@ export function SpriteFilters() {
  * Renders a sprite by manifest key. `state` (idle|attack|hurt|dead|victory|walk) is exposed as
  * a CSS class for procedural animation, and selects the row for sprite sheets.
  */
-export default function Sprite({ id, state = 'idle', scale = 1, flip = false, className = '' }) {
+// Memoised: battle frames re-render the stage ~60×/s, but a sprite only changes with its props.
+export default memo(Sprite);
+
+function Sprite({ id, state = 'idle', scale = 1, flip = false, className = '' }) {
   const def = SPRITES[id];
   if (!def) return null;
   const w = def.w * scale;

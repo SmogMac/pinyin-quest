@@ -7,11 +7,23 @@
 1. Pick a hero (swipe the Home line-up), then a **biome** for Act 1 on the route screen.
 2. Travel up a **branching scroll map**: battles, elites, campfires, treasure, shrines, merchants, teachers, encounters, and secret nodes revealed by words you know.
 3. **Battles are real-time.** The hero moves, attacks, dodges and blocks automatically; enemies move, charge, summon, shield and curse.
-4. You hold **up to 3 active spells**. Tap a charged spell and a compact Mandarin puzzle slides up while the **fight keeps going**. Solve it → the spell fires and goes on cooldown. Get it wrong → it fizzles, shows the answer, and goes on cooldown. Cancel → the spell stays ready. Only one puzzle can be open; there is no timer.
-5. Win → choose 1 of 3 **passive items** (or sometimes a new spell, which you can take, swap in or leave), plus ink (墨) for merchants.
+4. You hold **two active spells**: your hero's **signature** spell (slot 1, permanent) and one **pickup** spell found on the road (slot 2, empty at the start). Tap a charged spell and a compact Mandarin puzzle slides up while the **fight keeps going**. Solve it → the spell fires and goes on cooldown. Get it wrong → it fizzles, shows the answer, and goes on cooldown. Cancel → the spell stays ready. Only one puzzle can be open; there is no timer.
+5. Win → choose 1 of 3 **passive items** (or sometimes a new spell: equip it in the empty pickup slot, replace your current pickup, or leave it; the signature is never offered for replacement), plus ink (墨) for merchants.
 6. Beat the biome **guardian** → full heal, next act. Act 3 is the **Ink Dragon's Lair**. After 3 dragon victories you can continue into **The Forgotten Beyond** and face the **Word Eater**.
 
-Runs save after every step, so you can close the app between encounters and resume later. **Relaxed casting** (Settings) slows combat to 40% while a puzzle is open; normal play never pauses or slows.
+Runs save after every step, so you can close the app between encounters and resume later. A battle is saved as finished the moment it ends (before the Victory/Defeat screen), so reloading never replays a completed fight.
+
+### Battle flow
+
+`FIGHTING → RESOLVED (result saved once) → Victory/Defeat overlay → Continue → rewards / map / end screen`
+
+- The engine runs at a fixed 20 Hz (`COMBAT.dt`); the screen interpolates positions between steps, so motion is smooth at any display rate and the simulation never depends on frame rate.
+- Pending engine events are drained every frame, including ones emitted by player actions between steps (a spell that kills the last enemy). After every tick, `Battle.settle()` kills any unit at 0 HP and declares the winner, so simultaneous deaths, damage over time, chain reactions and phase changes can't leave a fight unresolved. `tests/flow.test.js` covers these cases.
+- Saved runs from the three-slot version keep their signature and most recent pickup spell; the extra spell is refunded as 40 ink, with a one-time notice.
+
+### Route map
+
+Every line on the scroll is drawn from the same graph the game navigates (`node.next`): solid ink for the route you took, red glowing paths with a flowing stroke for your next choices, dashed paths for routes still reachable later, and faint lines for routes no longer open. Generation never lets two routes cross. **Relaxed casting** (Settings) slows combat to 40% while a puzzle is open; normal play never pauses or slows.
 
 ## Spellcasting puzzles (`src/learn/puzzles.js`, `src/components/CastPuzzle.jsx`)
 
@@ -73,7 +85,7 @@ Everything below is data; the engine never needs to change for normal content.
 - **Passive item** (`data/items.js`): add an entry with `py/zh/en`, `element`, `rarity`, `category`, `desc`, optional `stats` (see `STAT_KEYS` in combat.js) and/or `hooks`. Hooks receive `(battle, payload, state)`; available triggers: `onBattleStart onAttack onHit onCrit onSpellHit onDamaged onDodge onBlock onShieldBreak onStatus onReaction onCast onCastFail onKill onMove onHeal onTick onLowHp onFatal modDamage modIncoming modSpellPower modHeal`. Use the Battle API: `damage, applyStatus, heal, addShield, knockback, addBuff, setTerrain, spawnAlly, schedule, castEffect, reduceCooldowns, label, emit`. Add `requires: ['火']` to gate it behind vocabulary.
 - **Synergy** (`data/synergies.js`): `requires` lists item and/or spell ids; give it `hooks` and/or `stats`, or set `battle.flags` that item hooks read.
 - **Spell** (`data/spells.js`): `py/zh/en`, `element`, `cd`, `tier` (puzzle difficulty), `tags`, `puzzles` (preferred types), `requires`, and `cast(battle, ctx)` using `ctx.power`. `signature: true` makes it a hero's starting spell; `SIGNATURE_LOCKED` in the same file controls whether that slot can be replaced.
-- **Hero** (`data/heroes.js`): stats, `attack` style, `signature` spell id, `passive` with hooks (passives are never silenced), unlock rule, sprite key.
+- **Hero** (`data/heroes.js`): stats, `attack` style (`attack.fx` picks the attack visuals), `signature` spell id, `passive` with hooks (passives are never silenced; optional `meter` shows a charge gauge), unlock rule, sprite key.
 - **Enemy** (`data/enemies.js`): stats, `affinity`, `element`, `onHitStatus`, `ai` behaviours (charge, summon, guard, hex, shift, flip, silence, hazard, shell, corrupt, devour, regen, nuke, onSpellHit) and boss `phases`.
 - **Biome** (`data/biomes.js`): terrain, periodic events, element modifiers, enemy pools, guardian/boss, unlock words; add it to `ACT_BIOMES`.
 - **Puzzle type**: add a builder in `learn/puzzles.js` (`BUILDERS`) and a body component in `components/CastPuzzle.jsx` (`BODIES`).

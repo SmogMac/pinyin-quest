@@ -15,6 +15,7 @@ const JOBS = [
   { src: 'tools/art-source/mei.webp', out: 'public/assets/characters/mei.webp', height: 420 },
   { src: 'tools/art-source/ruizhe.webp', out: 'public/assets/characters/ruizhe.webp', height: 420 },
   { src: 'tools/art-source/fuyun.webp', out: 'public/assets/characters/fuyun.webp', height: 420 },
+  { src: 'tools/art-source/lei.webp', out: 'public/assets/characters/lei.webp', height: 420 },
   // Effect layers share the character's canvas: both are cropped to the same box so they stay aligned.
   {
     src: 'tools/art-source/huojin.webp', out: 'public/assets/characters/huojin.webp', height: 420,

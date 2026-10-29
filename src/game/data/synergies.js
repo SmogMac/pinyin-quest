@@ -50,11 +50,11 @@ export const SYNERGIES = {
     hooks: { onBattleStart: (b) => (b.flags.chaosEcho = true) },
   },
   firestorm: {
-    py: 'huǒ fēng bào', zh: '火风暴', en: 'Firestorm', requires: ['huoqiu', 'dafeng'], archetype: 'Spell Weaver',
-    desc: 'Casting Fireball or Great Gale whips up a firestorm that sets every enemy Burning.',
+    py: 'huǒ fēng bào', zh: '火风暴', en: 'Firestorm', requires: ['huoqiu', 'wind_step'], archetype: 'Spell Weaver',
+    desc: 'Casting Fireball whips up a firestorm that sets every enemy Burning.',
     hooks: {
       onCast(b, c) {
-        if (c.spell !== 'huoqiu' && c.spell !== 'dafeng') return;
+        if (c.spell !== 'huoqiu') return;
         b.label(b.hero, 'huǒ fēng bào!', 'good');
         for (const f of b.foes()) b.applyStatus(f, 'burn', { dps: 4 * c.power, src: b.hero });
       },

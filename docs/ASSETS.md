@@ -59,6 +59,7 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 | `ruizhe` | Ruì Zhé (image) | 87×142 |
 | `huojin` | Huǒ Jìn (image + animated flame layer) | 103×142 |
 | `fuyun` | Fú Yún (image) | 107×142 |
+| `lei` | Léi (image) | 100×142 |
 | `companion` | Fox Spirit ally | 64×56 |
 | `slime`, `sporecap`, `bat`, `goblin`, `golem` | normal enemies | ~90–130 square |
 | `wisp`, `knight` | elites | ~115×125 |
@@ -67,6 +68,10 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 | `wyrm` | mò lóng, the Ink Dragon (image) | 170×230 |
 
 Enemy definitions in `src/game/data/enemies.js` reference sprites through their `sprite` field, so a new enemy just needs a new manifest key.
+
+### Attack and spell visuals
+
+Each hero's `attack.fx` in `heroes.js` picks how basic attacks look: melee `slash` (sword arc), `dagger` (crossing cuts) or `chain` (ball and chain slam); ranged `orb`, `dart` or `fire`. Elemental projectiles, impacts and lightning bolts are drawn per element, and spells get cast effects by id (`SPELL_FX` in `BattleScreen.jsx`). All of it is CSS in `src/styles/battle-fx.css` and animates only transform and opacity.
 
 ### Effect layers
 

@@ -21,6 +21,7 @@ export const SPRITES = {
   ruizhe: { src: 'assets/characters/ruizhe.webp', w: 87, h: 142 },
   huojin: { src: 'assets/characters/huojin.webp', w: 103, h: 142, fx: { src: 'assets/characters/huojin-fire.webp', kind: 'flame', origin: '84% 44%' } },
   fuyun: { src: 'assets/characters/fuyun.webp', w: 107, h: 142 },
+  lei: { src: 'assets/characters/lei.webp', w: 100, h: 142 },
   companion: { component: Companion, w: 64, h: 56, anchor: 'bottom' },
   slime: { component: Slime, w: 92, h: 83 },
   sporecap: { component: Sporecap, w: 90, h: 99 },
@@ -101,7 +102,7 @@ export const NODE_ICONS = {
 
 // Spell icons (glyph from Icons.jsx, coloured by the spell's element). Replace with { src }.
 export const SPELL_ICONS = {
-  jiayou: { glyph: 'heart' }, badao: { glyph: 'slash' }, zhishi: { glyph: 'book' }, dianhuo: { glyph: 'flame' }, xuanfeng: { glyph: 'wind' },
+  jiayou: { glyph: 'heart' }, badao: { glyph: 'slash' }, zhishi: { glyph: 'book' }, dianhuo: { glyph: 'flame' }, xuanfeng: { glyph: 'wind' }, leiting: { glyph: 'bolt' },
   huoqiu: { glyph: 'flame' }, dongtian: { glyph: 'snow' }, shandian: { glyph: 'bolt' }, xiayu: { glyph: 'drop' },
   qiang: { glyph: 'mountain' }, heiye: { glyph: 'moon' }, dafeng: { glyph: 'wind' }, yangguang: { glyph: 'sun' },
   dahai: { glyph: 'wave' }, dizhen: { glyph: 'mountain' }, xixue: { glyph: 'drop' }, xingxing: { glyph: 'star' },

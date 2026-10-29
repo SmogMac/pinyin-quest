@@ -1,3 +1,4 @@
+import Bi from '../components/Bi.jsx';
 import { useStore, update } from '../store/store.js';
 import { levelInfo, todayXp, dueCount, masteryCounts } from '../store/progress.js';
 import { SESSION_PRESETS } from '../learn/session.js';
@@ -64,7 +65,9 @@ export default function Home({ go }) {
           }}
         >
           <Icon name="cards" size={28} />
-          <b>QUICK LEARN</b>
+          <b>
+            <Bi py="kuài sù xué xí" en="Quick Learn" />
+          </b>
           <small>{isNew ? 'Start here' : due ? `${due} due` : 'New words'}</small>
         </button>
         <button
@@ -76,7 +79,7 @@ export default function Home({ go }) {
           }}
         >
           <Icon name="swords" size={28} />
-          <b>{run ? 'CONTINUE' : 'ADVENTURE'}</b>
+          <b>{run ? <Bi k="continue" /> : <Bi k="adventure" />}</b>
           <small>{run ? `Floor ${run.floor}` : 'Battle!'}</small>
         </button>
       </div>

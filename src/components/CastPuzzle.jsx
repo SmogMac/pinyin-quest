@@ -1,6 +1,7 @@
 // Compact spellcasting puzzle sheet. Combat keeps running behind it. No timer.
 // The parent calls onDone(success) after the feedback, or onCancel() if the player backs out.
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
+import Bi from './Bi.jsx';
 import { useStore, update } from '../store/store.js';
 import { recordAnswer, addXp } from '../store/progress.js';
 import { gradeFor, xpFor } from '../learn/grading.js';
@@ -32,7 +33,10 @@ function recordPuzzle(puzzle, correct, ms) {
   }
 }
 
-export default function CastPuzzle({ puzzle, onDone, onCancel, onSoundlessSwap }) {
+// Memoised: the battle stage re-renders every frame; the sheet only changes with its puzzle.
+export default memo(CastPuzzle);
+
+function CastPuzzle({ puzzle, onDone, onCancel, onSoundlessSwap }) {
   const s = useStore();
   const spell = SPELLS[puzzle.spellId];
   const el = ELEMENTS[spell.element];
@@ -84,11 +88,13 @@ export default function CastPuzzle({ puzzle, onDone, onCancel, onSoundlessSwap }
         <div className={`cast-result ${result.ok ? 'ok' : 'bad'}`} role="status">
           {result.ok ? (
             <b>
-              <Icon name="sparkle" size={18} /> Cast!
+              <Icon name="sparkle" size={18} /> <Bi k="success" inline />
             </b>
           ) : (
             <>
-              <b>Fizzle…</b>
+              <b>
+                <Bi k="fizzle" inline />
+              </b>
               <span>{result.answer}</span>
             </>
           )}

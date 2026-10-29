@@ -13,7 +13,7 @@ const front = (b) => b.front();
 export const SPELLS = {
   // ------------------------------------------------------------------ signature spells
   jiayou: {
-    py: 'jiā yóu', zh: '加油', en: 'Cheer On', element: 'light', cd: 10, tier: 1, signature: true, tags: ['heal', 'shield', 'buff', 'defensive'],
+    py: 'jiā yóu', zh: '加油', en: 'Cheer On', element: 'light', cd: 8.5, tier: 1, signature: true, tags: ['heal', 'shield', 'buff', 'defensive'],
     puzzles: ['syllables', 'meaning'],
     desc: 'Heal 12% HP, gain a 15 shield and +30% attack speed for 5s.',
     cast(b, c) {
@@ -23,7 +23,7 @@ export const SPELLS = {
     },
   },
   badao: {
-    py: 'bá dāo', zh: '拔刀', en: 'Sword Draw', element: 'dark', cd: 9, tier: 2, signature: true, tags: ['damage', 'aoe'],
+    py: 'bá dāo', zh: '拔刀', en: 'Sword Draw', element: 'dark', cd: 8, tier: 2, signature: true, tags: ['damage', 'aoe'],
     puzzles: ['syllables', 'shape'],
     desc: 'Slash every enemy for 160% attack as a guaranteed critical hit, and Curse them.',
     cast(b, c) {
@@ -34,22 +34,22 @@ export const SPELLS = {
     },
   },
   zhishi: {
-    py: 'zhī shi', zh: '知识', en: 'Knowledge', element: 'lightning', cd: 8, tier: 1, signature: true, tags: ['damage', 'chaos'],
+    py: 'zhī shi', zh: '知识', en: 'Knowledge', element: 'lightning', cd: 7, tier: 1, signature: true, tags: ['damage', 'chaos'],
     puzzles: ['phrase', 'meaning', 'syllables'],
-    desc: 'Throw 3 scrolls at random enemies: 14 lightning damage each, plus a random status.',
+    desc: 'Throw 3 scrolls at random enemies: 16 lightning damage each, plus a random status.',
     cast(b, c) {
       const statuses = ['burn', 'chill', 'wet', 'shock', 'curse'];
       for (let i = 0; i < 3; i++) {
         const f = b.randomFoe();
         if (!f) break;
         b.emit({ type: 'shot', src: 'hero', tgt: f.id, element: c.element, spell: true });
-        b.damage(b.hero, f, 14 * c.power, { element: c.element, kind: 'spell' });
+        b.damage(b.hero, f, 16 * c.power, { element: c.element, kind: 'spell' });
         b.applyStatus(f, statuses[Math.floor(b.rng() * statuses.length)], { src: b.hero, dps: 3 });
       }
     },
   },
   dianhuo: {
-    py: 'diǎn huǒ', zh: '点火', en: 'Ignite', element: 'fire', cd: 9, tier: 1, signature: true, tags: ['damage', 'aoe', 'terrain'],
+    py: 'diǎn huǒ', zh: '点火', en: 'Ignite', element: 'fire', cd: 8, tier: 1, signature: true, tags: ['damage', 'aoe', 'terrain'],
     puzzles: ['syllables', 'picture'],
     desc: 'Set every enemy Burning (4/s) and the ground ablaze for 6s.',
     cast(b, c) {
@@ -62,7 +62,7 @@ export const SPELLS = {
   },
 
   xuanfeng: {
-    py: 'xuán fēng', zh: '旋风', en: 'Whirlwind', element: 'wind', cd: 9, tier: 1, signature: true, tags: ['damage', 'aoe', 'control', 'defensive'],
+    py: 'xuán fēng', zh: '旋风', en: 'Whirlwind', element: 'wind', cd: 8, tier: 1, signature: true, tags: ['damage', 'aoe', 'control', 'defensive'],
     puzzles: ['syllables', 'shape'],
     desc: 'Spin through every enemy for 16 wind damage, then gain +30% dodge and +25% attack speed for 4s.',
     cast(b, c) {
@@ -70,6 +70,27 @@ export const SPELLS = {
         b.damage(b.hero, f, 16 * c.power, { element: c.element, kind: 'spell' });
       }
       b.addBuff(b.hero, { id: 'whirlwind', dur: 4, stats: { dodge: 0.3, aspdPct: 0.25 } });
+    },
+  },
+
+  leiting: {
+    py: 'léi tíng yī jī', zh: '雷霆一击', en: 'Thunder Crash', element: 'lightning', cd: 8.5, tier: 2, signature: true, tags: ['damage', 'aoe', 'melee', 'chain'],
+    puzzles: ['syllables', 'phrase'],
+    desc: 'Slam the charged ball and chain down: 26 lightning damage around the nearest enemy and Shock (3s). Lightning then arcs to every Wet enemy for half.',
+    cast(b, c) {
+      const t = front(b);
+      if (!t) return;
+      b.emit({ type: 'slam', tgt: t.id, element: c.element });
+      const hit = new Set([t, ...b.near(t, 18)]);
+      for (const f of hit) {
+        b.damage(b.hero, f, 26 * c.power, { element: c.element, kind: 'spell' });
+        b.applyStatus(f, 'shock', { dur: 3, src: b.hero });
+      }
+      for (const f of b.foes()) {
+        if (hit.has(f) || !f.statuses.wet) continue;
+        b.emit({ type: 'shot', src: t.id, tgt: f.id, element: c.element, spell: true, bolt: true });
+        b.damage(b.hero, f, 13 * c.power, { element: c.element, kind: 'spell' });
+      }
     },
   },
 
@@ -241,5 +262,6 @@ export const SPELLS = {
 export const SIGNATURE_SPELLS = Object.keys(SPELLS).filter((id) => SPELLS[id].signature);
 export const DISCOVERABLE_SPELLS = Object.keys(SPELLS).filter((id) => !SPELLS[id].signature);
 // How many slots a hero has, and whether the signature slot is locked (configurable for future items).
-export const SPELL_SLOTS = 3;
+// Two active slots: slot 1 is the hero's signature spell (locked), slot 2 holds one spell found on the run.
+export const SPELL_SLOTS = 2;
 export const SIGNATURE_LOCKED = true;

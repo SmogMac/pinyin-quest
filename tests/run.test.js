@@ -7,7 +7,7 @@ test('runs follow the act structure and finish', () => {
   for (let s = 1; s <= 30; s++) {
     const { run } = playRun(s * 97);
     assert.ok(['victory', 'defeat'].includes(run.phase), `ended in ${run.phase}`);
-    assert.ok(run.spells.length >= 1 && run.spells.length <= 3);
+    assert.ok(run.spells.length >= 1 && run.spells.length <= 2, 'signature + at most one pickup');
     assert.equal(new Set(run.items).size, run.items.length, 'items are unique');
   }
 });
@@ -23,7 +23,7 @@ test('the Forgotten Beyond and Word Eater are reachable after the dragon', () =>
 
 test('balance: winnable but not trivial, battles are short, bosses take longer', () => {
   const report = {};
-  for (const heroId of ['xinyi', 'mei', 'ruizhe', 'huojin', 'fuyun']) {
+  for (const heroId of ['xinyi', 'mei', 'ruizhe', 'huojin', 'fuyun', 'lei']) {
     let wins = 0;
     let floors = 0;
     const d = { battle: [], elite: [], guardian: [], boss: [] };

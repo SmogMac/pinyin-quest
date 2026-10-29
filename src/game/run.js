@@ -62,7 +62,9 @@ export function generateActMap(seed, act, biome, { secrets = [] } = {}) {
     for (let row = 0; row < fightRows; row++) {
       const n = ensure(row, col);
       if (row < fightRows - 1) {
-        const nextCol = Math.max(0, Math.min(COLS - 1, col + Math.floor(r() * 3) - 1));
+        let nextCol = Math.max(0, Math.min(COLS - 1, col + Math.floor(r() * 3) - 1));
+        // never cross an existing diagonal (keeps every route readable): go straight instead
+        if (nextCol !== col && nodes[key(row, nextCol)]?.next.includes(key(row + 1, col))) nextCol = col;
         const nn = ensure(row + 1, nextCol);
         if (!n.next.includes(nn.id)) n.next.push(nn.id);
         col = nextCol;

@@ -36,6 +36,7 @@ export const ACHIEVEMENTS = [
   { id: 'hero_mei', name: 'Méi joins you!', desc: 'Unlock Mei, the Silent Blade (level 3).', test: (s) => heroUnlocked('mei', s) },
   { id: 'hero_ruizhe', name: 'Ruì Zhé joins you!', desc: 'Unlock Ruizhe, the Nervous Scholar (level 5).', test: (s) => heroUnlocked('ruizhe', s) },
   { id: 'hero_huojin', name: 'Huǒ Jìn joins you!', desc: 'Unlock Huojin, the Grumpy Fire Master (level 8).', test: (s) => heroUnlocked('huojin', s) },
+  { id: 'hero_lei', name: 'Léi joins you!', desc: 'Unlock Lei, the Thunder Brawler (level 12).', test: (s) => heroUnlocked('lei', s) },
   { id: 'hero_fuyun', name: 'Fú Yún joins you!', desc: 'Unlock Fuyun, the Lucky Assassin (level 10).', test: (s) => heroUnlocked('fuyun', s) },
 ];
 
