@@ -6,12 +6,12 @@ Basic combat is automatic. Each hero has exactly one manually activated **signat
 
 ## The loop
 
-1. Pick a hero (swipe the Home line-up), then a **biome** for Act 1 on the route screen.
-2. Travel up a **branching scroll map**: battles, elites, campfires, treasure, shrines, merchants, teachers, encounters, and secret nodes revealed by words you know.
+1. Pick a hero and start a run. There are no route choices: **your hero walks to the right through a continuous, side-scrolling world**, and the land of each area is picked at random.
+2. Every few seconds (5–12s, faster with the 2× walking button or *Fast exploration* in Settings) something appears on the road: a fight, an elite, the fox merchant, a treasure chest, a stranger who needs a Mandarin word, a hot spring, or (rarely) a shrine. Each area ends with its guardian or boss.
 3. **Battles are real-time.** The hero moves, attacks, dodges and blocks automatically; enemies move, charge, summon, shield and curse.
 4. Your hero has one **signature move** (it can never be replaced). When it's charged, tap the big button (or press 1 / Space) and that hero's own Mandarin puzzle slides up while the **fight keeps going**. Solve it → the move fires and goes on cooldown. A wrong answer → it fizzles, shows the answer, and goes on cooldown. Cancel → it stays ready. There is no timer.
-5. Win → choose 1 of 3 **passive items**, plus ink (墨) for merchants. There are no spells to find.
-6. Beat the biome **guardian** → full heal, next act. Act 3 is the **Ink Dragon's Lair**. After 3 dragon victories you can continue into **The Forgotten Beyond** and face the **Word Eater**.
+5. Win → ink (墨); elites and guardians (and sometimes ordinary fights) also offer **one** passive item to take or leave. There is never a choice of three.
+6. Beat the area's **guardian** → full heal, the scene fades to black and the next act's area begins (a random land you have unlocked). Act 3 is the **Ink Dragon's Lair**. After 3 dragon victories you can continue into **The Forgotten Beyond** and face the **Word Eater**.
 
 Runs save after every step, so you can close the app between encounters and resume later. A battle is saved as finished the moment it ends (before the Victory/Defeat screen), so reloading never replays a completed fight.
 
@@ -21,18 +21,29 @@ The Adventure menu always offers **xīn mào xiǎn · New Run**; **jì xù mào 
 
 ### Battle flow
 
-`FIGHTING → RESOLVED (result saved once) → Victory/Defeat overlay → Continue → rewards / map / end screen`
+`EXPLORE → (encounter appears) → BATTLE → RESOLVED (result saved once) → Victory/Defeat → Continue → item reveal → EXPLORE`
 
 - The engine runs at a fixed 20 Hz (`COMBAT.dt`); the screen interpolates positions between steps, so motion is smooth at any display rate and the simulation never depends on frame rate.
 - Pending engine events are drained every frame, including ones emitted by player actions between steps (a signature move that kills the last enemy). After every tick, `Battle.settle()` kills any unit at 0 HP and declares the winner, so simultaneous deaths, damage over time, chain reactions and phase changes can't leave a fight unresolved. `tests/flow.test.js` covers these cases.
+- Saved route-map runs carry on in the journey: same hero, items, ink, health and act, restarting at the beginning of the current act's area; items that only worked for one hero are refunded as 30 ink each.
 - Saved runs from the spell versions carry on: every pickup spell is removed and refunded as 40 ink, a pending spell reward becomes an item choice, spells leave shops, and a one-time notice explains the change. Vocabulary, unlocks, story, achievements and statistics are untouched.
+
+## The journey (`game/run.js`, `components/Journey.jsx`, `data/encounters.js`)
+
+State machine: `areaIntro → explore → battle | merchant | chest | stranger | spring | shrine → explore …`; `battle → reward → explore`; guardian beaten → `areaClear` → fade to black → `areaIntro` (next act); dragon → `victory` (→ the Forgotten Beyond after 3 wins); Word Eater → `complete`; lost → `defeat`.
+
+- **Hidden, pre-generated areas.** When an area begins, `generateArea` rolls its whole encounter sequence (counts from `AREA_PACING` per act, arranged by pacing rules) from the run's seed, including every fight's enemies. It is saved with the run and never shown. Refreshing never rerolls: the sequence, the position in it and each encounter's `done` flag are saved, and anything random about an encounter (the chest's item, the shop's stock, the stranger) is rolled once from the saved seed when it is reached.
+- **Pacing rules:** every area opens with a fight; at most two peaceful stops in a row (fights are added if a roll would break this); no back-to-back repeats of a special encounter; merchants never before the third encounter (so you have ink); hot springs in the second half; elites not in the first two; shrines rare (15–30% of areas); exactly one boss, always last. `tests/journey.test.js` checks 1,600 generated areas.
+- **Encounters.** *Merchant:* the fox merchant's stall (4 items + tea; buy as many as you can afford; bought items leave the stall; a secret merchant with better stock appears once you know qián 钱). *Chest:* one random item (respecting unlocks and rarity) revealed with rays (stronger for rare/epic), **take or leave**; nothing is equipped before you take it. *Stranger:* eight small help quests (a farmer's fruit, a scholar's number, a child's body-part drawing, a spirit's unfinished sentence, a nervous student's encouragement, a traveller's tones, and vocabulary questions), never repeated within a run; right → ink or one item, wrong → the answer, friendly words and a little ink. All work in Soundless Mode. *Hot spring:* the hero steps in and heals 42% (+12 max HP instead at full health). *Shrine:* one random blessing for the rest of the run (`data/blessings.js`: Speed, Vitality, Momentum, Fortune, Echoes, Resilience, Phoenix, Abundance, Clarity, Ferocity, Guardian, Renewal), always positive and useful for every hero.
+- **Biomes** are picked at random from the act's unlocked lands (act 1 lands if none of act 2's are unlocked yet), weighted against lands already visited this run. The lair (act 3) and the Beyond (act 4) follow the story.
+- **The road.** The world scrolls with parallax while walking; the ground layer and the encounters on it move at exactly the same speed (`GROUND_CYCLE` in `Journey.jsx`). Battles open over the same land's backdrop. Bosses darken the world and announce themselves before you reach them.
 
 ### Positioning, knockback and Momentum
 
 Combat happens on a real battlefield in world units (`COMBAT.worldW` = 130, about 30% wider than before relative to the characters). The camera maps it onto the stage and adapts its zoom to the screen width; gameplay never depends on screen size or frame rate (fixed 20 Hz steps).
 
 - **Two zones:** the left half is the Hero Zone, the right half the Enemy Zone. Anyone can cross; the zones are territory, not walls (a faint ground tint and a brush mark show the line).
-- **Momentum:** standing in the *other* side's half gives +25% attack speed (`COMBAT.momentumAspd`) to basic attacks (not the signature cooldown). Effects can also *grant* Momentum for a while wherever you stand (Go All Out!, Juicy, War Drum, Charged Up); granted Momentum is tracked separately and drawn with gold chevrons. A ±3 buffer at the midpoint (`COMBAT.zoneBuffer`) stops it flickering. Shown as two orange chevrons beside the character (left of heroes, right of enemies).
+- **Momentum:** standing in the *other* side's half gives +25% attack speed (`COMBAT.momentumAspd`) to basic attacks (not the signature cooldown). Effects can also *grant* Momentum for a while wherever you stand (Go All Out!, Hearty Meal, War Drum, Charged Up); granted Momentum is tracked separately and drawn with gold chevrons. A ±3 buffer at the midpoint (`COMBAT.zoneBuffer`) stops it flickering. Shown as two orange chevrons beside the character (left of heroes, right of enemies).
 - **Knockback:** every basic attack pushes by its weight (`attack.kb` for heroes, `kb` for enemies; crits ×1.5; Léi's ball and chain 7, a qi orb 1.5); Deny Danger!, Knockback! and many items launch harder; enemies flung into the **far wall** slam into it (`onWallHit`), and enemies knocked into each other collide (`onCollide`); a Frozen enemy hit by a heavy impact Shatters; bosses push hardest with telegraphed charge attacks. Pushes slide out smoothly over ~0.3s. Pushes of 3+ stagger (no moving or attacking until recovered, but the swing timer keeps counting). `kbRes` resists pushes (bosses 70%, guardians 50%, golems and turtles 50%, Léi 35%). Pulls are a separate effect (`battle.pull`), used by Léi's Chain Pull and the Chain Hook item.
 - **Dodging** is a real hop backwards (`COMBAT.dodgeHop`): no damage, but ground is given up.
 - **Movement speed matters:** fast heroes (Fú Yún +30%, Méi +15%) reach the line first, chase knocked-back enemies and win back ground after a dodge; slow bruisers (Léi −10%) hold it with heavy pushes and knockback resistance.
@@ -43,9 +54,9 @@ Combat happens on a real battlefield in world units (`COMBAT.worldW` = 130, abou
 
 The battlefield shows the characters, attacks, the hero's health bar over the hero, one boss bar at the top, status pips, Momentum chevrons (plus a Momentum chip in the HUD), ground effects (banana peels, flame trails, ink trails, storm barriers) and **one signature button**: the hero's own icon, a cooldown dial, a ready pulse, the compact pinyin name, and a timer while one of its buffs is running. Enemy names and health bars are not drawn on the field: tap an enemy (or the eye button) to inspect it. Passive items and synergies live in the chest panel.
 
-### Route map
+### Relaxed casting
 
-Every line on the scroll is drawn from the same graph the game navigates (`node.next`): solid ink for the route you took, red glowing paths with a flowing stroke for your next choices, dashed paths for routes still reachable later, and faint lines for routes no longer open. Generation never lets two routes cross. **Relaxed casting** (Settings) slows combat to 40% while a puzzle is open; normal play never pauses or slows.
+**Relaxed casting** (Settings) slows combat to 40% while a puzzle is open; normal play never pauses or slows.
 
 ## Signature moves (`data/signatures.js`, `learn/signaturePuzzles.js`, `components/SignaturePuzzle.jsx`)
 
@@ -93,7 +104,7 @@ Terrain states: wet, frozen, burning, electrified, corrupted, blessed, obscured,
 
 If no Act-2 land is unlocked yet, Act-1 lands are offered again (harder), so nobody is stranded.
 
-Secret nodes: a **secret merchant** (better stock, discounts) appears once you know qián (钱, money); the **Jade Rabbit** (玉兔, a secret boss with an epic reward) can appear in the Lantern Temple once you know yuè liang and have beaten the dragon.
+Secrets: a **secret merchant** (better stock, discounts) appears once you know qián (钱, money); the **Jade Rabbit** (玉兔, a secret boss with an epic reward) waits before the guardian of the Lantern Temple once you know yuè liang and have beaten the dragon.
 
 ## Bosses
 
@@ -103,7 +114,7 @@ Secret nodes: a **secret merchant** (better stock, discounts) appears once you k
 
 ## Passive items and synergies (`data/items.js`, `data/synergies.js`)
 
-141 passive items (35 of them hero-specific, offered only to that hero) and 54 synergies. Items are real gameplay triggers, not descriptions: on basic attack, crit, dodge, block, taking damage, healing, shield creation and break, knockback, wall slams and enemy collisions, entering the enemy half, while Momentum is active or inactive, when it expires, on signature success or failure, while a signature buff runs, on status application, on enemy death, on elemental reactions and on entering a new battlefield. Examples: Ghost Step (dodges leave a decoy), Counterstrike, Afterimage, Last Stand, Overextension, Second Wind, Invader's Mark, Cursed Crown, Echoing Soul, Lingering Power, Final Word, Ink Resonance, Reckless Magic, Wallbreaker, Chain Collision, Mirror Brush, Ink Parasite, Broken Hourglass, Chaotic Scroll, Twin Shadows, Overflowing Ink. Synergies chain them: e.g. Thunder Counter (counterattacks always crit → Spark Arc lightning), Demolition (wall slams explode), Double Helping (Echoing Soul serves a second fruit at full power), Storm Flail (wall slams arc lightning), Peel Dancer (slipping enemies trigger your dodge effects).
+140 passive items and 54 synergies, all universal: every item and synergy is built on systems every hero shares, so none is ever useless for the hero you play (they can still be stronger on some heroes). Each item has an icon (`src/assets/itemArt.js`), a stable id and derived `tags`. Items are real gameplay triggers, not descriptions: on basic attack, crit, dodge, block, taking damage, healing, shield creation and break, knockback, wall slams and enemy collisions, entering the enemy half, while Momentum is active or inactive, when it expires, on signature success or failure, while a signature buff runs, on status application, on enemy death, on elemental reactions and on entering a new battlefield. Examples: Ghost Step (dodges leave a decoy), Counterstrike, Afterimage, Last Stand, Overextension, Second Wind, Invader's Mark, Cursed Crown, Echoing Soul, Lingering Power, Final Word, Ink Resonance, Reckless Magic, Wallbreaker, Chain Collision, Mirror Brush, Ink Parasite, Broken Hourglass, Chaotic Scroll, Twin Shadows, Overflowing Ink. Synergies chain them: e.g. Thunder Counter (counterattacks always crit → Spark Arc lightning), Demolition (wall slams explode), Double Helping (Echoing Soul serves a second fruit at full power), Storm Flail (wall slams arc lightning), Peel Dancer (slipping enemies trigger your dodge effects).
 
 ## Extending the game
 

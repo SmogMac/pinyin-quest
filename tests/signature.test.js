@@ -258,11 +258,14 @@ test('passive triggers modify the real simulation', () => {
   m.hero.x = 10;
   m.updateMomentum();
   assert.ok(m.hero.shield >= 20, 'Second Wind');
-  // fruit-specific items
-  const x = ready('xinyi', ['slime', 'slime', 'slime'], { items: ['fruit_basket', 'bumper_crop'] });
-  fire(x, 'apple');
-  const shots = x.drain().filter((ev) => ev.type === 'shot' && ev.small);
-  assert.ok(shots.length >= 3, 'thrown fruit split into seeds');
+  // signature success → Momentum anywhere (works the same for every hero)
+  for (const heroId of Object.keys(HEROES)) {
+    const x = ready(heroId, ['golem'], { items: ['charge_up'] });
+    x.hero.x = 10;
+    x.updateMomentum();
+    fire(x, 'apple');
+    assert.ok(x.hero.momentum, `${heroId}: Charged Up grants Momentum`);
+  }
   // failed signature → Bitter Lesson lashes out
   const bl = ready('mei', ['slime'], { items: ['bitter_lesson'] });
   const h0 = bl.foes()[0].hp;
@@ -289,15 +292,4 @@ test('elemental status interactions still work (no resistances needed)', () => {
   b.damage(b.hero, a, 10, { element: 'light', kind: 'proc' });
   assert.ok(b.events.some((e) => e.id === 'purge'));
   assert.ok(b.events.some((e) => e.type === 'hit' && e.tgt === c.id && e.element === 'light'), 'explosion hits the neighbour');
-});
-
-test('hero-specific items are only offered to their hero', async () => {
-  const { newRun, draftItems } = await import('../src/game/run.js');
-  for (const heroId of Object.keys(HEROES)) {
-    const run = newRun({ seed: 3, heroId });
-    run.biome = 'bamboo';
-    for (let i = 0; i < 30; i++) {
-      for (const id of draftItems(run, Object.keys(ITEMS), 3, { r: makeRng(i + 1) })) assert.ok(!ITEMS[id].hero || ITEMS[id].hero === heroId, `${heroId} offered ${id}`);
-    }
-  }
 });

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultSave, hydrate } from '../src/store/store.js';
 import { activeRun, startRun, abandonRun, finishRun } from '../src/game/runManager.js';
-import { chooseBiome, chooseNode, reachableNodes, RUN_VERSION } from '../src/game/run.js';
+import { enterArea, arrive, RUN_VERSION } from '../src/game/run.js';
 import { HEROES } from '../src/game/data/heroes.js';
 
 /** A save with learning progress, unlocks and a run deep in progress (mid-battle). */
@@ -22,8 +22,8 @@ function playedSave() {
   s.adventure.bestFloor = 9;
   s.cosmetics.hero = 'mei';
   const r = startRun(s, { heroId: 'mei', accountLevel: 10, seed: 42 });
-  chooseBiome(r, 'bamboo');
-  chooseNode(r, reachableNodes(r)[0].id); // into a battle
+  enterArea(r, { unlocked: ['bamboo'] });
+  arrive(r, { itemPool: [] }); // every area opens with a fight: into a battle
   r.items.push('ember_tip', 'heavy_hand');
   r.ink = 77;
   return s;
@@ -38,9 +38,9 @@ test('a new run starts clean: base hero with their signature move, no items or b
     assert.equal(r.spells, undefined, 'no spells: the signature move belongs to the hero');
     assert.ok(HEROES[heroId].signature);
     assert.deepEqual(r.items, []);
-    assert.equal(r.phase, 'biome');
+    assert.equal(r.phase, 'areaIntro');
     assert.equal(r.battle ?? null, null, 'no stale battle');
-    assert.equal(r.map ?? null, null, 'no stale route');
+    assert.equal(r.area ?? null, null, 'no stale area');
     assert.equal(r.floor, 0);
     assert.equal(r.ink, 0);
     assert.equal(r.v, RUN_VERSION);

@@ -1,0 +1,552 @@
+/* The continuous journey: the road, what stands on it, and the encounter panels beneath it.
+   Motion is transform/opacity only; Reduced Motion keeps the world still. */
+
+.journey {
+  margin-top: 6px;
+}
+/* the world scrolls while walking. The animations are always defined and only paused/resumed, so
+   stopping for an encounter never snaps a layer back. Ground and ground-level decoration share one
+   duration (GROUND_CYCLE in Journey.jsx), the same speed encounter props move at. */
+.journey-bg .far {
+  animation: scroll-x calc(14s * var(--walk)) linear infinite;
+}
+.journey-bg .mid {
+  animation: scroll-x calc(7s * var(--walk)) linear infinite;
+}
+.journey-bg .decor,
+.journey-bg .ground {
+  animation: scroll-x var(--ground) linear infinite;
+}
+.journey-bg.paused .bg-layer {
+  animation-play-state: paused;
+}
+.journey-bg .decor {
+  width: 200%;
+}
+.journey-bg .decor .bg-layer-svg {
+  width: 50%;
+}
+.reduced-motion .journey-bg .bg-layer {
+  animation: none !important;
+}
+
+.journey-hero {
+  position: absolute;
+  bottom: 13%;
+  left: 18%;
+  transform: translateX(-50%);
+  z-index: 3;
+  transition: left 0.9s ease-in-out, bottom 0.9s ease-in-out;
+}
+/* into the hot spring: step in and settle down */
+.journey-hero.soak {
+  left: 62%;
+  bottom: 9%;
+}
+.journey-hero.soak .sprite {
+  animation: soak-bob 1.4s ease-in-out 0.9s infinite;
+}
+@keyframes soak-bob {
+  50% {
+    transform: translateY(3px) scale(1.02, 0.98);
+  }
+}
+
+/* the next encounter glides in from the right edge, then stays put */
+.encounter-prop {
+  position: absolute;
+  bottom: 13%;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.prop-img {
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 4px rgba(20, 10, 40, 0.35));
+}
+.prop-foes {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.prop-foe {
+  margin-left: calc(var(--k) * -6px);
+}
+.prop-foes.guardian,
+.prop-foes.boss {
+  transform: scale(1.35);
+  transform-origin: bottom left;
+}
+.prop-merchant {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+.prop-img.cart {
+  width: clamp(80px, 24cqw, 130px);
+}
+.prop-fox {
+  margin-left: -24px;
+  animation: fox-wave 1.2s ease-in-out infinite;
+}
+@keyframes fox-wave {
+  50% {
+    transform: translateY(-3px) rotate(-3deg);
+  }
+}
+.prop-img.lantern-post {
+  width: clamp(26px, 7cqw, 40px);
+  margin-left: 6px;
+  filter: drop-shadow(0 0 10px rgba(255, 200, 90, 0.8));
+}
+.prop-chest {
+  position: relative;
+}
+.prop-img.chest {
+  width: clamp(54px, 15cqw, 84px);
+  transition: transform 0.25s;
+}
+.prop-chest.open .chest {
+  animation: chest-pop 0.6s ease-out;
+}
+@keyframes chest-pop {
+  30% {
+    transform: translateY(-8px) scale(1.12, 0.9);
+  }
+  60% {
+    transform: scale(0.95, 1.08);
+  }
+}
+.chest-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 40%;
+  width: 90px;
+  height: 90px;
+  margin-left: -45px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 236, 160, 0.9), transparent 65%);
+  opacity: 0;
+  pointer-events: none;
+}
+.prop-chest.open .chest-glow {
+  animation: chest-glow 1.4s ease-out forwards;
+}
+@keyframes chest-glow {
+  20% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  to {
+    opacity: 0.55;
+    transform: scale(1.1);
+  }
+}
+.prop-stranger {
+  position: relative;
+}
+.prop-stranger .speech {
+  position: absolute;
+  top: -8px;
+  right: -14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 900;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+  animation: bob 1.4s ease-in-out infinite;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+/* hot spring */
+.prop-spring {
+  position: relative;
+  width: clamp(110px, 30cqw, 170px);
+  height: 46px;
+}
+.prop-spring .pool {
+  position: absolute;
+  inset: auto 0 0;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 35%, #bff3ff, #4fb8d8 55%, #2a7fa6);
+  box-shadow: 0 0 0 5px #8a7a6a inset, 0 0 0 3px #6d5d50;
+  animation: ripple 2.2s ease-in-out infinite;
+}
+@keyframes ripple {
+  50% {
+    filter: brightness(1.12);
+  }
+}
+.prop-spring .steam {
+  position: absolute;
+  bottom: 18px;
+  left: calc(14% + var(--k) * 17%);
+  width: 18px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.75), transparent 70%);
+  animation: steam 2.4s ease-out calc(var(--k) * 0.45s) infinite;
+}
+@keyframes steam {
+  from {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(-56px) scale(1.5);
+    opacity: 0;
+  }
+}
+.prop-spring .petal {
+  position: absolute;
+  bottom: 12px;
+  width: 8px;
+  height: 6px;
+  border-radius: 60% 0;
+  background: #ffb6c8;
+  animation: petal-float 4s ease-in-out infinite;
+}
+.prop-spring .petal.p1 {
+  left: 30%;
+}
+.prop-spring .petal.p2 {
+  left: 64%;
+  animation-delay: -2s;
+}
+@keyframes petal-float {
+  50% {
+    transform: translate(10px, -2px) rotate(40deg);
+  }
+}
+.prop-spring.soaking .pool {
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 5px #8a7a6a inset, 0 0 0 3px #6d5d50, 0 0 26px rgba(255, 220, 160, 0.7);
+}
+/* shrine */
+.prop-shrine {
+  position: relative;
+}
+.prop-img.shrine {
+  width: clamp(64px, 18cqw, 100px);
+  filter: drop-shadow(0 0 14px rgba(255, 220, 120, 0.9));
+  animation: bob 2.4s ease-in-out infinite;
+}
+.prop-shrine .rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 190px;
+  height: 190px;
+  margin: -95px;
+  background: repeating-conic-gradient(rgba(255, 236, 160, 0.45) 0 10deg, transparent 10deg 30deg);
+  mask: radial-gradient(circle, #000 20%, transparent 70%);
+  animation: spin 9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* life in the world */
+.journey-life {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+.journey-life .leaf {
+  position: absolute;
+  top: -10px;
+  left: calc(10% + var(--i) * 13%);
+  width: 8px;
+  height: 5px;
+  border-radius: 60% 0;
+  background: color-mix(in srgb, #9bd06a 70%, #f0b45a);
+  opacity: 0.8;
+  animation: leaf-fall calc(6s + var(--i) * 0.7s) linear calc(var(--i) * -1.3s) infinite;
+}
+@keyframes leaf-fall {
+  to {
+    transform: translate(-60px, 300px) rotate(540deg);
+  }
+}
+.journey-life .bird {
+  position: absolute;
+  top: 18%;
+  left: 110%;
+  width: 14px;
+  height: 6px;
+  border-top: 2px solid rgba(40, 30, 60, 0.6);
+  border-radius: 50% 50% 0 0;
+  animation: bird 16s linear infinite;
+}
+.journey-life .bird.b2 {
+  top: 24%;
+  animation-delay: -7s;
+  transform: scale(0.8);
+}
+@keyframes bird {
+  to {
+    left: -10%;
+    top: 12%;
+  }
+}
+.reduced-motion .journey-life {
+  display: none;
+}
+
+/* boss ahead: the world darkens a little and a banner appears */
+.journey.boss-near .bg-stack {
+  filter: saturate(0.75) brightness(0.8);
+  transition: filter 1s;
+}
+.boss-warning {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: rgba(120, 20, 30, 0.85);
+  color: #fff;
+  font-weight: 800;
+  animation: pop-in 0.4s ease-out, warn-pulse 1.2s ease-in-out infinite;
+}
+@keyframes warn-pulse {
+  50% {
+    box-shadow: 0 0 18px rgba(255, 60, 60, 0.7);
+  }
+}
+.journey-toast {
+  position: absolute;
+  top: 30%;
+  left: 18%;
+  z-index: 6;
+  font-weight: 900;
+  color: var(--gold, #f5c84a);
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.6);
+  animation: rise-fade 1.6s ease-out forwards;
+}
+
+/* fade to black between areas */
+.journey-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #08040f;
+  opacity: 0;
+  pointer-events: none;
+}
+.journey-fade.out {
+  animation: fade-out 0.65s ease-in forwards;
+}
+.journey-fade.in {
+  animation: fade-in 0.7s ease-out forwards;
+}
+@keyframes fade-out {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.journey-black {
+  height: clamp(270px, 74vw, 400px);
+  border-radius: var(--radius);
+  background: #08040f;
+}
+
+/* HUD over the road */
+.journey-hud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.journey-hud .spacer {
+  flex: 1;
+}
+.jh-area {
+  font-family: var(--font-pinyin);
+  opacity: 0.85;
+}
+.jh-hp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green);
+}
+.jh-ink {
+  color: var(--gold, #f5c84a);
+}
+
+/* encounter panels, under the road */
+.journey-panel {
+  margin-top: 10px;
+  animation: slide-up 0.25s ease-out;
+}
+.reveal-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+.reveal-title {
+  font-weight: 800;
+}
+.reveal-item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 130px;
+}
+.reveal-item > .ability-icon,
+.reveal-item > .blessing-orb {
+  position: relative;
+  z-index: 1;
+  animation: reveal-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes reveal-pop {
+  from {
+    transform: translateY(30px) scale(0.3);
+    opacity: 0;
+  }
+}
+.reveal-rays {
+  position: absolute;
+  inset: -10px;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--el, #ffd27a) 55%, transparent) 0 8deg, transparent 8deg 24deg);
+  mask: radial-gradient(circle, #000 15%, transparent 68%);
+  animation: spin 10s linear infinite;
+  opacity: 0.7;
+}
+.reveal-panel.rarity-rare .reveal-rays {
+  opacity: 0.9;
+  background: repeating-conic-gradient(rgba(111, 209, 255, 0.6) 0 8deg, transparent 8deg 20deg);
+}
+.reveal-panel.rarity-epic .reveal-rays {
+  opacity: 1;
+  inset: -30px;
+  background: repeating-conic-gradient(rgba(211, 139, 255, 0.75) 0 8deg, transparent 8deg 16deg);
+  animation-duration: 5s;
+}
+.reveal-panel.rarity-epic .reveal-item > .ability-icon {
+  animation: reveal-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both, epic-glow 1.6s ease-in-out 0.6s infinite;
+}
+@keyframes epic-glow {
+  50% {
+    box-shadow: 0 0 0 2px #fff inset, 0 0 28px #d38bff;
+  }
+}
+.reveal-name {
+  justify-content: center;
+}
+.reveal-meta {
+  margin: 0;
+  font-size: 0.8rem;
+}
+.rarity-tag {
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+.rarity-tag.rare {
+  color: #2f9fd6;
+}
+.rarity-tag.epic {
+  color: #a24ae0;
+}
+.reveal-desc {
+  margin: 0;
+  max-width: 34em;
+}
+.reveal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.blessing-orb {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, var(--el-glow, #fff4d6), var(--el, #ffd27a) 60%, color-mix(in srgb, var(--el, #ffd27a) 60%, #000));
+  box-shadow: 0 0 0 3px #fff inset, 0 0 24px var(--el, #ffd27a);
+}
+.blessing-orb.small {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  --el: #ffd27a;
+  box-shadow: 0 0 0 2px #fff inset;
+}
+.spring-panel {
+  text-align: center;
+}
+.stranger-head,
+.merchant-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.stranger-face {
+  flex: none;
+  width: 48px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--paper-2, #efe6ff);
+  display: grid;
+  place-items: end center;
+}
+.stranger-panel p {
+  margin: 8px 0;
+}
+.stranger-quiz .quiz-view {
+  margin-top: 0;
+}
+.merchant-head {
+  margin-bottom: 8px;
+}
+.merchant-head p {
+  margin: 2px 0 0;
+}
+.merchant-fox {
+  flex: none;
+}
+.merchant-ink {
+  margin-left: auto;
+  font-weight: 900;
+  white-space: nowrap;
+}

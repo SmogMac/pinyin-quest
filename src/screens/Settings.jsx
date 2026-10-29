@@ -85,9 +85,15 @@ export default function Settings({ go }) {
         />
         <Toggle
           label="Relaxed casting"
-          desc="Slows combat to 40% while a spell puzzle is open. Normal play never pauses or slows."
+          desc="Slows combat to 40% while a signature puzzle is open. Normal play never pauses or slows."
           value={st.relaxedCasting}
           onChange={(v) => set('relaxedCasting', v)}
+        />
+        <Toggle
+          label="Fast exploration"
+          desc="Your hero walks twice as fast between encounters in Adventure Mode (also on the road: the 2× button)."
+          value={st.exploreSpeed === 2}
+          onChange={(v) => set('exploreSpeed', v ? 2 : 1)}
         />
         <Toggle
           label="Speaking practice"

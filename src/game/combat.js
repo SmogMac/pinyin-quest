@@ -14,6 +14,7 @@ import { STATUSES, REACTIONS, STATUS_REACTIONS, TERRAIN_REACTIONS, DOT_STATUSES 
 import { ITEMS } from './data/items.js';
 import { SYNERGIES, activeSynergies } from './data/synergies.js';
 import { SIGNATURES } from './data/signatures.js';
+import { BLESSINGS } from './data/blessings.js';
 import { ENEMIES } from './data/enemies.js';
 import { BIOMES } from './data/biomes.js';
 import { heroDef, DEFAULT_HERO, ITEM_ELEMENT } from './data/heroes.js';
@@ -40,8 +41,8 @@ const STAT_KEYS = [
 const MID = COMBAT.worldW / 2;
 const reach = (r) => (r > 20 ? r * COMBAT.rangedReach : r);
 
-/** Hero stats for a run: base + account bonus + passive item stats. */
-export function buildHero({ heroId = DEFAULT_HERO, items = [], accountLevel = 1 } = {}) {
+/** Hero stats for a run: base + account bonus + passive item stats + shrine blessings. */
+export function buildHero({ heroId = DEFAULT_HERO, items = [], accountLevel = 1, blessings = [] } = {}) {
   const def = heroDef(heroId);
   items = items.filter((id) => ITEMS[id]); // ids from older versions are ignored
   const s = { ...def.stats };
@@ -52,11 +53,13 @@ export function buildHero({ heroId = DEFAULT_HERO, items = [], accountLevel = 1 
     if (!it?.stats) continue;
     for (const [k, v] of Object.entries(it.stats)) s[k] = (s[k] || 0) + v;
   }
+  blessings = blessings.filter((id) => BLESSINGS[id]);
+  for (const id of blessings) for (const [k, v] of Object.entries(BLESSINGS[id].stats || {})) s[k] = (s[k] || 0) + v;
   const synergies = activeSynergies(items, [def.signature]);
   for (const sid of synergies) for (const [k, v] of Object.entries(SYNERGIES[sid].stats || {})) s[k] = (s[k] || 0) + v;
   const maxHp = Math.max(30, Math.round(s.maxHp * (1 + s.maxHpPct)));
   return {
-    heroId, hdef: def, items: [...items], synergies,
+    heroId, hdef: def, items: [...items], synergies, blessings,
     signature: def.signature,
     maxHp,
     // every passive item adds a little basic-attack power, so big item collections carry runs
@@ -168,6 +171,8 @@ export class Battle {
     if (sdef?.hooks) list.push({ id: `sig:${hero.signature}`, hooks: sdef.hooks, passive: true, src: sdef });
     for (const id of hero.items) if (ITEMS[id]?.hooks) list.push({ id, hooks: ITEMS[id].hooks, src: ITEMS[id] });
     for (const id of hero.synergies) if (SYNERGIES[id]?.hooks) list.push({ id: `syn:${id}`, hooks: SYNERGIES[id].hooks, src: SYNERGIES[id], synergy: true });
+    // shrine blessings are never silenced
+    for (const id of hero.blessings || []) if (BLESSINGS[id]?.hooks) list.push({ id: `bless:${id}`, hooks: BLESSINGS[id].hooks, src: BLESSINGS[id], passive: true });
     return list;
   }
 
@@ -684,6 +689,8 @@ export class Battle {
   }
 
   addBuff(unit, buff) {
+    // Lingering Spirit: the hero's temporary buffs last longer (not the 1-second upkeep buffs)
+    if (unit === this.hero && this.flags.buffDur && buff.dur > 1.5) buff = { ...buff, dur: buff.dur * (1 + this.flags.buffDur) };
     unit.buffs = unit.buffs.filter((b) => b.id !== buff.id);
     unit.buffs.push({ ...buff, until: this.t + buff.dur });
     this.emit({ type: 'buff', tgt: unit.id, id: buff.id, sig: Boolean(buff.sig), dur: r2(buff.dur) });

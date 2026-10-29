@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Battle, buildHero } from '../src/game/combat.js';
 import { COMBAT } from '../src/game/data/balance.js';
-import { generateActMap, newRun } from '../src/game/run.js';
+import { newRun } from '../src/game/run.js';
 import { hydrate } from '../src/store/store.js';
 
 const ends = (evs) => evs.filter((e) => e.type === 'end');
@@ -101,18 +101,20 @@ test('a run has no spells: the hero brings exactly one signature move', () => {
   assert.equal(b.spells, undefined, 'no spell slots exist');
 });
 
-test('saved runs with pickup spells migrate: spells removed, refunded as ink, nothing else lost', () => {
+test('old saved runs (spells + route map) migrate into the journey; nothing permanent is lost', () => {
   const s = hydrate({
     words: { 你好: { ok: 3 } },
-    adventure: { dragonWins: 2, current: { v: 2, heroId: 'xinyi', spells: ['jiayou', 'huoqiu'], ink: 5, items: ['ember_tip'], reward: { kind: 'spell', spell: 'dafeng', ink: 12 }, shop: { stock: [{ kind: 'spell', id: 'x' }, { kind: 'item', id: 'vitality' }] } } },
+    adventure: { dragonWins: 2, current: { v: 2, heroId: 'xinyi', act: 2, phase: 'map', spells: ['jiayou', 'huoqiu'], ink: 5, items: ['ember_tip', 'fruit_basket'], map: { nodes: {} }, pos: '1-2', reward: { kind: 'spell', spell: 'dafeng', ink: 12 }, shop: { stock: [{ kind: 'spell', id: 'x' }] }, stats: { kills: 3 } } },
   });
   const cur = s.adventure.current;
+  assert.equal(cur.v, 3);
   assert.equal(cur.spells, undefined);
-  assert.equal(cur.ink, 45, 'one found spell refunded');
-  assert.equal(cur.notice.kind, 'signatures');
-  assert.deepEqual(cur.items, ['ember_tip']);
-  assert.equal(cur.reward.kind, 'items', 'a pending spell reward becomes an item choice');
-  assert.deepEqual(cur.shop.stock.map((x) => x.kind), ['item'], 'spells leave the shop');
+  assert.equal(cur.map, undefined, 'route map removed');
+  assert.equal(cur.phase, 'areaIntro', 'restarts at the beginning of its act');
+  assert.equal(cur.act, 2);
+  assert.deepEqual(cur.items, ['ember_tip'], 'hero-only items removed');
+  assert.equal(cur.ink, 5 + 40 + 30, 'refunds: one spell, one removed item');
+  assert.equal(cur.notice.kind, 'journey');
   assert.equal(s.words['你好'].ok, 3, 'learning progress intact');
   assert.equal(s.adventure.dragonWins, 2, 'story progress intact');
   // the migrated run can be played
@@ -157,28 +159,6 @@ test('Lei: bosses are pushed less, but still meaningfully', () => {
   for (let i = 0; i < 40; i++) b.step(COMBAT.dt);
   const moved = boss.x - 60;
   assert.ok(moved >= 10 && moved < COMBAT.worldW - 63, `boss moved ${moved.toFixed(1)}`);
-});
-
-test('route maps: every node is connected and no two routes cross', () => {
-  for (let seed = 1; seed <= 300; seed++) {
-    for (const act of [1, 2, 3]) {
-      const map = generateActMap(seed, act, 'bamboo');
-      const nodes = Object.values(map.nodes);
-      const incoming = new Set(nodes.flatMap((n) => n.next));
-      for (const n of nodes) {
-        if (n.row > 0) assert.ok(incoming.has(n.id), `seed ${seed}: ${n.id} has a path leading to it`);
-        if (n.type !== 'guardian' && n.type !== 'boss') assert.ok(n.next.length > 0, `seed ${seed}: ${n.id} leads somewhere`);
-      }
-      // a crossing is a→b' and a'→b between the same two rows with the columns swapped
-      const edges = nodes.flatMap((n) => n.next.map((id) => [n, map.nodes[id]])).filter(([, m]) => typeof m.col === 'number' && Number.isInteger(m.col));
-      for (const [a, b] of edges) {
-        for (const [c, d] of edges) {
-          if (a.row !== c.row) continue;
-          assert.ok(!((a.col - c.col) * (b.col - d.col) < 0), `seed ${seed} act ${act}: ${a.id}>${b.id} crosses ${c.id}>${d.id}`);
-        }
-      }
-    }
-  }
 });
 
 // ------------------------------------------------------------------ positioning

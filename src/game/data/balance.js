@@ -8,19 +8,18 @@ export const ACCOUNT_HP_CAP = 30;
 export const COLLECTION_ATK_PER_ITEM = 0.06;
 
 export const RUN = {
-  // rows per act (the last row of acts 1-2 is the biome guardian; act 3/4 end with the boss)
-  actRows: { 1: 6, 2: 6, 3: 3, 4: 4 },
   dragonWinsForBeyond: 3,
-  victoryHealPct: 0.15, // after each won battle
-  actHealPct: 1, // beating a guardian fully heals you for the next act
-  restHealPct: 0.4,
-  lessonHealPct: 0.04, // per correct answer at a teacher node
+  victoryHealPct: 0.12, // after each won battle
+  actHealPct: 1, // beating a guardian fully heals you for the next area
+  springHealPct: 0.42, // a hot spring (at full health it gives +springMaxHp max HP instead)
+  springMaxHp: 12,
+  battleItemChance: 0.15, // an ordinary fight sometimes offers one item
   inkPerBattle: [14, 22],
   inkPerElite: 40,
+  inkPerGuardian: 60,
   inkPerCast: 3, // successful signature move
-  inkPerAnswer: 8, // correct answer at teacher/rest/event nodes
-  prices: { common: 55, rare: 90, epic: 150, heal: 40 },
-  questions: { lesson: 5, rest: 3, event: 1 },
+  inkPerAnswer: 8, // correct answer to a stranger's vocabulary question
+  prices: { common: 50, rare: 85, epic: 140, heal: 40 },
   maxNewWordsPerQuiz: 2, // new words are always taught first with a teaching card
 };
 
@@ -31,8 +30,8 @@ export const SCALING = {
   // global knobs applied to every enemy (bosses use their own)
   enemyHp: 1.0,
   enemyAtk: 0.38,
-  bossHp: 0.85,
-  bossAtk: 0.56,
+  bossHp: 1.2,
+  bossAtk: 0.66,
 };
 
 export const COMBAT = {

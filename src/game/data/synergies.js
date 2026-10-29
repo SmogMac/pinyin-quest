@@ -1,8 +1,8 @@
-// Synergies: activate automatically when you own every requirement (passive items, and for
-// hero-specific ones the hero's signature move id). They work through the same hook system as
-// items, often by setting battle flags that the item hooks read (e.g. b.flags.shieldFreeze makes
-// Bursting Shield freeze enemies). Rare, absurd combinations are allowed on purpose; the engine's
-// depth/proc limits and the items' own internal cooldowns keep them from looping forever.
+// Synergies: activate automatically when you own every passive item they list. Like items, every
+// synergy works for every hero. They use the same hook system as items, often by setting battle
+// flags that the item hooks read (e.g. b.flags.shieldFreeze makes Bursting Shield freeze enemies).
+// Rare, absurd combinations are allowed on purpose; the engine's depth/proc limits and the items'
+// own internal cooldowns keep them from looping forever.
 const pick = (b, list) => list[Math.floor(b.rng() * list.length)];
 
 export const SYNERGIES = {
@@ -58,10 +58,10 @@ export const SYNERGIES = {
     },
   },
   storm_hammer: {
-    py: 'léi chuí', zh: '雷锤', en: 'Storm Hammer', requires: ['thunder_impact', 'knockback'], archetype: 'Heavy Bruiser',
-    desc: 'Lei’s Knockback! Shocks every enemy it launches, and Shocked enemies that hit the wall pass the Shock to their neighbours.',
+    py: 'léi chuí', zh: '雷锤', en: 'Storm Hammer', requires: ['thunder_impact', 'arc_flail'], archetype: 'Heavy Bruiser',
+    desc: 'Every push of 6 or more Shocks its target, and Shocked enemies that hit the wall pass the Shock to their neighbours.',
     hooks: {
-      onLaunch: (b, p) => p.targets.forEach((f) => b.applyStatus(f, 'shock', { dur: 3, src: b.hero })),
+      onKnockback: (b, p) => !p.pull && p.dist >= 6 && b.applyStatus(p.target, 'shock', { dur: 3, src: b.hero }),
       onWallHit(b, p) {
         if (p.target.statuses.shock) for (const g of b.near(p.target, 12)) b.applyStatus(g, 'shock', { dur: 2, src: b.hero });
       },
@@ -114,14 +114,14 @@ export const SYNERGIES = {
     hooks: { onBattleStart: (b) => (b.flags.chaosEcho = true) },
   },
   firestorm: {
-    py: 'huǒ fēng bào', zh: '火风暴', en: 'Firestorm', requires: ['burning_passion', 'wind_step'], archetype: 'Burning Swarm',
-    desc: 'Dodging during Burning Passion whips up a firestorm that sets every enemy Burning.',
+    py: 'huǒ fēng bào', zh: '火风暴', en: 'Firestorm', requires: ['wind_step', 'ember_tip'], archetype: 'Burning Swarm',
+    desc: 'Dodging whips up a firestorm that sets every enemy Burning (at most every 3s).',
     hooks: {
       onDodge(b, p, s) {
-        if (!b.buffActive('passion') || (s.at || -9) > b.t - 1) return;
+        if ((s.at || -9) > b.t - 3) return;
         s.at = b.t;
         b.label(b.hero, 'huǒ fēng bào!', 'good');
-        for (const f of b.foes()) b.applyStatus(f, 'burn', { dps: 5, src: b.hero });
+        for (const f of b.foes()) b.applyStatus(f, 'burn', { dps: 4, src: b.hero });
       },
     },
   },
@@ -251,29 +251,34 @@ export const SYNERGIES = {
     hooks: { onBattleStart: (b) => (b.flags.echoAll = true) },
   },
   hidden_blade: {
-    py: 'àn qì', zh: '暗器', en: 'Hidden Blades', requires: ['patient_blade', 'shadow_double'], archetype: 'Wind Dancer',
-    desc: 'Patient Blade also summons a shadow illusion that keeps cutting.',
+    py: 'àn qì', zh: '暗器', en: 'Hidden Blades', requires: ['shadow_double', 'second_wave'], archetype: 'Wind Dancer',
+    desc: 'Every successful signature move also summons a shadow illusion that keeps cutting.',
     hooks: {
-      onBlade(b, p) {
-        if (!p.wave && b.allies().length < 4) b.spawnAlly({ sprite: 'shade', ttl: 3, interval: 0.5, dmg: b.hero.atk * 0.5, element: 'dark' });
+      onSignature(b, c) {
+        if (!c.echo && b.allies().length < 4) b.spawnAlly({ sprite: 'shade', ttl: 3, interval: 0.5, dmg: b.hero.atk * 0.5, element: 'dark' });
       },
     },
   },
   scholars_storm: {
-    py: 'bó xué', zh: '博学', en: 'Erudite Storm', requires: ['deny_danger', 'chain_reaction'], archetype: 'Chaos Alchemist',
-    desc: 'Deny Danger!’s shockwave also leaves a random status on every enemy it throws.',
-    hooks: { onRepel: (b, p) => p.targets.forEach((f) => b.applyStatus(f, pick(b, ['burn', 'chill', 'wet', 'shock', 'curse']), { src: b.hero, dps: 3 })) },
-  },
-  cheer_squad: {
-    py: 'yì qǐ', zh: '一起', en: 'All Together', requires: ['fruit_salad', 'resonance'], archetype: 'Radiant Guardian',
-    desc: 'Bonus and echoed fruit count toward Resonance too, and each Resonance burst also serves a strawberry shield.',
+    py: 'bó xué', zh: '博学', en: 'Erudite Storm', requires: ['chain_reaction', 'storm_edge'], archetype: 'Chaos Alchemist',
+    desc: 'Enemies you knock back 8 or more pick up a random status.',
     hooks: {
-      onBattleStart: (b) => (b.flags.resonanceEcho = true),
-      onFruit: (b, p) => p.bonus && b.addShield(b.hero, 6),
+      onKnockback(b, p) {
+        if (!p.pull && p.dist >= 8) b.applyStatus(p.target, pick(b, ['burn', 'chill', 'wet', 'shock', 'curse']), { src: b.hero, dps: 3 });
+      },
     },
   },
-
-  // ---------------------------------------------------------------- deep combinations
+  cheer_squad: {
+    py: 'yì qǐ', zh: '一起', en: 'All Together', requires: ['resonance', 'patient_reward'], archetype: 'Radiant Guardian',
+    desc: 'Resonance bursts also grant a 20 shield, and echoed signature moves count toward Resonance.',
+    hooks: {
+      onBattleStart: (b) => (b.flags.resonanceEcho = true),
+      onSignature(b, c, s) {
+        s.n = (s.n || 0) + 1;
+        if (s.n % (b.flags.resonanceN || 3) === 0) b.addShield(b.hero, 20);
+      },
+    },
+  },
   thunder_counter: {
     py: 'léi jī', zh: '雷击', en: 'Thunder Counter', requires: ['counterstrike', 'spark_arc'], archetype: 'Storm Conductor',
     desc: 'Counterattacks are always critical hits, so every dodge ends in a lightning arc.',
@@ -289,22 +294,22 @@ export const SYNERGIES = {
     desc: 'Enemies you slam into the wall are Chilled, and Frozen ones Shatter (they always shatter on a wall slam).',
     hooks: { onWallHit: (b, p) => p.target.alive && b.applyStatus(p.target, 'chill', { src: b.hero, dur: 3 }) },
   },
-  fruit_frenzy: {
-    py: 'guǒ kuáng', zh: '果狂', en: 'Fruit Frenzy', requires: ['fruit_basket', 'bouncy_fruit'], archetype: 'Fruit Salad',
-    desc: 'Every seed from Fruit Basket bounces on to a second enemy.',
-    hooks: { onBattleStart: (b) => (b.flags.fruitFrenzy = true) },
+  chain_blast: {
+    py: 'lián bào', zh: '连爆', en: 'Chain Blast', requires: ['explosive_impact', 'split_ink'], archetype: 'Burning Swarm',
+    desc: 'Explosive Impact explosions throw shrapnel at another enemy too.',
+    hooks: { onBattleStart: (b) => (b.flags.chainBlast = true) },
   },
   echo_fruit: {
-    py: 'shuāng guǒ', zh: '双果', en: 'Double Helping', requires: ['fruit_salad', 'echo_cast'], archetype: 'Fruit Salad',
-    desc: 'Echoing Soul serves a second, different fruit at full power instead of a weak copy.',
-    hooks: { onBattleStart: (b) => (b.flags.echoFruit = true) },
+    py: 'huí xiǎng', zh: '回响', en: 'Resounding Echo', requires: ['echo_cast', 'lingering'], archetype: 'Signature Weaver',
+    desc: 'Echoing Soul’s copy is far stronger: 75% power instead of 40%.',
+    hooks: { onBattleStart: (b) => (b.flags.echoPower = 0.75) },
   },
   fruit_wave: {
-    py: 'guǒ bō', zh: '果波', en: 'Juice Wave', requires: ['fruit_salad', 'overflowing_ink'], archetype: 'Fruit Salad',
-    desc: 'Healing from fruit releases a shockwave: 20 damage to nearby enemies and pushes them back.',
+    py: 'quán bō', zh: '泉波', en: 'Healing Wave', requires: ['overflowing_ink', 'spring_tea'], archetype: 'Radiant Guardian',
+    desc: 'Healing 5% or more at once releases a shockwave: 20 damage to nearby enemies and pushes them back.',
     hooks: {
       onHeal(b, p, s) {
-        if (!p.fruit || (s.at || -9) > b.t - 0.8) return;
+        if (p.amount < b.hero.maxHp * 0.05 || (s.at || -9) > b.t - 1.5) return;
         s.at = b.t;
         b.emit({ type: 'cast', spell: 'gust', element: 'light' });
         for (const f of b.foes().filter((x) => x.x - b.hero.x <= 32)) {
@@ -315,14 +320,17 @@ export const SYNERGIES = {
     },
   },
   peel_dancer: {
-    py: 'huá bù', zh: '滑步', en: 'Peel Dancer', requires: ['fruit_salad', 'ghost_step'], archetype: 'Fruit Salad',
-    desc: 'Banana peels last twice as long and work 6 times, and every enemy that slips triggers your dodge effects.',
+    py: 'huàn wǔ', zh: '幻舞', en: 'Phantom Dance', requires: ['ghost_step', 'slipstream'], archetype: 'Wind Dancer',
+    desc: 'Every dodge also grants an 8 shield, and Ghost Step’s illusions explode for 25 when they fade.',
     hooks: {
-      onBattleStart: (b) => (b.flags.peelLong = true),
-      onSlip(b, p, s) {
-        if ((s.at || -9) > b.t - 0.4) return;
+      onDodge(b, p, s) {
+        b.addShield(b.hero, 8);
+        if ((s.at || -9) > b.t - 1.6) return;
         s.at = b.t;
-        b.trigger('onDodge', { src: p.target, ranged: false, slip: true });
+        b.schedule(1.6, () => {
+          if (b.result) return;
+          for (const f of b.foes().filter((x) => x.x - b.hero.x <= 30)) b.damage(b.hero, f, 25, { element: 'dark', kind: 'proc' });
+        });
       },
     },
   },
@@ -370,19 +378,13 @@ export const SYNERGIES = {
     },
   },
   lucky_star: {
-    py: 'fú xīng', zh: '福星', en: 'Lucky Star', requires: ['go_all_out', 'lucky_cat'], archetype: 'Wind Dancer',
-    desc: 'Go All Out! lasts 2s longer and starts with a 20 shield.',
-    hooks: {
-      onSignature(b, c) {
-        if (c.echo) return;
-        b.extendBuff(b.hero, 'frenzy', 2, 2);
-        b.grantMomentum(b.hero, b.hero.buffs.find((x) => x.id === 'frenzy')?.until - b.t || 0);
-        b.addShield(b.hero, 20);
-      },
-    },
+    py: 'fú xīng', zh: '福星', en: 'Lucky Star', requires: ['lucky_cat', 'lucky_charm'], archetype: 'Wind Dancer',
+    desc: '+10% critical chance, and every critical hit heals 1% of your health.',
+    stats: { crit: 0.1 },
+    hooks: { onCrit: (b, p, s) => (s.at || -9) <= b.t - 0.2 && ((s.at = b.t), b.heal(b.hero, b.hero.maxHp * 0.01, { silent: true })) },
   },
   storm_flail: {
-    py: 'léi suǒ', zh: '雷锁', en: 'Storm Flail', requires: ['knockback', 'spark_arc'], archetype: 'Storm Conductor',
+    py: 'léi suǒ', zh: '雷锁', en: 'Storm Flail', requires: ['wallbreaker', 'spark_arc'], archetype: 'Storm Conductor',
     desc: 'Every enemy that slams into the wall releases lightning that arcs to two other enemies (15 each).',
     hooks: {
       onWallHit(b, p) {
@@ -398,10 +400,10 @@ export const SYNERGIES = {
     },
   },
   final_verdict: {
-    py: 'pàn jué', zh: '判决', en: 'Final Verdict', requires: ['deny_danger', 'final_word'], archetype: 'Earth Guardian',
-    desc: 'Each Deny Danger! also arms 3 empowered attacks that Mark their target.',
+    py: 'pàn jué', zh: '判决', en: 'Final Verdict', requires: ['final_word', 'invaders_mark'], archetype: 'Earth Guardian',
+    desc: 'Final Word’s empowered attacks also Mark their targets (they take 20% more from you).',
     hooks: {
-      onRepel: (b, p, s) => !p.second && (s.n = 3),
+      onSignature: (b, c, s) => !c.echo && (s.n = 3),
       onHit(b, p, s) {
         if (!(s.n > 0) || p.sub) return;
         s.n -= 1;
@@ -410,40 +412,39 @@ export const SYNERGIES = {
     },
   },
   inferno_heart: {
-    py: 'liè huǒ', zh: '烈火', en: 'Inferno', requires: ['burning_passion', 'ashes'], archetype: 'Burning Swarm',
-    desc: 'During Burning Passion, Burning enemies that die explode twice as hard and reset 1s of your cooldown.',
+    py: 'liè huǒ', zh: '烈火', en: 'Inferno', requires: ['ashes', 'cinder_heart'], archetype: 'Burning Swarm',
+    desc: 'Burning enemies explode when they die (30 to enemies nearby) and recharge your signature 1s faster.',
     hooks: {
       onKill(b, p) {
-        if (!b.buffActive('passion') || !p.statuses.burn) return;
+        if (!p.statuses.burn) return;
         for (const f of b.near(p.target, 22)) b.damage(b.hero, f, 30, { element: 'fire', kind: 'proc' });
         b.reduceCooldowns(1);
       },
     },
   },
   blade_storm: {
-    py: 'jiàn fēng', zh: '剑风', en: 'Blade Storm', requires: ['patient_blade', 'second_wave', 'blood_blossom'], archetype: 'Rare',
-    desc: 'Patient Blade’s second wave also Bleeds, and every Bleeding enemy it hits takes double.',
+    py: 'jiàn fēng', zh: '剑风', en: 'Blade Storm', requires: ['second_wave', 'blood_blossom'], archetype: 'Rare',
+    desc: 'Second Wave deals double damage to Bleeding enemies and makes the others Bleed.',
     hooks: {
-      modDamage: (b, c) => c.kind === 'spell' && c.element === 'wind' && c.tgt.statuses.bleed && (c.mult *= 2),
+      modDamage(b, c) {
+        if (c.kind !== 'proc' || c.element !== 'wind' || !c.tgt) return;
+        if (c.tgt.statuses.bleed) c.mult *= 2;
+        else b.applyStatus(c.tgt, 'bleed', { dps: 4, src: b.hero });
+      },
     },
   },
   repel_wall: {
-    py: 'bù dòng', zh: '不动', en: 'Unshakeable', requires: ['deny_danger', 'iron_roots'], archetype: 'Earth Guardian',
-    desc: 'While Deny Danger!’s shield holds, you can’t be knocked back and take 20% less damage.',
+    py: 'bù dòng', zh: '不动', en: 'Unshakeable', requires: ['iron_roots', 'stone_bulwark'], archetype: 'Earth Guardian',
+    desc: 'While you have a shield you can’t be knocked back and take 20% less damage.',
     hooks: {
-      modKnockback: (b, p) => b.hero.sigShield > 0 && b.hero.shield > 0 && (p.dist = 0),
-      modIncoming: (b, c) => b.hero.sigShield > 0 && b.hero.shield > 0 && (c.mult *= 0.8),
+      modKnockback: (b, p) => b.hero.shield > 0 && (p.dist = 0),
+      modIncoming: (b, c) => b.hero.shield > 0 && (c.mult *= 0.8),
     },
   },
   thunder_god: {
-    py: 'léi shén', zh: '雷神', en: 'Thunder God', requires: ['knockback', 'arc_flail', 'storm_barrier'], archetype: 'Rare',
-    desc: 'Lei’s Knockback! comes back 3s sooner, and the storm barrier stays twice as long.',
-    hooks: {
-      onLaunch(b) {
-        b.reduceCooldowns(3);
-        for (const z of b.zones) if (z.kind === 'barrier') z.until += 6;
-      },
-    },
+    py: 'léi shén', zh: '雷神', en: 'Thunder God', requires: ['arc_flail', 'storm_barrier', 'charge_up'], archetype: 'Rare',
+    desc: 'Storm Barriers last twice as long and Shock for longer, and every enemy that crosses one recharges your signature 0.5s.',
+    hooks: { onBattleStart: (b) => (b.flags.longBarrier = true) },
   },
 };
 

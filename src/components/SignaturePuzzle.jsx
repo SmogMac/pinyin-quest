@@ -86,7 +86,7 @@ function SignaturePuzzle({ puzzle, sig, practiced, onDone, onCancel }) {
     >
       <div className="cast-head">
         <span className="cast-spell">
-          <SigIcon id={puzzle.sigId} size={26} />
+          {puzzle.sigId && <SigIcon id={puzzle.sigId} size={26} />}
           {sig.en}
         </span>
         <span className="cast-type">{TEMPLATES[puzzle.template].name}</span>

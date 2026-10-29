@@ -29,8 +29,8 @@ test('content meets the minimums', () => {
   const elements = new Set(Object.values(ITEMS).map((s) => s.element));
   for (const el of ['fire', 'ice', 'water', 'earth', 'lightning', 'wind', 'dark', 'light']) assert.ok(elements.has(el), `no item for ${el}`);
   for (const h of Object.values(HEROES)) assert.ok(SIGNATURES[h.signature], `${h.en} needs a signature move`);
-  // every hero has signature-specific items
-  for (const id of Object.keys(HEROES)) assert.ok(Object.values(ITEMS).filter((i) => i.hero === id).length >= 4, `${id} signature items`);
+  // no item belongs to one hero; every item is built on shared systems
+  assert.deepEqual(Object.values(ITEMS).filter((i) => i.hero).map((i) => i.en), []);
 });
 
 test('every vocabulary requirement is a real word in the list', () => {
@@ -131,10 +131,11 @@ test('every passive item runs in battle without errors', () => {
   console.error = (...a) => errors.push(a.join(' '));
   try {
     for (const id of Object.keys(ITEMS)) {
-      const heroId = ITEMS[id].hero || 'xinyi';
-      const h = buildHero({ heroId, items: [id] });
-      const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['slime', 'crab', 'bat'], biome: 'coast', floor: 4, seed: 9, autoCast: { delay: 1, success: 0.8 } });
-      assert.ok(['win', 'lose'].includes(r.result), id);
+      for (const heroId of Object.keys(HEROES)) {
+        const h = buildHero({ heroId, items: [id] });
+        const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['slime', 'crab', 'bat'], biome: 'coast', floor: 4, seed: 9, autoCast: { delay: 1, success: 0.8 } });
+        assert.ok(['win', 'lose'].includes(r.result), `${id} on ${heroId}`);
+      }
     }
   } finally {
     console.error = orig;
@@ -167,7 +168,7 @@ test('every synergy activates and runs without errors', () => {
 
 test('absurd builds stay bounded (no infinite chains)', () => {
   for (const heroId of Object.keys(HEROES)) {
-    const items = Object.keys(ITEMS).filter((id) => !ITEMS[id].hero || ITEMS[id].hero === heroId);
+    const items = Object.keys(ITEMS);
     const h = buildHero({ heroId, items });
     const start = Date.now();
     const r = simulateBattle({ hero: h, heroHp: h.maxHp, enemies: ['wordeater'], biome: 'beyond', floor: 18, seed: 1, autoCast: { delay: 0.5, success: 1 } });

@@ -42,6 +42,7 @@ export function defaultSave() {
       speaking: false,
       sessionMinutes: 5,
       battleSpeed: 1,
+      exploreSpeed: 1,
       perfOverlay: false,
     },
     adventure: {
@@ -88,7 +89,34 @@ export function hydrate(data) {
   if (cur?.reward?.kind === 'spell') cur.reward = { kind: 'items', choices: null, ink: cur.reward.ink || 0 };
   if (cur?.shop?.stock) cur.shop.stock = cur.shop.stock.filter((x) => x.kind !== 'spell');
   if (cur && Array.isArray(cur.items)) cur.items = cur.items.filter((id) => typeof id === 'string');
+  // Route maps became a continuous journey (run v3). A route-map run carries on: same hero, items,
+  // ink, health and act, restarting at the beginning of its current act's area. Items that only
+  // worked for one hero (since made universal or removed) are refunded as ink.
+  if (cur && cur.v === 2) migrateJourney(cur);
   return out;
+}
+
+const REMOVED_ITEMS = ['fruit_basket', 'bouncy_fruit', 'juicy'];
+function migrateJourney(r) {
+  const removed = (r.items || []).filter((id) => REMOVED_ITEMS.includes(id));
+  r.items = (r.items || []).filter((id) => !REMOVED_ITEMS.includes(id));
+  r.ink = (r.ink || 0) + 30 * removed.length;
+  const keep = ['victory', 'defeat', 'complete'].includes(r.phase);
+  r.v = 3;
+  r.phase = keep ? r.phase : 'areaIntro';
+  if (!keep && r.phase === 'areaIntro' && r.act >= 3 && r.biome === 'beyond') r.act = 4;
+  for (const k of ['map', 'pos', 'node', 'reward', 'shop', 'quiz', 'event', 'spells']) delete r[k];
+  r.area = null;
+  r.battle = null;
+  r.offer = null;
+  r.stranger = null;
+  r.spring = null;
+  r.blessings = r.blessings || [];
+  r.biomesSeen = r.biomesSeen || [];
+  r.strangersSeen = r.strangersSeen || [];
+  r.stats = { areas: 0, encounters: 0, ...(r.stats || {}) };
+  if (!keep) r.biome = null;
+  r.notice = { kind: 'journey', refund: 30 * removed.length };
 }
 
 function load() {

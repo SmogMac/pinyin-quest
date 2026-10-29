@@ -3,26 +3,26 @@ import { useStore, update, getState, flush } from '../store/store.js';
 import { levelInfo, addXp } from '../store/progress.js';
 import { pickAdventureTasks } from '../learn/adventurePicker.js';
 import {
-  chooseBiome, chooseNode, leaveNode, battleReward, takeItem, resolveBattle, afterReward,
-  enterLair, enterBeyond, openShop, shrineOptions, draftItems, heroFor, healRun, scoreOf, RUN_VERSION, runSignatures, runSynergies,
+  enterArea, arrive, finishEncounter, nextEncounter, nextArea, takeItem, takeBlessing, resolveBattle, afterReward, enterBeyond,
+  heroFor, healRun, gainInk, buy, finishSpring, scoreOf, RUN_VERSION, runSignatures, runSynergies,
 } from '../game/run.js';
 import { RUN } from '../game/data/balance.js';
 import { ITEMS } from '../game/data/items.js';
 import { SIGNATURES } from '../game/data/signatures.js';
-import { TEMPLATES } from '../learn/signaturePuzzles.js';
+import { BLESSINGS } from '../game/data/blessings.js';
+import { STRANGERS, STRANGER_CONSOLATION, MERCHANT } from '../game/data/encounters.js';
+import { TEMPLATES, generateSigPuzzle } from '../learn/signaturePuzzles.js';
 import { SYNERGIES, synergiesCompletedBy, synergiesWith } from '../game/data/synergies.js';
-import { ENEMIES } from '../game/data/enemies.js';
 import { BIOMES } from '../game/data/biomes.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import { heroDef } from '../game/data/heroes.js';
-import { EVENTS } from '../game/data/events.js';
 import { STORY } from '../game/data/story.js';
 import { unlockedItems, actBiomeOptions, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
 import { checkAchievements, selectedHero, heroUnlocked } from '../game/achievements.js';
-import { getWord } from '../learn/vocab.js';
 import StudyCard from '../components/StudyCard.jsx';
 import BattleScreen from '../components/BattleScreen.jsx';
-import ScrollMap from '../components/ScrollMap.jsx';
+import SignaturePuzzle from '../components/SignaturePuzzle.jsx';
+import { ExploreScene, ItemReveal, ShrineReveal, SpringScene, JourneyHud, npcFor } from '../components/Journey.jsx';
 import Sprite, { ItemIcon } from '../components/Sprite.jsx';
 import { TopBar, Bar, Button, Modal, Confetti, Pinyin, Hanzi, CnName } from '../components/ui.jsx';
 import SigIcon from '../components/SigIcon.jsx';
@@ -38,13 +38,21 @@ import { activeRun, startRun, abandonRun, finishRun as endRunIn } from '../game/
 const mutate = (fn) => update((s) => s.adventure.current && fn(s.adventure.current, s));
 const accountLevelOf = (s) => levelInfo(s.profile.xp).level;
 const worldColorOf = (s) => Math.min(1, learnedWords(s).size / 250);
-/** Display name of a synergy requirement (a passive item or a signature move). */
+/** Display name of a synergy requirement (a passive item). */
 const reqDef = (id) => ITEMS[id] || SIGNATURES[id] || { py: id, en: id };
-/** Synergies this hero could ever complete (signature-specific ones need that hero). */
-const possibleFor = (run, sy) => {
-  const sig = runSignatures(run);
-  return sy.requires.every((r) => (ITEMS[r] ? !ITEMS[r].hero || ITEMS[r].hero === run.heroId : sig.includes(r)));
-};
+const STORY_FOR_ACT = { 1: 'intro', 2: 'act2', 3: 'lair', 4: 'beyond' };
+const ENCOUNTER_PHASES = ['merchant', 'chest', 'stranger', 'spring', 'shrine', 'reward'];
+
+/** Biomes the player can be sent to for an act (random among unlocked; act 1 if none unlock yet). */
+function unlockedBiomes(act, save) {
+  const open = actBiomeOptions(act, save).filter((o) => o.unlocked).map((o) => o.id);
+  return open.length ? open : actBiomeOptions(1, save).map((o) => o.id);
+}
+/** Hidden extras revealed by vocabulary and progress. */
+function secretsFor(save) {
+  const learned = learnedWords(save);
+  return { merchant: learned.has('钱'), jadeRabbit: learned.has('月亮') && (save.adventure.dragonWins || 0) >= 1 };
+}
 
 export default function Adventure({ go, params = {} }) {
   const s = useStore();
@@ -58,10 +66,11 @@ export default function Adventure({ go, params = {} }) {
   const [codex, setCodex] = useState(false);
   const [synergyPopup, setSynergyPopup] = useState(null);
   const [story, setStory] = useState(null);
+  const [fading, setFading] = useState(null); // 'out' | 'in' | null
+  const [toast, setToast] = useState(null);
   // A finished battle stays on screen (Victory/Defeat overlay) until Continue, while the saved
-  // run has already moved on to rewards, so a reload never replays a completed fight.
-  // Set through a ref first: saving the run re-renders synchronously, and the battle must not
-  // unmount (and restart as a new fight) in the render between the save and the state update.
+  // run has already moved on, so a reload never replays a completed fight. Set through a ref
+  // first: saving re-renders synchronously, and the battle must not unmount in between.
   const heldRef = useRef(null);
   const [heldState, setHeldState] = useState(null); // { key, levelUp }
   const held = heldState || heldRef.current;
@@ -78,28 +87,35 @@ export default function Adventure({ go, params = {} }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run?.seed, run?.startedAt]);
 
-  // Runs from the previous version can't continue with the new item system.
+  // Runs from much older versions can't continue (route-map runs are converted when loading).
   const outdated = run && run.v !== RUN_VERSION;
 
-  // Story beats (each shown once)
+  // A new area begins: its story beat (once), then the biome is rolled and its hidden encounter
+  // sequence generated, exactly once (enterArea only acts in the areaIntro phase).
   useEffect(() => {
-    if (!run || outdated) return;
+    if (!run || outdated || !entered) return;
     const seen = s.adventure.storySeen;
     let id = null;
-    if (run.phase === 'biome' && run.act === 1) id = 'intro';
-    else if (run.phase === 'biome' && run.act === 2) id = 'act2';
-    else if (run.phase === 'lairIntro') id = 'lair';
-    else if (run.phase === 'map' && run.act === 4) id = 'beyond';
+    if (run.phase === 'areaIntro') id = STORY_FOR_ACT[run.act];
     else if (run.phase === 'victory') id = s.adventure.dragonWins >= 3 ? 'dragon3' : s.adventure.dragonWins === 2 ? 'dragon2' : 'dragon1';
     else if (run.phase === 'complete') id = 'wordeater';
     if (id && !seen[id]) setStory(id);
-    if (run.phase === 'lairIntro' && seen.lair) mutate((r) => r.phase === 'lairIntro' && enterLair(r));
-  }, [run?.phase, run?.act, outdated]); // eslint-disable-line react-hooks/exhaustive-deps
+    else if (run.phase === 'areaIntro') beginArea();
+  }, [run?.phase, run?.act, outdated, entered]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function beginArea() {
+    update((x) => {
+      const r = x.adventure.current;
+      if (r?.phase === 'areaIntro') enterArea(r, { unlocked: unlockedBiomes(r.act, x), secrets: secretsFor(x) });
+    });
+    flush();
+    setFading('in');
+    setTimeout(() => setFading(null), 700);
+  }
   const closeStory = () => {
     update((x) => (x.adventure.storySeen[story] = Date.now()));
-    if (story === 'lair') mutate((r) => r.phase === 'lairIntro' && enterLair(r));
     setStory(null);
+    if (getState().adventure.current?.phase === 'areaIntro') beginArea();
   };
 
   const grantItem = (id) => {
@@ -118,12 +134,12 @@ export default function Adventure({ go, params = {} }) {
     }
     checkAchievements();
   };
-  // runs saved before the signature redesign may be waiting on a spell reward: offer items instead
-  useEffect(() => {
-    if (run?.reward && run.reward.kind === 'items' && !run.reward.choices) {
-      mutate((r) => (r.reward.choices = draftItems(r, unlockedItems(getState()), 3)));
-    }
-  }, [run?.reward]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Ends the current encounter and walks on; shows how much ink was gained on the way. */
+  const walkOn = (ink = 0) => {
+    mutate((r) => finishEncounter(r));
+    flush();
+    if (ink) setToast({ text: `+${ink} 墨`, key: Date.now() });
+  };
 
   if (outdated) return <OutdatedRun go={go} />;
   if (!run || !entered)
@@ -134,65 +150,115 @@ export default function Adventure({ go, params = {} }) {
   const maxHp = heroFor(run, accountLevel).maxHp;
   const inBattle = (run.phase === 'battle' && Boolean(run.battle)) || Boolean(held);
   const battleKey = held?.key ?? run.battle?.seed;
-  const pools = () => ({ itemPool: unlockedItems(getState()) });
+  const itemPool = () => unlockedItems(getState());
+  const speed = s.settings.exploreSpeed === 2 ? 2 : 1;
+  const enc = nextEncounter(run);
+  const onRoad = !inBattle && ['explore', ...ENCOUNTER_PHASES, 'areaClear'].includes(run.phase) && run.area;
+  const areaName = run.biome ? `${BIOMES[run.biome].py} · ${BIOMES[run.biome].en}` : '';
 
   return (
-    <div className={`screen adventure phase-${run.phase}`}>
+    <div className={`screen adventure journey-screen phase-${run.phase}`}>
       {!inBattle && (
         <TopBar
-          title={run.biome ? BIOMES[run.biome].py : `Act ${run.act}`}
+          title={run.biome ? BIOMES[run.biome].py : <Bi k="adventure" inline />}
           onBack={() => setEntered(false)}
           right={
-            <button type="button" className="icon-btn" onClick={() => setInventory(true)} aria-label="Signature move, items and synergies">
+            <button type="button" className="icon-btn" onClick={() => setInventory(true)} aria-label="Signature move, items, blessings and synergies">
               <Icon name="chest" />
             </button>
           }
         />
       )}
-      {!inBattle && !['victory', 'defeat', 'complete'].includes(run.phase) && <RunHud run={run} maxHp={maxHp} onInventory={() => setInventory(true)} />}
-      {!inBattle && run.notice?.kind === 'signatures' && (
-        <div className="card notice-card">
-          <b>
-            <Bi k="signature" inline /> · one move per hero
-          </b>
-          <p className="small">
-            Spells are gone: {heroDef(run.heroId).py} now has a single signature move, {SIGNATURES[heroDef(run.heroId).signature].en}, with its own Mandarin
-            minigame. Passive items do the rest.{run.notice.refund ? ` The spells you had found were traded for ${run.notice.refund} 墨 ink.` : ''}
-          </p>
-          <Button variant="secondary" onClick={() => mutate((r) => delete r.notice)}>
-            <Bi k="continue" />
-          </Button>
-        </div>
+      {!inBattle && run.notice?.kind && <NoticeCard run={run} />}
+
+      {onRoad && (
+        <>
+          <JourneyHud run={run} maxHp={maxHp} speed={speed} areaName={areaName} onSpeed={(x) => update((st) => (st.settings.exploreSpeed = x))} onInventory={() => setInventory(true)} />
+          <ExploreScene
+            run={run}
+            encounter={run.phase === 'areaClear' || run.phase === 'reward' ? null : enc /* beaten foes leave the road */}
+            walking={run.phase === 'explore' && !story && !inventory}
+            speed={speed}
+            toast={toast}
+            fading={fading}
+            propState={run.phase === 'chest' || (run.phase === 'reward' && run.offer?.source === 'chest') ? 'open' : run.phase === 'spring' ? 'soak' : null}
+            heroState={run.phase === 'spring' ? 'soak' : null}
+            onArrive={() => {
+              let t = null;
+              update((x) => {
+                const r = x.adventure.current;
+                if (r) t = arrive(r, { itemPool: unlockedItems(x), accountLevel: accountLevelOf(x) });
+              });
+              flush();
+              if (t) play(t === 'battle' || t === 'elite' || t === 'guardian' || t === 'boss' ? 'crit' : 'reveal');
+            }}
+          />
+        </>
       )}
 
-      {run.phase === 'biome' && (
-        <BiomeSelect
-          act={run.act}
-          onChoose={(id) => {
-            play('pick');
-            const secrets = secretNodes(getState(), id);
-            mutate((r) => r.phase === 'biome' && chooseBiome(r, id, secrets));
-          }}
-        />
-      )}
-      {run.phase === 'lairIntro' && <div className="card center">The air smells of ink…</div>}
-      {!held && run.phase === 'map' && run.map && (
-        <ScrollMap
+      {!inBattle && run.phase === 'areaIntro' && <div className="journey-black" aria-hidden="true" />}
+      {/* the encounter panels sit under the road, so the world stays visible */}
+      {!inBattle && run.phase === 'chest' && run.offer && (
+        <ItemReveal
           run={run}
-          onChoose={(id) => {
-            play('pick');
-            mutate((r) => {
-              const t = chooseNode(r, id);
-              if (t === 'merchant' || (t === 'secret' && r.node?.secret === 'merchant')) {
-                const p = pools();
-                openShop(r, p.itemPool, { secret: t === 'secret' });
-              }
-              if (t === 'treasure') r.reward = { kind: 'items', choices: draftItems(r, pools().itemPool, 2, { minRarity: 'rare' }), free: true };
-              if (t === 'event') r.event = { id: EVENTS[Math.floor(Math.random() * EVENTS.length)].id };
-            });
+          id={run.offer.id}
+          title={<Bi py="bǎo xiāng" en="A treasure chest!" />}
+          onTake={() => {
+            grantItem(run.offer.id);
+            walkOn();
+          }}
+          onLeave={() => walkOn()}
+        />
+      )}
+      {!held && run.phase === 'reward' && run.offer && (
+        <ItemReveal
+          run={run}
+          id={run.offer.id}
+          title={<Bi py="zhàn lì pǐn" en={`Spoils of battle${run.offer.ink ? ` · +${run.offer.ink} 墨` : ''}`} />}
+          onTake={() => {
+            grantItem(run.offer.id);
+            mutate((r) => afterReward(r));
+          }}
+          onLeave={() => mutate((r) => afterReward(r))}
+        />
+      )}
+      {!inBattle && run.phase === 'merchant' && run.shop && <MerchantView run={run} grantItem={grantItem} accountLevel={accountLevel} onLeave={() => walkOn()} />}
+      {!inBattle && run.phase === 'stranger' && run.stranger && <StrangerView run={run} grantItem={grantItem} onLevelUp={setLevelUp} onDone={walkOn} />}
+      {!inBattle && run.phase === 'spring' && (
+        <SpringScene
+          spring={run.spring}
+          onDone={() => {
+            mutate((r) => finishSpring(r, accountLevelOf(getState())));
+            flush();
+            play('levelUp');
           }}
         />
       )}
+      {!inBattle && run.phase === 'shrine' && run.offer && (
+        <ShrineReveal
+          id={run.offer.id}
+          onAccept={() => {
+            mutate((r) => {
+              if (r.offer?.id) takeBlessing(r, r.offer.id, accountLevelOf(getState()));
+            });
+            play('levelUp');
+            walkOn();
+          }}
+        />
+      )}
+      {!inBattle && run.phase === 'areaClear' && (
+        <AreaClear
+          run={run}
+          onNext={() => {
+            setFading('out');
+            setTimeout(() => {
+              mutate((r) => nextArea(r));
+              flush();
+            }, 650);
+          }}
+        />
+      )}
+
       {inBattle && (
         <BattleScreen
           key={battleKey}
@@ -203,6 +269,9 @@ export default function Adventure({ go, params = {} }) {
           onContinue={() => {
             if (held?.levelUp) setLevelUp(held.levelUp);
             setHeld(null);
+            // nothing to choose after an ordinary fight: walk straight on
+            const r = getState().adventure.current;
+            if (r?.phase === 'reward' && !r.offer?.id) walkOn(r.offer?.ink);
           }}
           onResolve={(res) => {
             if (run.phase !== 'battle') return;
@@ -213,13 +282,11 @@ export default function Adventure({ go, params = {} }) {
             update((x) => {
               const r = x.adventure.current;
               if (!r || r.phase !== 'battle') return;
-              r.runState = { ...r.runState, ...res.runState };
               r.stats.casts += res.casts;
               r.stats.fizzles += res.fizzles;
-              r.ink += res.casts * RUN.inkPerCast;
-              r.stats.inkEarned += res.casts * RUN.inkPerCast;
+              gainInk(r, res.casts * RUN.inkPerCast);
               x.adventure.kills += res.kills;
-              resolveBattle(r, res, accountLevelOf(x));
+              resolveBattle(r, res, accountLevelOf(x), { itemPool: unlockedItems(x) });
               if (won && type === 'boss') {
                 if (r.biome === 'beyond') x.adventure.wordEaterWins += 1;
                 else {
@@ -228,57 +295,15 @@ export default function Adventure({ go, params = {} }) {
                 }
               }
               if (won && type === 'secretboss') x.adventure.secretBosses += 1;
-              if (r.phase === 'reward') r.reward = battleReward(r, pools()) || null;
-              if (r.phase === 'reward' && !r.reward) afterReward(r);
             });
-            let levelUp = null;
-            if (xp) levelUp = addXp(xp).levelUp || null;
-            setHeld({ key: battleKey, levelUp });
+            flush();
+            let lv = null;
+            if (xp) lv = addXp(xp).levelUp || null;
+            setHeld({ key: battleKey, levelUp: lv });
             checkAchievements();
           }}
         />
       )}
-      {!held && run.phase === 'reward' && run.reward && (
-        <RewardView
-          run={run}
-          onItem={(id) => {
-            if (id) grantItem(id);
-            mutate((r) => afterReward(r));
-          }}
-        />
-      )}
-      {!held && run.phase === 'treasure' && run.reward && (
-        <div className="reward-wrap">
-          <div className="ribbon">
-            <Bi k="treasure" />
-          </div>
-          <ItemChoice
-            run={run}
-            choices={run.reward.choices}
-            onPick={(id) => {
-              if (id) grantItem(id);
-              mutate((r) => leaveNode(r));
-            }}
-          />
-        </div>
-      )}
-      {run.phase === 'rest' && <RestView run={run} accountLevel={accountLevel} maxHp={maxHp} onLevelUp={setLevelUp} />}
-      {run.phase === 'lesson' && (
-        <QuizRunner
-          title="lǎo shī · The teacher’s questions"
-          count={RUN.questions.lesson}
-          run={run}
-          onLevelUp={setLevelUp}
-          perCorrect={(r, x) => {
-            healRun(r, accountLevelOf(x), RUN.lessonHealPct);
-            r.ink += RUN.inkPerAnswer;
-          }}
-          onDone={() => mutate((r) => leaveNode(r))}
-        />
-      )}
-      {run.phase === 'event' && <EventView run={run} onLevelUp={setLevelUp} grantItem={grantItem} />}
-      {run.phase === 'shrine' && <ShrineView run={run} grantItem={grantItem} accountLevel={accountLevel} />}
-      {run.phase === 'merchant' && run.shop && <MerchantView run={run} grantItem={grantItem} accountLevel={accountLevel} />}
       {!held && run.phase === 'victory' && <VictoryView run={run} go={go} onLevelUp={setLevelUp} />}
       {!held && (run.phase === 'defeat' || run.phase === 'complete') && <EndView run={run} go={go} onLevelUp={setLevelUp} />}
 
@@ -290,13 +315,48 @@ export default function Adventure({ go, params = {} }) {
   );
 }
 
-/** Hidden map nodes revealed by vocabulary and progress. */
-function secretNodes(save, biome) {
-  const learned = learnedWords(save);
-  const out = [];
-  if (learned.has('钱')) out.push({ id: 'merchant', type: 'secret' });
-  if (biome === 'temple' && learned.has('月亮') && (save.adventure.dragonWins || 0) >= 1) out.push({ id: 'jade_rabbit', type: 'secretboss' });
-  return out;
+/** One-time notices about changes to a run that was saved by an older version. */
+function NoticeCard({ run }) {
+  const n = run.notice;
+  const text =
+    n.kind === 'journey'
+      ? `Adventures are now a continuous journey: no more route maps. Your run carries on from the start of this act with everything you own.${n.refund ? ` Items that only worked for one hero were traded for ${n.refund} 墨 ink.` : ''}`
+      : `Spells are gone: ${heroDef(run.heroId).py} now has a single signature move with its own Mandarin minigame.${n.refund ? ` The spells you had found were traded for ${n.refund} 墨 ink.` : ''}`;
+  return (
+    <div className="card notice-card">
+      <b>
+        <Bi py="xīn de lǚ chéng" en="Something changed" inline />
+      </b>
+      <p className="small">{text}</p>
+      <Button variant="secondary" onClick={() => mutate((r) => delete r.notice)}>
+        <Bi k="continue" />
+      </Button>
+    </div>
+  );
+}
+
+/** Guardian beaten: the road leads on to the next area. */
+function AreaClear({ run, onNext }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="journey-panel card center">
+      <b>
+        <Bi py="qián jìn" en="The path opens" />
+      </b>
+      <p className="small">The {BIOMES[run.biome]?.en || 'land'} is behind you. The road leads on…</p>
+      <Button
+        className="wide"
+        disabled={busy}
+        onClick={() => {
+          if (busy) return;
+          setBusy(true);
+          onNext();
+        }}
+      >
+        <Bi k="continue" />
+      </Button>
+    </div>
+  );
 }
 
 // ------------------------------------------------------------------------------ run menu & HUD
@@ -400,7 +460,7 @@ function AdventureStart({ go, onCodex, codex, closeCodex, children }) {
         </h2>
         <p className="muted small">
           Your hero fights on their own. Each hero has one <b>signature move</b>, powered by their own Mandarin minigame, which you solve <b>while the battle keeps going</b>. Passive items
-          transform how they fight: collect them, discover synergies, and pick your route across a scroll map. Learning more words unlocks new items and lands.
+          transform how they fight. Your hero walks on through random lands, meeting battles, merchants, treasure, strangers who need a word, hot springs and rare shrines, until each land's guardian. Learning more words unlocks new items and lands.
         </p>
         <div className="adv-hero-line">
           <SigIcon id={h.signature} size={44} />
@@ -456,7 +516,7 @@ function OutdatedRun({ go }) {
       <TopBar title="Adventure" onBack={() => go('home')} />
       <div className="card center">
         <h2>The world has changed!</h2>
-        <p className="muted">Adventure Mode was rebuilt with signature moves, passive items and a new map, so your unfinished run was retired. Your words, levels and heroes are all kept.</p>
+        <p className="muted">Adventure Mode was rebuilt, and this unfinished run was too old to carry over, so it was retired. Your words, levels and heroes are all kept.</p>
         <Button
           className="wide"
           onClick={() =>
@@ -468,74 +528,6 @@ function OutdatedRun({ go }) {
         >
           Start fresh
         </Button>
-      </div>
-    </div>
-  );
-}
-
-function RunHud({ run, maxHp, onInventory }) {
-  return (
-    <div className="run-hud">
-      <div className="run-hp">
-        <Icon name="heart" size={18} />
-        <Bar value={run.hp / maxHp} color="var(--green)" label="Hero health" />
-        <span className="hp-num">
-          {run.hp}/{maxHp}
-        </span>
-      </div>
-      <div className="run-ink" title="Ink (mò): spend at merchants">
-        <span className="ink-dot">墨</span>
-        <b>{run.ink}</b>
-      </div>
-      <button type="button" className="run-upgrades" onClick={onInventory} aria-label="View signature move and items">
-        <SigIcon id={heroDef(run.heroId).signature} size={30} />
-        <span className="divider" />
-        {run.items.slice(-6).map((id) => (
-          <ItemIcon key={id} id={id} def={ITEMS[id]} size={26} />
-        ))}
-        {run.items.length > 6 && <span className="more">+{run.items.length - 6}</span>}
-        {run.items.length === 0 && <span className="muted small">no items yet</span>}
-      </button>
-    </div>
-  );
-}
-
-function BiomeSelect({ act, onChoose }) {
-  const s = useStore();
-  const opts = actBiomeOptions(act, s);
-  let options = opts;
-  if (!opts.some((o) => o.unlocked)) {
-    // nobody is stranded: if no act-2 land is unlocked yet, revisit act-1 lands (harder)
-    options = [...opts, ...actBiomeOptions(1, s).map((o) => ({ ...o, fallback: true }))];
-  }
-  return (
-    <div className="biome-select">
-      <h2 className="section-title">
-        <Bi k="route" py="xuǎn zé lù xiàn" en={`Act ${act}: choose your path`} />
-      </h2>
-      <div className="biome-cards">
-        {options.map(({ id, unlocked, fallback }) => {
-          const b = BIOMES[id];
-          return (
-            <button key={id} type="button" className={`biome-card theme-${b.theme} ${unlocked ? '' : 'locked'}`} disabled={!unlocked} onClick={() => onChoose(id)}>
-              <span className="biome-name">
-                <b>{b.py}</b> <Hanzi text={b.zh} className="hanzi-sm" />
-              </span>
-              <span className="biome-en">
-                {b.en}
-                {fallback ? ' (again, harder)' : ''}
-              </span>
-              <span className="biome-desc">{unlocked ? b.desc : `Locked: learn ${requirementHint(b.unlock)} to open this path.`}</span>
-              {unlocked && (
-                <span className="biome-foes">
-                  {[...new Set(b.pools.battle.flat())].slice(0, 4).map((e) => (
-                    <span key={e}>{ENEMIES[e].py}</span>
-                  ))}
-                </span>
-              )}
-            </button>
-          );
-        })}
       </div>
     </div>
   );
@@ -572,48 +564,7 @@ function ItemCard({ id, run, onClick, price, disabled }) {
   );
 }
 
-function ItemChoice({ run, choices, onPick }) {
-  const [chosen, setChosen] = useState(false);
-  return (
-    <div className="pick-view">
-      <div className="pick-cards">
-        {choices.map((id) => (
-          <ItemCard
-            key={id}
-            id={id}
-            run={run}
-            disabled={chosen}
-            onClick={() => {
-              if (chosen) return;
-              setChosen(true);
-              speak(ITEMS[id].zh);
-              onPick(id);
-            }}
-          />
-        ))}
-        {!choices.length && <p className="muted center">Nothing left to find here.</p>}
-      </div>
-      <button type="button" className="link-btn" onClick={() => !chosen && onPick(null)}>
-        <Bi k="skip" en="Take nothing" inline />
-      </button>
-    </div>
-  );
-}
-
-function RewardView({ run, onItem }) {
-  const r = run.reward;
-  return (
-    <div className="reward-wrap">
-      <div className="ribbon">
-        <Bi k="reward" py="jiǎng lì · xuǎn zé" en="Reward: choose one" />
-      </div>
-      {r.ink ? <p className="center gold-text">+{r.ink} 墨 ink</p> : null}
-      {r.choices && <ItemChoice run={run} choices={r.choices} onPick={onItem} />}
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------------------ node screens
+// ------------------------------------------------------------------------------ encounters
 /** Runs a short series of vocabulary questions (StudyCard), with a callback per correct answer. */
 function QuizRunner({ title, count, run, perCorrect, onDone, onLevelUp, listeningFocus = false }) {
   const tasks = useMemo(() => pickAdventureTasks(getState(), count, { listeningFocus }), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -663,222 +614,152 @@ function QuizRunner({ title, count, run, perCorrect, onDone, onLevelUp, listenin
   );
 }
 
-function RestView({ run, accountLevel, maxHp, onLevelUp }) {
-  const [study, setStudy] = useState(false);
-  const heal = Math.min(maxHp - run.hp, Math.round(maxHp * RUN.restHealPct));
-  if (study)
-    return (
-      <QuizRunner
-        title="gōu huǒ · Study by the fire"
-        count={RUN.questions.rest}
-        run={run}
-        onLevelUp={onLevelUp}
-        perCorrect={(r) => {
-          r.ink += RUN.inkPerAnswer + 4;
-          r.stats.inkEarned += RUN.inkPerAnswer + 4;
-        }}
-        onDone={() => mutate((r) => leaveNode(r))}
-      />
-    );
-  return (
-    <div className="rest-view">
-      <div className="campfire-art" aria-hidden="true">
-        <Icon name="campfire" size={80} />
-      </div>
-      <h2 className="section-title">gōu huǒ · A quiet campfire</h2>
-      <div className="node-choices">
-        <button
-          type="button"
-          className="node-card node-rest"
-          onClick={() =>
-            mutate((r) => {
-              healRun(r, accountLevel, RUN.restHealPct);
-              leaveNode(r);
-            })
-          }
-        >
-          <span className="node-icon">
-            <Icon name="heart" size={30} />
-          </span>
-          <b>Rest</b>
-          <small>Heal {heal} HP</small>
-        </button>
-        <button type="button" className="node-card node-lesson" onClick={() => setStudy(true)}>
-          <span className="node-icon">
-            <Icon name="book" size={30} />
-          </span>
-          <b>Study</b>
-          <small>
-            {RUN.questions.rest} questions · {RUN.inkPerAnswer + 4} 墨 each
-          </small>
-        </button>
-      </div>
-    </div>
+/**
+ * A stranger who needs help with a word. Help → one Mandarin puzzle (a minigame or a vocabulary
+ * question; all work without sound). Right → their reward (ink, or one item to take or leave).
+ * Wrong → friendly feedback with the answer and a little ink. The result is saved the moment it is
+ * known, so a reload can't replay the question or pay twice.
+ */
+function StrangerView({ run, grantItem, onLevelUp, onDone }) {
+  const st = STRANGERS.find((x) => x.id === run.stranger.id) || STRANGERS[0];
+  const result = run.stranger.result; // null | 'ok' | 'fail'
+  const [step, setStep] = useState(result ? 'result' : 'talk'); // talk | puzzle | result
+  const practiced = useRef(new Set());
+  const puzzle = useMemo(
+    () => (st.template === 'vocab' ? null : { ...generateSigPuzzle(st.template, { save: getState(), soundless: getState().settings.soundless }), sigId: null }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
   );
-}
-
-function EventView({ run, onLevelUp, grantItem }) {
-  const ev = EVENTS.find((e) => e.id === run.event?.id) || EVENTS[0];
-  const [phase, setPhase] = useState('intro'); // intro | quiz | result
-  const [outcome, setOutcome] = useState(null);
-  const finish = (score) => {
-    const ok = score.ok > 0 && score.bad === 0;
-    const branch = ok ? ev.success : ev.failure;
-    const rw = branch.reward;
-    let itemId = null;
+  const settle = (ok) => {
+    let ink = 0;
     update((x) => {
       const r = x.adventure.current;
-      if (!r) return;
-      const lvl = accountLevelOf(x);
-      if (rw.kind === 'ink') {
-        r.ink += rw.amount;
-        r.stats.inkEarned += rw.amount;
-      } else if (rw.kind === 'heal') healRun(r, lvl, rw.pct);
-      else if (rw.kind === 'maxHp') {
-        r.bonus.maxHp += rw.amount;
-        r.hp += rw.amount;
-      } else if (rw.kind === 'spellPower') r.bonus.spellPower += rw.amount;
-      else if (rw.kind === 'item') {
-        const pool = unlockedItems(x);
-        const lastWord = getWord(r.stats.words[r.stats.words.length - 1] || '');
-        const el = rw.ofWordElement && lastWord?.element;
-        const themed = el ? pool.filter((id) => ITEMS[id].element === el && !r.items.includes(id)) : [];
-        itemId = (themed.length ? themed : draftItems(r, pool, 1))[0] || null;
-      }
+      if (!r?.stranger || r.stranger.result) return;
+      r.stranger.result = ok ? 'ok' : 'fail';
+      if (ok) r.stats.correct += 1;
+      else r.stats.wrong += 1;
+      if (ok && st.reward.kind === 'ink') ink = gainInk(r, st.reward.amount);
+      if (!ok) ink = gainInk(r, STRANGER_CONSOLATION.amount);
     });
-    if (itemId) grantItem(itemId);
-    setOutcome({ ok, text: branch.text, itemId });
-    setPhase('result');
+    flush();
+    play(ok ? 'correct' : 'wrong');
+    setStep('result');
+    return ink;
   };
-  if (phase === 'quiz') return <QuizRunner title={`${ev.py} · ${ev.title}`} count={1} run={run} onLevelUp={onLevelUp} onDone={finish} />;
-  return (
-    <div className="card event-card">
-      <div className="event-title">
-        <Icon name="sparkle" size={22} />
-        <b>{ev.py}</b> <Hanzi text={ev.zh} className="hanzi-sm" /> <span className="muted">· {ev.title}</span>
+  const npc = npcFor(run, run.area.idx);
+  const head = (
+    <div className="stranger-head">
+      <span className="stranger-face">
+        <Sprite id={heroDef(npc).sprite} scale={0.3} flip />
+      </span>
+      <div>
+        <b>
+          {st.py} <Hanzi text={st.zh} className="hanzi-sm" />
+        </b>
+        <small className="muted"> · {st.en}</small>
       </div>
-      {phase === 'intro' ? (
-        <>
-          <p>{ev.text}</p>
-          <Button className="wide" onClick={() => setPhase('quiz')}>
-            Help
-          </Button>
-          <button type="button" className="link-btn" onClick={() => mutate((r) => leaveNode(r))}>
-            Walk on
-          </button>
-        </>
-      ) : (
-        <>
-          <p className={outcome.ok ? 'good-text' : ''}>{outcome.text}</p>
-          {outcome.itemId && (
-            <div className="build-row">
-              <ItemIcon id={outcome.itemId} def={ITEMS[outcome.itemId]} size={40} />
-              <div>
-                <CnName def={ITEMS[outcome.itemId]} />
-                <p className="small">{ITEMS[outcome.itemId].desc}</p>
-              </div>
-            </div>
-          )}
-          <Button className="wide" onClick={() => mutate((r) => leaveNode(r))}>
-            Continue
-          </Button>
-        </>
-      )}
+    </div>
+  );
+  if (step === 'talk') {
+    return (
+      <div className="journey-panel card stranger-panel">
+        {head}
+        <p>{st.text}</p>
+        <Button className="wide" onClick={() => setStep('puzzle')}>
+          <Bi py="bāng máng" en="Help them" />
+        </Button>
+        <button type="button" className="link-btn" onClick={() => onDone()}>
+          <Bi py="jì xù zǒu" en="Walk on" inline />
+        </button>
+      </div>
+    );
+  }
+  if (step === 'puzzle') {
+    if (st.template === 'vocab') {
+      return (
+        <div className="journey-panel stranger-quiz">
+          <QuizRunner title={`${st.py} · ${st.en}`} count={1} run={run} onLevelUp={onLevelUp} onDone={(score) => settle(score.ok > 0 && score.bad === 0)} />
+        </div>
+      );
+    }
+    return (
+      <SignaturePuzzle
+        puzzle={puzzle}
+        sig={{ en: st.en, element: 'light' }}
+        practiced={practiced.current}
+        onDone={(ok) => settle(ok)}
+        onCancel={() => setStep('talk')}
+      />
+    );
+  }
+  // result
+  const ok = (run.stranger.result || result) === 'ok';
+  const itemReward = ok && st.reward.kind === 'item' && run.stranger.item;
+  if (itemReward) {
+    return (
+      <ItemReveal
+        run={run}
+        id={run.stranger.item}
+        title={<span>{st.thanks}</span>}
+        onTake={() => {
+          grantItem(run.stranger.item);
+          onDone();
+        }}
+        onLeave={() => onDone()}
+      />
+    );
+  }
+  return (
+    <div className="journey-panel card stranger-panel">
+      {head}
+      <p className={ok ? 'good-text' : ''}>{ok ? st.thanks : STRANGER_CONSOLATION.text}</p>
+      {ok && st.reward.kind === 'ink' && <p className="center gold-text">+ink 墨</p>}
+      <Button className="wide" onClick={() => onDone()}>
+        <Bi k="continue" />
+      </Button>
     </div>
   );
 }
 
-function ShrineView({ run, grantItem, accountLevel }) {
-  const { element, gift } = useMemo(() => shrineOptions(run, unlockedItems(getState())), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const el = ELEMENTS[element];
-  return (
-    <div className="rest-view">
-      <div className="campfire-art" style={{ color: el.color }} aria-hidden="true">
-        <Icon name="sun" size={80} />
-      </div>
-      <h2 className="section-title">
-        shén miào · Shrine of {el.py} ({el.name})
-      </h2>
-      <div className="node-choices">
-        {gift && (
-          <button
-            type="button"
-            className="node-card"
-            onClick={() => {
-              grantItem(gift);
-              mutate((r) => leaveNode(r));
-            }}
-          >
-            <ItemIcon id={gift} def={ITEMS[gift]} size={52} />
-            <b>{ITEMS[gift].py}</b>
-            <small>{ITEMS[gift].desc}</small>
-          </button>
-        )}
-        <button
-          type="button"
-          className="node-card"
-          onClick={() =>
-            mutate((r) => {
-              r.bonus.spellPower += 0.15;
-              leaveNode(r);
-            })
-          }
-        >
-          <span className="node-icon" style={{ background: el.color }}>
-            <Icon name="sparkle" size={30} />
-          </span>
-          <b>Blessing</b>
-          <small>Your signature move +15% power for this run</small>
-        </button>
-        <button
-          type="button"
-          className="node-card"
-          onClick={() =>
-            mutate((r) => {
-              r.bonus.maxHp += 20;
-              healRun(r, accountLevel, 0.25);
-              leaveNode(r);
-            })
-          }
-        >
-          <span className="node-icon node-rest">
-            <Icon name="heart" size={30} />
-          </span>
-          <b>Vigour</b>
-          <small>+20 max HP and heal 25%</small>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function MerchantView({ run, grantItem, accountLevel }) {
+/** The fox merchant: buy as many items as you can afford; bought items leave the stall. */
+function MerchantView({ run, grantItem, accountLevel, onLeave }) {
   const shop = run.shop;
-  const buy = (i) => {
-    const st = shop.stock[i];
-    if (st.sold || run.ink < st.price) return;
-    mutate((r) => {
-      r.ink -= st.price;
-      r.shop.stock[i].sold = true;
-      if (st.kind === 'heal') healRun(r, accountLevel, 0.3);
+  const hello = useMemo(() => MERCHANT.hello[Math.floor(Math.random() * MERCHANT.hello.length)], []);
+  const purchase = (i) => {
+    let got = null;
+    update((x) => {
+      const r = x.adventure.current;
+      if (r) got = buy(r, i, accountLevel);
     });
-    if (st.kind === 'item') grantItem(st.id);
+    if (!got) return;
+    if (got !== 'heal') grantItem(got);
+    else play('levelUp');
     play('pick');
   };
+  const forSale = shop.stock.map((st, i) => ({ ...st, i })).filter((st) => !st.sold);
   return (
-    <div className="merchant-view">
-      <div className="ribbon">{shop.secret ? 'mì mì shāng rén · Secret merchant' : 'shāng rén · Merchant'}</div>
-      <p className="center">
-        You have <b className="gold-text">{run.ink} 墨</b> ink.
-      </p>
+    <div className="journey-panel merchant-view">
+      <div className="merchant-head card">
+        <span className="merchant-fox">
+          <Sprite id="companion" scale={0.8} />
+        </span>
+        <div>
+          <b>
+            {shop.secret ? 'mì mì ' : ''}
+            {MERCHANT.py} <Hanzi text={MERCHANT.zh} className="hanzi-sm" />
+          </b>
+          <small className="muted"> · {shop.secret ? 'Secret ' : ''}{MERCHANT.en}</small>
+          <p className="small">{hello}</p>
+        </div>
+        <span className="merchant-ink gold-text">{run.ink} 墨</span>
+      </div>
       <div className="pick-cards">
-        {shop.stock.map((st, i) =>
+        {forSale.map((st) =>
           st.kind === 'item' ? (
-            <div key={i} className={`shop-slot ${st.sold ? 'sold' : ''}`}>
-              <ItemCard id={st.id} run={run} price={st.price} disabled={st.sold || run.ink < st.price} onClick={() => buy(i)} />
+            <div key={st.i} className="shop-slot">
+              <ItemCard id={st.id} run={run} price={st.price} disabled={run.ink < st.price} onClick={() => purchase(st.i)} />
             </div>
           ) : (
-            <button key={i} type="button" className={`shop-line ${st.sold ? 'sold' : ''}`} disabled={st.sold || run.ink < st.price} onClick={() => buy(i)}>
+            <button key={st.i} type="button" className="shop-line" disabled={run.ink < st.price} onClick={() => purchase(st.i)}>
               <span className="node-icon node-rest">
                 <Icon name="heart" size={22} />
               </span>
@@ -886,13 +767,14 @@ function MerchantView({ run, grantItem, accountLevel }) {
                 <b>Tea and rest</b>
                 <small>Heal 30% HP</small>
               </span>
-              <span className="price-tag">{st.sold ? 'sold' : `${st.price} 墨`}</span>
+              <span className="price-tag">{st.price} 墨</span>
             </button>
           ),
         )}
+        {!forSale.length && <p className="muted center">“Sold out! You have excellent taste.”</p>}
       </div>
-      <Button className="wide" variant="secondary" onClick={() => mutate((r) => leaveNode(r))}>
-        Leave
+      <Button className="wide" variant="secondary" onClick={onLeave}>
+        <Bi k="leave" en="Leave the stall" />
       </Button>
     </div>
   );
@@ -1051,8 +933,8 @@ function InventoryModal({ run, accountLevel, onClose }) {
   const sigId = def.signature;
   const sig = SIGNATURES[sigId];
   const syn = runSynergies(run);
-  const owned = [...run.items, sigId];
-  const possible = Object.entries(SYNERGIES).filter(([id, sy]) => !syn.includes(id) && possibleFor(run, sy) && sy.requires.some((r) => owned.includes(r)));
+  const owned = run.items;
+  const possible = Object.entries(SYNERGIES).filter(([id, sy]) => !syn.includes(id) && sy.requires.some((r) => owned.includes(r)));
   const [confirm, setConfirm] = useState(false);
   const pct = (n) => `${Math.round(n * 100)}%`;
   return (
@@ -1087,8 +969,26 @@ function InventoryModal({ run, accountLevel, onClose }) {
           </p>
         </div>
       </div>
+      {(run.blessings || []).length > 0 && (
+        <>
+          <h3 className="sum-sub">
+            <Bi py="zhù fú" en="Shrine blessings" inline />
+          </h3>
+          {run.blessings.map((id) => (
+            <div key={id} className="build-row">
+              <span className="blessing-orb small">
+                <Icon name={BLESSINGS[id].icon} size={20} />
+              </span>
+              <div>
+                <CnName def={{ ...BLESSINGS[id], name: BLESSINGS[id].en }} speakable />
+                <p className="small">{BLESSINGS[id].desc}</p>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
       <h3 className="sum-sub">Passive items ({run.items.length})</h3>
-      {run.items.length === 0 && <p className="muted small">Win battles to collect passive items.</p>}
+      {run.items.length === 0 && <p className="muted small">Find items in chests, win them in battle, or buy them from merchants.</p>}
       <div className="build-list">
         {run.items.map((id) => (
           <div key={id} className="build-row">

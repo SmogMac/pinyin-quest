@@ -3,7 +3,7 @@
 //   they never change
 // - everything else (pages, icons, character art, audio): network first, so updates arrive as
 //   soon as you're online; the cached copy is used when offline
-const CACHE = 'moyu-rumble-v3'; // new name: old caches are cleared on activate
+const CACHE = 'moyu-rumble-v4'; // new name: old caches are cleared on activate
 const HASHED = /-[A-Za-z0-9_-]{8}\.(js|css)$/;
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 

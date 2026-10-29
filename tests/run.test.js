@@ -9,7 +9,6 @@ test('runs follow the act structure and finish', () => {
     const { run } = playRun(s * 97);
     assert.ok(['victory', 'defeat'].includes(run.phase), `ended in ${run.phase}`);
     assert.equal(run.spells, undefined, 'no spells: the signature move comes from the hero');
-    for (const id of run.items) assert.ok(!ITEMS[id].hero || ITEMS[id].hero === run.heroId, `${id} belongs to another hero`);
     assert.equal(new Set(run.items).size, run.items.length, 'items are unique');
   }
 });

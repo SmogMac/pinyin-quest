@@ -6,7 +6,7 @@ Learn to **speak and understand** Mandarin with flashcards, spaced repetition an
 - Mandarin audio on every card (normal and slow) via the browser's zh-CN voice, with a slot for recorded clips.
 - Study modes: teaching card, flashcard (Again/Hard/Good/Easy), multiple choice, **listening**, recall (English → pinyin), plus optional speaking practice.
 - SM-2-style spaced repetition, tracked **separately** for recognition, listening, recall and speaking.
-- **Adventure:** real-time autobattles; six heroes, each with one signature move and its own Mandarin minigame (fruit, numbers, encouraging phrases, negation, body parts, tones; combat never pauses); positional combat (knockback, wall slams, dodge hops, a Hero Zone and an Enemy Zone, and **Momentum** for whoever holds the other side's half); 141 passive items, 54 synergies; 8 elements with status reactions and no elemental resistances; 9 biomes with battlefield effects; branching scroll-map routes; the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**.
+- **Adventure:** real-time autobattles; six heroes, each with one signature move and its own Mandarin minigame (fruit, numbers, encouraging phrases, negation, body parts, tones; combat never pauses); positional combat (knockback, wall slams, dodge hops, a Hero Zone and an Enemy Zone, and **Momentum** for whoever holds the other side's half); a continuous side-scrolling journey through random lands with hidden, pre-rolled encounters (fights, the fox merchant, treasure chests, strangers' Mandarin quests, hot springs, rare shrine blessings); 140 universal passive items with icons, 54 synergies; 8 elements with status reactions and no elemental resistances; 9 biomes with battlefield effects; the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**.
 - **Soundless Mode:** play 100% of the game without audio; listening exercises are swapped for text and picture ones and never counted as missed.
 - Passive learning everywhere: enemies, items, moves, reactions and places are named in pinyin first (e.g. 石头人 shí tou rén, "stone person"), with Hanzi and English beside them. Tap a name to hear it.
 - Installable PWA that works offline. All progress stays on the device, with JSON export and import.
@@ -62,12 +62,12 @@ src/
   app/App.jsx              screen routing, toasts, audio unlock, error boundary
   screens/                 Home, Learn (Quick Learn + summary), Adventure, Collection, Progress, Settings
   components/              StudyCard (study modes), BattleScreen (real-time battle), SignaturePuzzle (minigames),
-                           ScrollMap (route map), HeroCarousel, Sprite, AudioButtons, ui
+                           Journey (the road and its encounters), HeroCarousel, Sprite, AudioButtons, ui
   learn/                   vocab, srs (scheduler), session (what to study next), questions (distractors),
                            signaturePuzzles (the six minigames and their vocabulary), pinyinTools (tones)
   game/
     combat.js              real-time combat engine + event/hook system (no UI)
-    run.js                 run state machine: acts, maps, rewards, shops (no UI)
+    run.js                 run state machine: areas, hidden encounter sequences, rewards, shops (no UI)
     unlocks.js             vocabulary → which items and lands can appear
     achievements.js        achievements + hero unlocks
     data/                  everything tunable: heroes, signatures, items, synergies, enemies, biomes,
@@ -141,7 +141,7 @@ Recorded clips take priority over TTS, play at 0.7× in slow mode, and fall back
 
 ### Changing battle balance
 
-Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `signatures.js`, `enemies.js`, `items.js`, `synergies.js`, `biomes.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who picks items at random and solves 85% of signature puzzles: the dragon is beaten in 50–68% of runs depending on the hero (Huǒ Jìn lowest, Ruì Zhé highest). Cooldowns differ per hero and are the main balance knob (Fruit Salad! and Patient Blade 5.5s, Knockback! 7s, Deny Danger! 10s, Burning Passion! and Go All Out! 11s); normal battles last 8–15s, elites 11–27s, guardians 15–29s, the dragon 25–51s.
+Everything tunable is data: `src/game/data/balance.js` (global knobs: enemy HP/attack, per-floor scaling, boss strength, heals, ink, prices, per-item attack bonus), `heroes.js`, `signatures.js`, `enemies.js`, `items.js`, `synergies.js`, `biomes.js`, `encounters.js` (area pacing, strangers), `blessings.js`. After changes run `npm test` (includes 240+ simulated full runs) or `node tests/sweep.mjs` for a quick table. Current results with a simulated player who takes almost every item it is offered, buys what it can afford and solves 85% of signature puzzles: the dragon is beaten in 65–75% of runs depending on the hero. Cooldowns differ per hero and are the main balance knob (Fruit Salad! and Patient Blade 5.5s, Knockback! 7s, Deny Danger! 10s, Burning Passion! and Go All Out! 11s); normal battles last 8–13s, elites 10–19s, guardians 13–24s, the dragon 20–38s.
 
 ## Replacing art
 

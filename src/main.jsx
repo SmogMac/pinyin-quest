@@ -5,6 +5,7 @@ import './styles/app.css';
 import './styles/adventure.css';
 import './styles/battle-fx.css';
 import './styles/signature.css';
+import './styles/journey.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>

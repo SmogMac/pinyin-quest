@@ -1,37 +1,32 @@
-// Roguelike run state machine (v2). Pure functions that mutate a plain, JSON-serialisable run
-// object, saved after every step so a run can be resumed between encounters.
+// Roguelike run state machine (v3: continuous exploration). Pure functions that mutate a plain,
+// JSON-serialisable run object, saved after every step so a run resumes exactly where it was.
 //
-// Structure: Act 1 (choose a biome) → Act 2 (choose a biome; some need vocabulary) →
-//            Act 3 Ink Dragon's Lair → [Act 4 The Forgotten Beyond, after 3 dragon victories]
-// Each act is a branching scroll map of rows; the last row is the act's guardian / boss.
-// phases: biome → map → battle → reward → map … → victory | defeat
-//         map → rest | treasure | shrine | merchant | lesson | event → map
+// Structure: Act 1 area → Act 2 area (some biomes need vocabulary) → Act 3 Ink Dragon's Lair →
+//            [Act 4 The Forgotten Beyond, after 3 dragon victories]. The biome of each area is
+//            picked at random; the player never chooses a route.
+//
+// Each area's encounters are generated ONCE, when the area begins (generateArea), as a hidden,
+// pre-rolled sequence saved with the run: refreshing can't reroll anything. The hero walks right;
+// reaching the next encounter starts it (arrive), finishing it moves on (finishEncounter). The
+// last encounter of every area is its guardian or boss.
+//
+// phases:  areaIntro → explore → battle | merchant | chest | stranger | spring | shrine
+//          battle → reward (one item, take or leave) → explore …
+//          guardian beaten → areaClear → (fade) → areaIntro (next act)
+//          dragon beaten → victory → [enterBeyond] · word eater beaten → complete · lost → defeat
 import { RUN, SCORE } from './data/balance.js';
 import { ITEMS, RARITY_WEIGHT } from './data/items.js';
 import { BIOMES, ACT_BIOMES } from './data/biomes.js';
+import { AREA_PACING, WALK_SECONDS, STRANGERS, ENCOUNTERS } from './data/encounters.js';
+import { BLESSINGS, BLESSING_IDS } from './data/blessings.js';
 import { synergiesCompletedBy, activeSynergies } from './data/synergies.js';
 import { heroDef, DEFAULT_HERO } from './data/heroes.js';
 import { makeRng, buildHero } from './combat.js';
 
-export const RUN_VERSION = 2;
+export const RUN_VERSION = 3;
+export { ENCOUNTERS };
 
-export const NODE_INFO = {
-  battle: { py: 'zhàn dòu', zh: '战斗', name: 'Battle', desc: 'A fight. Win a passive item.' },
-  elite: { py: 'jīng yīng', zh: '精英', name: 'Elite', desc: 'Dangerous foe, rare rewards.' },
-  rest: { py: 'gōu huǒ', zh: '篝火', name: 'Campfire', desc: 'Heal, or study words for ink.' },
-  treasure: { py: 'bǎo xiāng', zh: '宝箱', name: 'Treasure', desc: 'Choose a rare item.' },
-  shrine: { py: 'shén miào', zh: '神庙', name: 'Shrine', desc: 'An elemental blessing.' },
-  merchant: { py: 'shāng rén', zh: '商人', name: 'Merchant', desc: 'Spend ink on passive items.' },
-  lesson: { py: 'lǎo shī', zh: '老师', name: 'Teacher', desc: '5 questions: heal and earn ink.' },
-  event: { py: 'qí yù', zh: '奇遇', name: 'Encounter', desc: 'Something strange happens…' },
-  secret: { py: 'mì mì', zh: '秘密', name: 'Secret', desc: 'A hidden place, revealed by a word you know.' },
-  guardian: { py: 'shǒu wèi', zh: '守卫', name: 'Guardian', desc: 'The biome’s guardian. Leads to the next act.' },
-  boss: { py: 'dà wáng', zh: '大王', name: 'Boss', desc: 'The final battle of this path.' },
-  secretboss: { py: 'yù tù', zh: '玉兔', name: 'Moon Gate', desc: 'Something shines behind the moon…' },
-};
-
-const NODE_WEIGHTS = { battle: 44, elite: 12, rest: 9, treasure: 8, shrine: 7, merchant: 6, lesson: 8, event: 9 };
-
+/** A fresh deterministic RNG per call (seeded by the run and a counter that is saved with it). */
 function rng(run) {
   run.rngN = (run.rngN || 0) + 1;
   return makeRng(run.seed * 7919 + run.rngN * 104729);
@@ -45,64 +40,96 @@ function weighted(r, items, w) {
   }
   return items[items.length - 1];
 }
+const between = (r, [a, b]) => a + Math.floor(r() * (b - a + 1));
+const shuffle = (r, arr) => {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
 
-// ------------------------------------------------------------------ map generation
-/** Branching map: 3 random walks across 4 columns, merged. Last row = guardian/boss. */
-export function generateActMap(seed, act, biome, { secrets = [] } = {}) {
+// ------------------------------------------------------------------ area generation
+const NONCOMBAT = new Set(['merchant', 'chest', 'stranger', 'spring', 'shrine']);
+/** Pacing problems in an arrangement (lower is better). */
+function pacingFaults(seq) {
+  let faults = 0;
+  if (seq[0] !== 'battle') faults += 5; // every area opens with a fight
+  let calm = 0;
+  seq.forEach((t, i) => {
+    calm = NONCOMBAT.has(t) ? calm + 1 : 0;
+    if (calm > 2) faults += 3; // no long stretches without combat
+    if (i > 0 && NONCOMBAT.has(t) && seq[i - 1] === t) faults += 3; // no back-to-back repeats
+    if (t === 'merchant' && i < 3) faults += 4; // money first, shopping later
+    if (t === 'spring' && i < seq.length * 0.4) faults += 2; // healing helps more later on
+    if (t === 'elite' && i < 2) faults += 3;
+    if (t === 'shrine' && i < 2) faults += 1;
+  });
+  if (seq.length > 1 && seq[seq.length - 1] === 'chest') faults += 1;
+  return faults;
+}
+
+/** Orders the encounter types: many random shuffles, keep the one with the fewest pacing faults. */
+export function arrangeArea(r, types) {
+  let best = types;
+  let bestFaults = Infinity;
+  for (let i = 0; i < 600 && bestFaults > 0; i++) {
+    const s = shuffle(r, types);
+    const f = pacingFaults(s);
+    if (f < bestFaults) {
+      best = s;
+      bestFaults = f;
+    }
+  }
+  return best;
+}
+
+/**
+ * Generates an area's full, hidden encounter sequence. `secrets`: { merchant: bool (better
+ * stock), jadeRabbit: bool }. Combat encounters get their enemies and battle seed now, so the
+ * whole area is fixed from the moment it begins.
+ */
+export function generateArea(seed, { act, biome, secrets = {} }) {
   const r = makeRng(seed);
-  const rows = RUN.actRows[act];
-  const COLS = 4;
-  const nodes = {};
-  const key = (row, col) => `${row}-${col}`;
-  const ensure = (row, col) => (nodes[key(row, col)] ||= { id: key(row, col), row, col, next: [], type: null });
-  const fightRows = rows - 1;
-  for (let p = 0; p < 3; p++) {
-    let col = p === 0 ? 0 : p === 1 ? COLS - 1 : Math.floor(r() * COLS);
-    for (let row = 0; row < fightRows; row++) {
-      const n = ensure(row, col);
-      if (row < fightRows - 1) {
-        let nextCol = Math.max(0, Math.min(COLS - 1, col + Math.floor(r() * 3) - 1));
-        // never cross an existing diagonal (keeps every route readable): go straight instead
-        if (nextCol !== col && nodes[key(row, nextCol)]?.next.includes(key(row + 1, col))) nextCol = col;
-        const nn = ensure(row + 1, nextCol);
-        if (!n.next.includes(nn.id)) n.next.push(nn.id);
-        col = nextCol;
-      }
-    }
+  const pace = AREA_PACING[act] || AREA_PACING[1];
+  const b = BIOMES[biome];
+  const types = [];
+  for (const [t, v] of Object.entries(pace)) {
+    const n = Array.isArray(v) ? between(r, v) : r() < v ? 1 : 0;
+    for (let i = 0; i < n; i++) types.push(t);
   }
-  const finalId = `${fightRows}-final`;
-  nodes[finalId] = { id: finalId, row: fightRows, col: 1.5, next: [], type: act >= 3 ? 'boss' : 'guardian' };
-  for (const n of Object.values(nodes)) if (n.row === fightRows - 1) n.next = [finalId];
+  // never more than two peaceful stops between fights: add fights if the roll needs them
+  const calmCount = () => types.filter((t) => NONCOMBAT.has(t)).length;
+  while (calmCount() > 2 * types.filter((t) => !NONCOMBAT.has(t)).length) types.push('battle');
+  const order = arrangeArea(r, types);
+  if (secrets.jadeRabbit && biome === 'temple') order.push('secretboss');
+  order.push(b.boss ? 'boss' : 'guardian');
+  const seq = order.map((type, i) => {
+    const walk = WALK_SECONDS[type] || (ENCOUNTERS[type]?.boss ? WALK_SECONDS.boss : WALK_SECONDS.default);
+    const e = { i, type, walk: Math.round((walk[0] + r() * (walk[1] - walk[0])) * 10) / 10, done: false };
+    if (type === 'battle' || type === 'elite') {
+      const pool = b.pools[type === 'elite' ? 'elite' : 'battle'];
+      e.enemies = pool[Math.floor(r() * pool.length)];
+    } else if (type === 'guardian') e.enemies = [b.guardian];
+    else if (type === 'boss') e.enemies = [b.boss];
+    else if (type === 'secretboss') e.enemies = ['jade_rabbit'];
+    if (ENCOUNTERS[type]?.combat) e.seed = Math.floor(r() * 1e9);
+    if (type === 'merchant' && secrets.merchant) e.secret = true;
+    return e;
+  });
+  return { act, biome, seed, idx: 0, seq };
+}
 
-  // node types
-  for (const n of Object.values(nodes)) {
-    if (n.type) continue;
-    if (n.row === 0) n.type = 'battle';
-    else if (n.row === fightRows - 1 && fightRows > 2) n.type = r() < 0.6 ? 'rest' : 'battle';
-    else {
-      const types = Object.keys(NODE_WEIGHTS).filter((t) => !(t === 'elite' && n.row < 2) && !(t === 'merchant' && n.row < 1));
-      n.type = weighted(r, types, (t) => NODE_WEIGHTS[t]);
-    }
-  }
-  // the row before the guardian always offers at least one campfire
-  const pre = Object.values(nodes).filter((n) => n.row === fightRows - 1);
-  if (fightRows > 2 && pre.length && !pre.some((n) => n.type === 'rest')) pre[0].type = 'rest';
-
-  // secret nodes appear only when their condition is met
-  const middle = Object.values(nodes).filter((n) => n.row >= 1 && n.row < fightRows - 1);
-  for (const s of secrets) {
-    const n = middle.splice(Math.floor(r() * middle.length), 1)[0];
-    if (n) {
-      n.type = s.type;
-      n.secret = s.id;
-    }
-  }
-  return { act, biome, rows, nodes };
+/** Picks the next area's biome at random from what is unlocked, avoiding repeats within a run. */
+export function pickBiome(run, unlocked, r = rng(run)) {
+  const pool = unlocked.length ? unlocked : ACT_BIOMES[1];
+  const seen = run.biomesSeen || [];
+  return weighted(r, pool, (id) => (seen.includes(id) ? 0.25 : 1));
 }
 
 // ------------------------------------------------------------------ run lifecycle
 export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId = DEFAULT_HERO, beyondUnlocked = false } = {}) {
-  const def = heroDef(heroId);
   const hero = buildHero({ heroId, accountLevel });
   return {
     v: RUN_VERSION,
@@ -111,115 +138,147 @@ export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId
     startedAt: Date.now(),
     act: 1,
     biome: null,
-    map: null,
-    pos: null,
-    floor: 0,
+    area: null,
+    floor: 0, // fights started (drives enemy scaling)
     hp: hero.maxHp,
     items: [],
+    blessings: [],
     ink: 0,
     bonus: { spellPower: 0, maxHp: 0 },
-    phase: 'biome',
-    node: null,
+    phase: 'areaIntro',
     battle: null,
-    reward: null,
+    offer: null, // the single item (or blessing) on offer right now
     shop: null,
-    quiz: null,
+    stranger: null,
+    spring: null,
     beyondUnlocked,
+    biomesSeen: [],
+    strangersSeen: [],
     runState: { phoenixUsed: false },
-    stats: { kills: 0, casts: 0, fizzles: 0, correct: 0, wrong: 0, battles: 0, words: [], guardians: 0, inkEarned: 0 },
-    newlyFound: [],
+    stats: { kills: 0, casts: 0, fizzles: 0, correct: 0, wrong: 0, battles: 0, words: [], guardians: 0, inkEarned: 0, areas: 0, encounters: 0 },
   };
 }
 
 /** The signature move id(s) a run owns, for synergy checks (heroes have exactly one). */
 export const runSignatures = (run) => [heroDef(run.heroId).signature];
 export const runSynergies = (run) => activeSynergies(run.items, runSignatures(run));
+const blessingRun = (run, key) => (run.blessings || []).reduce((s, id) => s + (BLESSINGS[id]?.run?.[key] || 0), 0);
 
 export function heroFor(run, accountLevel) {
-  const h = buildHero({ heroId: run.heroId, items: run.items, accountLevel });
-  h.maxHp += run.bonus?.maxHp || 0;
+  const h = buildHero({ heroId: run.heroId, items: run.items, accountLevel, blessings: run.blessings || [] });
+  h.maxHp += (run.bonus?.maxHp || 0) + blessingRun(run, 'maxHp');
   h.spellPower += run.bonus?.spellPower || 0;
   return h;
 }
 export const maxHpOf = (run, accountLevel) => heroFor(run, accountLevel).maxHp;
 export const healRun = (run, accountLevel, pct) => {
   const max = maxHpOf(run, accountLevel);
-  run.hp = Math.min(max, run.hp + Math.round(max * pct));
+  run.hp = Math.max(1, Math.min(max, run.hp + Math.round(max * pct)));
 };
-
-/** Enter an act after choosing its biome. `secrets` are hidden nodes unlocked by vocabulary. */
-export function chooseBiome(run, biomeId, secrets = []) {
-  run.biome = biomeId;
-  run.map = generateActMap(run.seed * 13 + run.act * 101, run.act, biomeId, { secrets });
-  run.pos = null;
-  run.phase = 'map';
+/** Adds ink (Lucky Cat and the Blessing of Abundance increase it). Returns the amount gained. */
+export function gainInk(run, base) {
+  const mult = 1 + (run.items.includes('lucky_cat') ? 0.25 : 0) + blessingRun(run, 'inkMult');
+  const ink = Math.round(base * mult);
+  run.ink += ink;
+  run.stats.inkEarned += ink;
+  return ink;
 }
 
-export function reachableNodes(run) {
-  if (!run.map) return [];
-  const nodes = run.map.nodes;
-  if (!run.pos) return Object.values(nodes).filter((n) => n.row === 0);
-  return (nodes[run.pos]?.next || []).map((id) => nodes[id]);
+/**
+ * Begins the next area: picks its biome (random among `unlocked`, never chosen by the player) and
+ * pre-generates its hidden encounter sequence. Only ever called from the areaIntro phase.
+ */
+export function enterArea(run, { unlocked = [], secrets = {} } = {}) {
+  if (run.phase !== 'areaIntro') return;
+  const biome = run.act >= 4 ? 'beyond' : run.act === 3 ? 'lair' : pickBiome(run, unlocked);
+  run.biome = biome;
+  run.biomesSeen = [...(run.biomesSeen || []), biome];
+  run.area = generateArea(run.seed * 13 + run.act * 101 + (run.stats.areas || 0) * 7, { act: run.act, biome, secrets });
+  run.stats.areas = (run.stats.areas || 0) + 1;
+  run.phase = 'explore';
 }
 
-export function chooseNode(run, nodeId) {
-  if (run.phase !== 'map' || !reachableNodes(run).some((n) => n.id === nodeId)) return null;
-  const node = run.map.nodes[nodeId];
-  run.pos = nodeId;
-  node.visited = true;
-  run.floor += 1;
-  run.node = { id: nodeId, type: node.type, secret: node.secret || null };
-  const r = rng(run);
-  const biome = BIOMES[run.biome];
-  const t = node.type;
-  if (['battle', 'elite', 'guardian', 'boss', 'secretboss'].includes(t)) {
-    let enemies;
-    if (t === 'guardian') enemies = [biome.guardian];
-    else if (t === 'boss') enemies = [biome.boss];
-    else if (t === 'secretboss') enemies = ['jade_rabbit'];
-    else {
-      const pool = biome.pools[t === 'elite' ? 'elite' : 'battle'];
-      enemies = pool[Math.floor(r() * pool.length)];
-    }
-    run.battle = { type: t, enemies, seed: Math.floor(r() * 1e9), biome: run.biome };
+/** The encounter the hero is walking toward (never shown before it is reached). */
+export const nextEncounter = (run) => run.area?.seq[run.area.idx] || null;
+
+/**
+ * The hero reached the next encounter: start it. Everything random about it (the chest's item, the
+ * shop's stock, the stranger, the blessing) is rolled here from the run's saved seed, once.
+ * `ctx`: { itemPool, accountLevel }.
+ */
+export function arrive(run, { itemPool, accountLevel = 1 }) {
+  if (run.phase !== 'explore') return null;
+  const e = nextEncounter(run);
+  if (!e || e.done) return null;
+  const t = e.type;
+  run.stats.encounters = (run.stats.encounters || 0) + 1;
+  if (ENCOUNTERS[t]?.combat) {
+    run.floor += 1;
+    run.battle = { type: t, enemies: e.enemies, seed: e.seed, biome: run.biome };
     run.phase = 'battle';
-  } else if (t === 'rest') run.phase = 'rest';
-  else if (t === 'treasure') run.phase = 'treasure';
-  else if (t === 'shrine') run.phase = 'shrine';
-  else if (t === 'merchant' || (t === 'secret' && node.secret === 'merchant')) run.phase = 'merchant';
-  else if (t === 'lesson') run.phase = 'lesson';
-  else run.phase = 'event';
+  } else if (t === 'merchant') {
+    openShop(run, itemPool, { secret: !!e.secret });
+    run.phase = 'merchant';
+  } else if (t === 'chest') {
+    run.offer = { kind: 'item', id: draftItem(run, itemPool, { r: rng(run) }), source: 'chest' };
+    run.phase = 'chest';
+  } else if (t === 'stranger') {
+    const fresh = STRANGERS.filter((s) => !(run.strangersSeen || []).includes(s.id));
+    const list = fresh.length ? fresh : STRANGERS;
+    const s = list[Math.floor(rng(run)() * list.length)];
+    run.strangersSeen = [...(run.strangersSeen || []), s.id];
+    run.stranger = { id: s.id, item: s.reward.kind === 'item' ? draftItem(run, itemPool, { r: rng(run) }) : null, result: null };
+    run.phase = 'stranger';
+  } else if (t === 'spring') {
+    // at (nearly) full health the spring invigorates instead, so it is never a wasted stop
+    const max = maxHpOf(run, accountLevel);
+    const full = run.hp >= max * 0.95;
+    run.spring = { heal: full ? 0 : RUN.springHealPct, vigour: full ? RUN.springMaxHp : 0 };
+    run.phase = 'spring';
+  } else if (t === 'shrine') {
+    const options = BLESSING_IDS.filter((id) => !(run.blessings || []).includes(id));
+    run.offer = { kind: 'blessing', id: options.length ? options[Math.floor(rng(run)() * options.length)] : null };
+    run.phase = 'shrine';
+  }
   return t;
 }
 
-export function leaveNode(run) {
-  run.node = null;
+/** Marks the current encounter done (exactly once) and walks on. */
+export function finishEncounter(run) {
+  const e = nextEncounter(run);
+  if (e) e.done = true;
+  if (run.area) run.area.idx += 1;
   run.battle = null;
-  run.reward = null;
+  run.offer = null;
   run.shop = null;
-  run.quiz = null;
-  run.phase = 'map';
+  run.stranger = null;
+  run.spring = null;
+  run.phase = run.area && run.area.idx < run.area.seq.length ? 'explore' : 'areaClear';
 }
 
-// ------------------------------------------------------------------ rewards
-/**
- * Weighted draft of passive items, biased toward completing synergies, the biome's element and the
- * hero's own signature items (items with `hero` are only offered to that hero).
- */
-export function draftItems(run, pool, n = 3, { minRarity = null, r = rng(run) } = {}) {
+// ------------------------------------------------------------------ items
+/** One random passive item (weighted by rarity, synergy potential, biome and Fortune). */
+export function draftItem(run, pool, { minRarity = null, r = rng(run) } = {}) {
+  return draftItems(run, pool, 1, { minRarity, r })[0] || null;
+}
+
+/** Weighted draft of distinct passive items, biased toward completing synergies and the biome's element. */
+export function draftItems(run, pool, n = 1, { minRarity = null, r = rng(run) } = {}) {
   const owned = new Set(run.items);
   const def = heroDef(run.heroId);
   const biomeEl = Object.keys(BIOMES[run.biome]?.elementMods || {});
-  const fits = (id) => ITEMS[id] && !owned.has(id) && (!ITEMS[id].hero || ITEMS[id].hero === run.heroId);
+  const fortune = blessingRun(run, 'fortune') > 0;
+  const fits = (id) => ITEMS[id] && !owned.has(id);
   let candidates = pool.filter(fits);
   if (minRarity === 'rare') candidates = candidates.filter((id) => ITEMS[id].rarity !== 'common');
+  if (minRarity === 'epic') candidates = candidates.filter((id) => ITEMS[id].rarity === 'epic');
   if (!candidates.length) candidates = pool.filter(fits);
   const w = (id) => {
     const it = ITEMS[id];
     let x = RARITY_WEIGHT[it.rarity] || 5;
+    if (fortune && it.rarity !== 'common') x *= 2.5;
     if (def.poolBias?.[it.element]) x *= def.poolBias[it.element];
     if (biomeEl.includes(it.element)) x *= 1.3;
-    if (it.hero) x *= 1.6; // signature items shape the build: they come up fairly often
     if (synergiesCompletedBy(id, run.items, runSignatures(run)).length) x *= 2;
     return x;
   };
@@ -233,30 +292,9 @@ export function draftItems(run, pool, n = 3, { minRarity = null, r = rng(run) } 
   return out;
 }
 
-/** After a won battle, prepare the reward screen. Pools come from unlocks.js (vocabulary). */
-export function battleReward(run, { itemPool }) {
-  const t = run.battle.type;
-  const r = rng(run);
-  const inkMult = run.items.includes('lucky_cat') ? 1.25 : 1;
-  let ink = t === 'elite' || t === 'guardian' ? RUN.inkPerElite : RUN.inkPerBattle[0] + Math.floor(r() * (RUN.inkPerBattle[1] - RUN.inkPerBattle[0]));
-  ink = Math.round(ink * inkMult);
-  run.ink += ink;
-  run.stats.inkEarned += ink;
-  if (t === 'boss') return null;
-  if (t === 'secretboss') {
-    const epics = itemPool.filter((id) => ITEMS[id].rarity === 'epic' && !run.items.includes(id));
-    return { kind: 'items', choices: epics.length ? epics.slice(0, 1) : draftItems(run, itemPool, 2, { minRarity: 'rare', r }), ink };
-  }
-  return {
-    kind: 'items',
-    choices: draftItems(run, itemPool, 3, { minRarity: t === 'elite' || t === 'guardian' ? 'rare' : null, r }),
-    ink,
-  };
-}
-
 /** Returns newly completed synergy ids. */
 export function takeItem(run, id, accountLevel) {
-  if (run.items.includes(id)) return [];
+  if (!ITEMS[id] || run.items.includes(id)) return [];
   const before = runSynergies(run);
   const maxBefore = maxHpOf(run, accountLevel);
   run.items.push(id);
@@ -266,49 +304,76 @@ export function takeItem(run, id, accountLevel) {
   return runSynergies(run).filter((s) => !before.includes(s));
 }
 
-export function resolveBattle(run, sim, accountLevel) {
+/** Grants a shrine blessing (applied exactly once). */
+export function takeBlessing(run, id, accountLevel) {
+  const def = BLESSINGS[id];
+  if (!def || (run.blessings || []).includes(id)) return false;
+  const maxBefore = maxHpOf(run, accountLevel);
+  run.blessings = [...(run.blessings || []), id];
+  const maxAfter = maxHpOf(run, accountLevel);
+  if (maxAfter > maxBefore) run.hp += maxAfter - maxBefore;
+  if (def.run?.healFull) run.hp = maxAfter;
+  return true;
+}
+
+// ------------------------------------------------------------------ battles
+/** Records a finished fight. Wins pay ink and may offer one item; bosses end the area. */
+export function resolveBattle(run, sim, accountLevel, { itemPool = [] } = {}) {
+  if (run.phase !== 'battle' || !run.battle) return;
   run.hp = Math.max(0, Math.round(sim.heroHp));
   run.stats.kills += sim.kills;
   run.stats.battles += 1;
+  if (sim.runState) run.runState = { ...run.runState, ...sim.runState };
   const t = run.battle.type;
   if (sim.result !== 'win') {
     run.phase = 'defeat';
     return;
   }
-  healRun(run, accountLevel, RUN.victoryHealPct);
-  if (t === 'guardian') {
-    run.stats.guardians += 1;
-    healRun(run, accountLevel, RUN.actHealPct);
-  }
+  healRun(run, accountLevel, RUN.victoryHealPct + blessingRun(run, 'victoryHeal'));
+  const r = rng(run);
+  const base = t === 'elite' ? RUN.inkPerElite : t === 'guardian' || t === 'secretboss' ? RUN.inkPerGuardian : t === 'boss' ? 0 : RUN.inkPerBattle[0] + Math.floor(r() * (RUN.inkPerBattle[1] - RUN.inkPerBattle[0]));
+  const ink = base ? gainInk(run, base) : 0;
   if (t === 'boss') {
     run.phase = run.biome === 'beyond' ? 'complete' : 'victory';
     return;
   }
+  if (t === 'guardian') {
+    run.stats.guardians += 1;
+    healRun(run, accountLevel, RUN.actHealPct);
+  }
+  // one item, never a choice of three: always after elites, guardians and secret bosses,
+  // sometimes after ordinary fights
+  let item = null;
+  if (t === 'secretboss') item = draftItem(run, itemPool, { minRarity: 'epic', r });
+  else if (t === 'elite' || t === 'guardian') item = draftItem(run, itemPool, { minRarity: 'rare', r });
+  else if (r() < RUN.battleItemChance) item = draftItem(run, itemPool, { r });
+  run.offer = { kind: 'item', id: item, ink, source: t };
   run.phase = 'reward';
 }
 
-/** After the reward: guardians lead to the next act, otherwise back to the map. */
+/** After the reward screen (item taken or left): walk on, or leave the area after its guardian. */
 export function afterReward(run) {
-  const wasGuardian = run.battle?.type === 'guardian';
-  leaveNode(run);
-  if (wasGuardian) {
-    run.act += 1;
-    run.biome = null;
-    run.map = null;
-    run.pos = null;
-    run.phase = run.act >= 3 ? 'lairIntro' : 'biome';
-  }
+  finishEncounter(run);
 }
 
-export function enterLair(run) {
-  chooseBiome(run, 'lair');
+/** The guardian's area is behind us: the next act's area begins (biome chosen by enterArea). */
+export function nextArea(run) {
+  if (run.phase !== 'areaClear') return;
+  run.act += 1;
+  run.area = null;
+  run.biome = null;
+  run.phase = 'areaIntro';
 }
+
+/** After the dragon (3 victories across runs): continue into the Forgotten Beyond. */
 export function enterBeyond(run) {
   run.act = 4;
-  chooseBiome(run, 'beyond');
+  run.area = null;
+  run.biome = null;
+  run.phase = 'areaIntro';
 }
 
-// ------------------------------------------------------------------ merchant & shrine
+// ------------------------------------------------------------------ merchant, spring
 export function openShop(run, itemPool, { secret = false } = {}) {
   const r = rng(run);
   const items = draftItems(run, itemPool, secret ? 5 : 4, { minRarity: secret ? 'rare' : null, r });
@@ -322,11 +387,25 @@ export function openShop(run, itemPool, { secret = false } = {}) {
   };
 }
 
-export function shrineOptions(run, itemPool) {
-  const biome = BIOMES[run.biome];
-  const element = Object.keys(biome.elementMods || {})[0] || 'light';
-  const gifts = itemPool.filter((id) => ITEMS[id].element === element && !run.items.includes(id) && (!ITEMS[id].hero || ITEMS[id].hero === run.heroId));
-  return { element, gift: gifts.length ? gifts[Math.floor(rng(run)() * gifts.length)] : null };
+/** Buys stock line `i` if affordable. Returns the item id bought (or 'heal'), else null. */
+export function buy(run, i, accountLevel) {
+  const st = run.shop?.stock[i];
+  if (!st || st.sold || run.ink < st.price) return null;
+  run.ink -= st.price;
+  st.sold = true;
+  if (st.kind === 'heal') healRun(run, accountLevel, 0.3);
+  return st.kind === 'heal' ? 'heal' : st.id;
+}
+
+/** The hot spring's soak is over: heal (or gain max HP at full health), exactly once. */
+export function finishSpring(run, accountLevel) {
+  if (run.phase !== 'spring' || !run.spring) return;
+  if (run.spring.vigour) {
+    run.bonus.maxHp += run.spring.vigour;
+    run.hp += run.spring.vigour;
+  }
+  if (run.spring.heal) healRun(run, accountLevel, run.spring.heal);
+  finishEncounter(run);
 }
 
 export function scoreOf(run) {

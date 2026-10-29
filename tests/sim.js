@@ -1,33 +1,31 @@
-// Simulated player for balance tests and sweeps.
+// Simulated player for balance tests and sweeps: walks a whole journey (areas, encounters, battles).
 import {
-  newRun, chooseBiome, reachableNodes, chooseNode, battleReward, takeItem, resolveBattle, afterReward,
-  enterLair, enterBeyond, leaveNode, openShop, draftItems, heroFor, healRun,
+  newRun, enterArea, arrive, finishEncounter, resolveBattle, afterReward, takeItem, takeBlessing, buy, finishSpring,
+  nextArea, enterBeyond, heroFor, gainInk,
 } from '../src/game/run.js';
 import { simulateBattle, makeRng } from '../src/game/combat.js';
 import { ITEMS } from '../src/game/data/items.js';
 import { ACT_BIOMES } from '../src/game/data/biomes.js';
-import { RUN } from '../src/game/data/balance.js';
+import { STRANGERS, STRANGER_CONSOLATION } from '../src/game/data/encounters.js';
 
 const itemPool = Object.keys(ITEMS);
 
-/** Plays a full run. castSuccess: how often the simulated player solves signature puzzles. */
-export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, accountLevel = 4, beyond = false, eliteBias = 0.3, pickItem = null } = {}) {
+/**
+ * Plays a full run. castSuccess: how often the simulated player solves signature puzzles;
+ * quizSuccess: strangers' questions; takeChance: how often an offered item is taken.
+ */
+export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, quizSuccess = 0.8, accountLevel = 4, beyond = false, takeChance = 0.9, log = null } = {}) {
   const r = makeRng(seed);
   const run = newRun({ seed, accountLevel, heroId, beyondUnlocked: beyond });
-  const durations = { battle: [], elite: [], guardian: [], boss: [] };
-  for (let guard = 0; guard < 400; guard++) {
+  const durations = { battle: [], elite: [], guardian: [], boss: [], secretboss: [] };
+  const counts = {};
+  for (let guard = 0; guard < 600; guard++) {
     const p = run.phase;
-    if (p === 'biome') {
-      const opts = ACT_BIOMES[run.act];
-      chooseBiome(run, opts[Math.floor(r() * opts.length)]);
-    } else if (p === 'lairIntro') enterLair(run);
-    else if (p === 'map') {
-      const opts = reachableNodes(run);
-      const safe = opts.filter((n) => n.type !== 'elite');
-      const pick = r() < eliteBias || !safe.length ? opts[Math.floor(r() * opts.length)] : safe[Math.floor(r() * safe.length)];
-      const t = chooseNode(run, pick.id);
-      if (t === 'merchant' || t === 'secret') openShop(run, itemPool);
-      if (t === 'treasure') run.reward = { kind: 'items', choices: draftItems(run, itemPool, 2, { minRarity: 'rare' }) };
+    log?.(p, run);
+    if (p === 'areaIntro') enterArea(run, { unlocked: ACT_BIOMES[run.act] || ACT_BIOMES[1] });
+    else if (p === 'explore') {
+      const t = arrive(run, { itemPool, accountLevel });
+      counts[t] = (counts[t] || 0) + 1;
     } else if (p === 'battle') {
       const hero = heroFor(run, accountLevel);
       const sim = simulateBattle({
@@ -35,44 +33,38 @@ export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, accountLev
         runState: run.runState, autoCast: { delay: 3, success: castSuccess },
       });
       durations[run.battle.type]?.push(sim.duration);
-      run.runState = { ...run.runState, phoenixUsed: sim.battle.runState.phoenixUsed };
-      resolveBattle(run, sim, accountLevel);
-      if (run.phase === 'reward') {
-        run.reward = battleReward(run, { itemPool });
-        if (!run.reward) afterReward(run);
-      }
+      sim.runState = { phoenixUsed: sim.battle.runState.phoenixUsed, blessPhoenixUsed: sim.battle.runState.blessPhoenixUsed };
+      resolveBattle(run, sim, accountLevel, { itemPool });
     } else if (p === 'reward') {
-      const rw = run.reward;
-      if (rw.kind === 'items' && rw.choices.length) takeItem(run, pickItem ? pickItem(rw.choices, run) : rw.choices[0], accountLevel);
+      if (run.offer?.id && r() < takeChance) takeItem(run, run.offer.id, accountLevel);
       afterReward(run);
-    } else if (p === 'treasure') {
-      if (run.reward?.choices?.length) takeItem(run, run.reward.choices[0], accountLevel);
-      leaveNode(run);
-    } else if (p === 'rest') {
-      if (run.hp < heroFor(run, accountLevel).maxHp * 0.7) healRun(run, accountLevel, RUN.restHealPct);
-      else run.ink += 30;
-      leaveNode(run);
-    } else if (p === 'lesson') {
-      for (let i = 0; i < 5; i++) if (r() < 0.8) healRun(run, accountLevel, RUN.lessonHealPct);
-      leaveNode(run);
-    } else if (p === 'shrine') {
-      run.bonus.spellPower += 0.15;
-      leaveNode(run);
+    } else if (p === 'chest') {
+      if (run.offer?.id && r() < takeChance) takeItem(run, run.offer.id, accountLevel);
+      finishEncounter(run);
     } else if (p === 'merchant') {
-      const st = run.shop.stock.find((x) => x.kind === 'item' && x.price <= run.ink);
-      if (st) {
-        run.ink -= st.price;
-        takeItem(run, st.id, accountLevel);
+      // buy whatever is affordable, cheapest first
+      const order = run.shop.stock.map((s, i) => [s, i]).filter(([s]) => s.kind === 'item').sort((a, b) => a[0].price - b[0].price);
+      for (const [, i] of order) {
+        const got = buy(run, i, accountLevel);
+        if (got && got !== 'heal') takeItem(run, got, accountLevel);
       }
-      leaveNode(run);
-    } else if (p === 'event') {
-      if (r() < 0.8) run.ink += 30;
-      leaveNode(run);
-    } else if (p === 'victory') {
+      finishEncounter(run);
+    } else if (p === 'stranger') {
+      const st = STRANGERS.find((x) => x.id === run.stranger.id);
+      if (r() < quizSuccess) {
+        if (st.reward.kind === 'ink') gainInk(run, st.reward.amount);
+        else if (run.stranger.item) takeItem(run, run.stranger.item, accountLevel);
+      } else gainInk(run, STRANGER_CONSOLATION.amount);
+      finishEncounter(run);
+    } else if (p === 'spring') finishSpring(run, accountLevel);
+    else if (p === 'shrine') {
+      if (run.offer?.id) takeBlessing(run, run.offer.id, accountLevel);
+      finishEncounter(run);
+    } else if (p === 'areaClear') nextArea(run);
+    else if (p === 'victory') {
       if (beyond) enterBeyond(run);
       else break;
     } else break;
   }
-  return { run, durations };
+  return { run, durations, counts };
 }
-
