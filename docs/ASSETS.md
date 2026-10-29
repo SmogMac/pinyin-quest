@@ -69,6 +69,10 @@ Put the original (transparent PNG/WebP, or a plain white background) in `tools/a
 
 Enemy definitions in `src/game/data/enemies.js` reference sprites through their `sprite` field, so a new enemy just needs a new manifest key.
 
+### Passive item icons
+
+89 passive items use painted art from the source pack in `icon_asset_pack/` (kept out of git; the originals are 1024×1024). `npm run item-art` (`tools/item-art.mjs`) holds the item → picture map, trims each picture, writes 128×128 WebP files to `public/assets/items/<item id>.webp`, and regenerates `src/assets/itemArt.js`. `ItemIcon` shows the art on a tile tinted by the item's element, with the rarity ring around it. Items without a picture keep their drawn glyph. To give one art, add a line to the map and run the script again.
+
 ### Signature move icons
 
 Each hero's signature button shows painted art from `public/assets/signatures/<signature id>.webp` (200×200, transparent corners), listed in `SIGNATURE_ICONS` in `src/assets/manifest.js`. The cooldown is drawn over the art in CSS (a dark clockwise sweep plus the seconds left), so the art itself needs no states. A move without an entry falls back to the drawn SVG in `SigIcon.jsx`.

@@ -54,7 +54,7 @@ Each hero always plays the same kind of minigame; only the question changes.
 | Hero | Move | Minigame (learning focus) | Effect |
 | --- | --- | --- | --- |
 | Xīn Yí | **shuǐguǒ shālā · Fruit Salad!** (5.5s) | an emoji fruit → pick its pinyin from 4 (10 fruits) | the named fruit is summoned. Thrown: apple (heavy hit, shatters Frozen), grape (volley), watermelon (area + Wet), banana (slippery peel: enemies stumble), lemon (Weaken all). Eaten: orange (heal), strawberry (shield), mango (attack speed), pear (defence + block), peach (heal over time) |
-| Méi | **nàixīn jiàn · Patient Blade** (5.5s) | a number 1–10 → pick its pinyin from all ten | a composed stance, then a great sword arc: 160% attack to every enemy as a guaranteed crit, a small push, and 3s on guard (block + defence) |
+| Méi | **nàixīn jiàn · Patient Blade** (5.5s) | a number word in pinyin (yī … shí) → pick its digit from 1–10 | a composed stance, then a great sword arc: 160% attack to every enemy as a guaranteed crit, a small push, and 3s on guard (block + defence) |
 | Huǒ Jìn | **rèqíng ránshāo · Burning Passion!** (11s) | select every encouraging phrase among 6 (praise vs criticism; bùcuò and méi wèntí are positive) | 8s fire aura: +35% attack speed, +20% damage, basic attacks Burn and leave flame trails |
 | Ruì Zhé | **jùjué wēixiǎn · Deny Danger!** (10s) | drag or tap bù / méi / méiyǒu into a sentence (the English meaning makes one answer correct) | unroll the scroll: a strong shield and a shockwave that throws every enemy far back, almost no damage |
 | Fú Yún | **quánlì yǐfù · Go All Out!** (11s) | a body part (emoji, or a figure with the part lit) → pick its pinyin | 5s frenzy: every hit crits, faster attacks, Momentum anywhere |

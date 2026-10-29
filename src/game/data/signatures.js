@@ -118,7 +118,7 @@ export const SIGNATURES = {
   patient_blade: {
     hero: 'mei', py: 'nàixīn jiàn', zh: '耐心剑', en: 'Patient Blade', template: 'number', element: 'physical', cd: 5.5, icon: 'blade',
     blurb: 'Mei steadies her breath, counts, and unleashes one perfect strike across the whole battlefield.',
-    desc: 'Read the number in Mandarin. Mei takes a composed stance, then a great sword arc cuts every enemy for 160% attack as a guaranteed critical hit and pushes them back a little; afterwards she stays on guard for 3s (parries far more blows).',
+    desc: 'Read the number word in pinyin and pick its digit. Mei takes a composed stance, then a great sword arc cuts every enemy for 160% attack as a guaranteed critical hit and pushes them back a little; afterwards she stays on guard for 3s (parries far more blows).',
     cast(b, c) {
       b.emit({ type: 'sig', id: 'patient_blade', phase: 'windup' });
       b.schedule(0.45, () => {

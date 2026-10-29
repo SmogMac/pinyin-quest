@@ -220,6 +220,17 @@
   font-weight: 600;
   color: var(--ink-soft);
 }
+.sig-word {
+  font-family: var(--font-pinyin);
+  font-size: clamp(2.6rem, 11vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.sig-numbers .opt-py {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
 .sig-numbers {
   grid-template-columns: repeat(5, 1fr);
   gap: 6px;

@@ -79,11 +79,13 @@ test('fruit: emoji + four pinyin options; the named fruit is the one summoned', 
   assert.equal(p.choice, p.answer);
 });
 
-test('number: shows a digit, offers all ten numbers', () => {
+test('number: shows the pinyin, the player picks the digit from 1–10', () => {
   assert.deepEqual(NUMBERS.map((n) => n.py), ['yī', 'èr', 'sān', 'sì', 'wǔ', 'liù', 'qī', 'bā', 'jiǔ', 'shí']);
   const p = generateSigPuzzle('number', { save: defaultSave(), rng: makeRng(3) });
   assert.equal(p.options.length, 10);
-  assert.equal(NUMBERS.find((n) => n.id === p.answer).n, Number(p.prompt.big));
+  assert.deepEqual(p.options.map((o) => o.py), ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], 'digits, in order');
+  assert.equal(NUMBERS.find((n) => n.id === p.answer).py, p.prompt.word, 'the prompt is the pinyin');
+  assert.ok(!/\d/.test(p.prompt.word), 'no digit in the prompt');
 });
 
 test('cheer: pick every encouraging phrase; partial or wrong picks fail', () => {

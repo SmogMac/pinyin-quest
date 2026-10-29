@@ -181,6 +181,7 @@ function Prompt({ puzzle, soundless, result, hideHanzi }) {
       {p.emoji && <span className="sig-emoji">{p.emoji}</span>}
       {p.figure && <BodyFigure part={p.figure} />}
       {p.big && <span className="sig-number">{p.big}</span>}
+      {p.word && <span className="sig-word">{p.word}</span>}
       {p.before !== undefined && <p className="cast-en">“{p.en}”</p>}
       {p.before !== undefined && !hideHanzi && result && <small className="muted">{p.zh}</small>}
       <p className="cast-sub">{p.q}</p>
@@ -213,7 +214,7 @@ function ChoiceBody({ puzzle, submit, result, soundless, hideHanzi }) {
             >
               <span className="opt-py">{o.py}</span>
               {/* meanings show once answered (and while teaching), never as a giveaway */}
-              {(locked || (puzzle.teach && correct)) && o.en && !numbers && <small className="opt-en">{o.en}</small>}
+              {(locked || (puzzle.teach && correct)) && o.en && (!numbers || locked || correct) && <small className="opt-en">{o.en}</small>}
               {locked && !hideHanzi && o.zh && <small className="opt-zh">{o.zh}</small>}
             </button>
           );

@@ -11,7 +11,8 @@
     "vocab": "node tools/build-vocab.mjs",
     "icons": "node tools/make-icons.mjs",
     "test": "node --test \"tests/*.test.js\"",
-    "art": "node tools/process-art.mjs"
+    "art": "node tools/process-art.mjs",
+    "item-art": "node tools/item-art.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

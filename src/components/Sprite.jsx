@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { SPRITES, ABILITY_ICONS } from '../assets/manifest.js';
+import { ITEM_ART } from '../assets/itemArt.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import Icon from '../assets/icons/Icons.jsx';
 
@@ -81,14 +82,27 @@ export function AbilityIcon({ id, element, size = 44, level }) {
   );
 }
 
-/** Icon for a passive item or synergy (glyph from data, coloured by element). */
+/**
+ * Icon for a passive item or synergy: painted art (ITEM_ART) on a tile tinted by the item's
+ * element, or a glyph from the data when there is no art. The rarity ring shows either way.
+ */
 export function ItemIcon({ kind = 'item', def, id, size = 40, badge }) {
   const el = ELEMENTS[def?.element] || ELEMENTS.physical;
   const override = ABILITY_ICONS[id];
+  const art = kind === 'item' ? ITEM_ART[id] : null;
   const glyph = override?.glyph || def?.icon || 'sparkle';
   return (
-    <div className={`ability-icon kind-${kind} rarity-${def?.rarity || 'common'}`} style={{ width: size, height: size, '--el': el.color, '--el-glow': el.glow }}>
-      {override?.src ? <img src={asset(override.src)} alt="" /> : <Icon name={glyph} size={size * 0.56} />}
+    <div
+      className={`ability-icon kind-${kind} rarity-${def?.rarity || 'common'} ${art ? 'has-art' : ''}`}
+      style={{ width: size, height: size, '--el': el.color, '--el-glow': el.glow }}
+    >
+      {art ? (
+        <img className="item-art" src={asset(art)} alt="" draggable="false" loading="lazy" />
+      ) : override?.src ? (
+        <img src={asset(override.src)} alt="" />
+      ) : (
+        <Icon name={glyph} size={size * 0.56} />
+      )}
       {badge ? <span className="ability-level">{badge}</span> : null}
     </div>
   );

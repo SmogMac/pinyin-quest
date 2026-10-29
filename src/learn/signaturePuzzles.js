@@ -1,5 +1,5 @@
 // Character signature puzzles. Every hero always plays the same kind of Mandarin minigame (Xinyi
-// names fruit, Mei reads numbers, Lei hears tones…); only the question changes. Pure logic: the UI
+// names fruit, Mei reads number words, Lei hears tones…); only the question changes. Pure logic: the UI
 // lives in components/SignaturePuzzle.jsx and the combat effect in game/data/signatures.js.
 //
 // A template has:   pool (curated, verified vocabulary) · generate({ save, rng, last, soundless })
@@ -209,10 +209,11 @@ export const TEMPLATES = {
       const t = pickTarget(NUMBERS, save, rng, last);
       return {
         template: 'number', kind: 'choice', target: t.id, choice: t.n, words: [t.zh], teach: isNew(save, t.zh),
-        prompt: { big: String(t.n), q: 'Choose its pinyin' },
-        // all ten, in order, so the player learns where each number lives
-        options: NUMBERS.map((n) => ({ id: n.id, py: n.py, zh: n.zh, en: String(n.n) })),
-        answer: t.id, reveal: `${t.n} = ${t.py}`,
+        // the pinyin is the clue: recognising it is the skill. The digits stay in order 1–10 so
+        // finding the one you mean is instant once you know it.
+        prompt: { word: t.py, q: 'Which number is this?' },
+        options: NUMBERS.map((n) => ({ id: n.id, py: String(n.n), zh: n.zh, en: n.py })),
+        answer: t.id, reveal: `${t.py} = ${t.n}`,
       };
     },
   },

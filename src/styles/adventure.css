@@ -1184,6 +1184,17 @@
 .ability-icon.rarity-epic {
   box-shadow: 0 0 0 2px #fff inset, 0 0 10px #d38bff;
 }
+.ability-icon.has-art {
+  /* a darker, element-tinted tile so the painted object stands out */
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--el) 45%, #2a1f45), #1d1533 75%);
+}
+.ability-icon .item-art {
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  border-radius: 0;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+}
 .ability-icon.rarity-rare {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85) inset, 0 0 6px #6fd1ff;
 }

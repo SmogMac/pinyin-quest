@@ -3,3 +3,6 @@ dist
 .DS_Store
 tools/source/
 .claude/
+
+# source art (large originals); processed copies live in public/assets
+icon_asset_pack/

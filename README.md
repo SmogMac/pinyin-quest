@@ -133,7 +133,7 @@ Recorded clips take priority over TTS, play at 0.7× in slow mode, and fall back
 | Hero | Unlock | Signature move (minigame) | Passive |
 | --- | --- | --- | --- |
 | **Xīn Yí** 欣怡, Cheerful Wanderer | from the start | **Fruit Salad!** (name the fruit): the fruit is thrown or eaten, each with its own effect | **kāi xīn 开心:** every successful move heals 6% (first one also shields) |
-| **Méi** 梅, Silent Blade | account level 3 | **Patient Blade** (read the number 1–10): a critical sword arc across every enemy, then a moment on guard | **méi huā 梅花:** sword-draw opener; each move makes her next attack a splashing crit |
+| **Méi** 梅, Silent Blade | account level 3 | **Patient Blade** (read a number in pinyin, pick the digit): a critical sword arc across every enemy, then a moment on guard | **méi huā 梅花:** sword-draw opener; each move makes her next attack a splashing crit |
 | **Ruì Zhé** 睿哲, Nervous Scholar | account level 5 | **Deny Danger!** (bù / méi / méiyǒu): a strong shield and a shockwave that throws enemies far back | **jǐn zhāng 紧张:** +10% signature power per different element among his items; panics at half HP (signature recharges) |
 | **Huǒ Jìn** 火烬, Grumpy Fire Master | account level 8 | **Burning Passion!** (pick every encouraging phrase): 8s of faster, harder, burning attacks and flame trails | **huǒ hou 火候:** fire attacks, every 4th is a burning bolt that blasts the target back; +20% damage to Burning enemies; fire items appear twice as often |
 | **Fú Yún** 浮云, Lucky Assassin | account level 10 | **Go All Out!** (name the body part): 5s frenzy, every hit a crit, Momentum anywhere | **yùn qi 运气:** every dodge sets up a guaranteed crit with a wind slash on all other enemies; once per battle survives a knockout at 1 HP |
