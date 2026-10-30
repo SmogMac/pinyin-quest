@@ -527,7 +527,7 @@
 }
 @keyframes fruit-spin {
   to {
-    rotate: 540deg;
+    rotate: var(--spin, 540deg);
   }
 }
 .fx-nom {
@@ -573,32 +573,6 @@
     transform: translateY(14px) scale(0.4);
     clip-path: inset(0 0 0 100%);
     opacity: 0;
-  }
-}
-.sprite.st-eat {
-  transform-origin: 50% 100%;
-  animation: eat 0.6s ease-in-out;
-}
-@keyframes eat {
-  20%,
-  60% {
-    transform: scale(1.04, 0.96) rotate(-3deg);
-  }
-  40%,
-  80% {
-    transform: scale(0.98, 1.04) rotate(3deg);
-  }
-}
-.sprite.st-throw {
-  transform-origin: 50% 100%;
-  animation: throw 0.38s ease-out;
-}
-@keyframes throw {
-  30% {
-    transform: translateX(-6px) rotate(-10deg);
-  }
-  60% {
-    transform: translateX(10px) rotate(8deg) scale(1.05);
   }
 }
 .fx-splash,
@@ -647,17 +621,6 @@
   animation: rise-fade 0.7s ease-out calc(var(--i) * 40ms) both;
 }
 
-/* ---------- Mei: composed stance, then a great arc ---------- */
-.sprite.st-stance {
-  transform-origin: 50% 100%;
-  animation: stance 0.46s ease-in forwards;
-}
-@keyframes stance {
-  to {
-    transform: translateX(-6px) scale(1.04, 0.9);
-    filter: brightness(1.15);
-  }
-}
 .sp-glint > i:first-child {
   width: 22px;
   height: 22px;
@@ -846,16 +809,6 @@
   animation: glint 0.35s ease-out both;
 }
 
-/* ---------- Lei: overhead swing, blast, wall slams ---------- */
-.sprite.st-windup {
-  transform-origin: 50% 100%;
-  animation: windup 0.38s ease-in forwards;
-}
-@keyframes windup {
-  to {
-    transform: translateX(-10px) rotate(-14deg) scale(0.95, 1.08);
-  }
-}
 .sp-swing > i:first-child {
   width: 110px;
   height: 110px;
@@ -924,22 +877,33 @@
     opacity: 0;
   }
 }
-.side-enemy .sprite.st-slammed {
-  transform-origin: 100% 100%;
-  animation: slammed 0.38s ease-out;
-}
-@keyframes slammed {
-  30% {
-    transform: scale(0.8, 1.1) translateX(4px);
-  }
-  60% {
-    transform: scale(1.06, 0.94);
-  }
-}
 .fx-melee.mirror {
   scale: -1 1;
 }
 .fx2-ring.big {
   width: 220px;
   height: 220px;
+}
+
+/* Ascension puzzle extras */
+.tone-clues {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.opt-ctx {
+  display: block;
+  font-style: italic;
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+.sig-part {
+  display: inline;
+}
+.sig-part + .sig-part::before {
+  content: ' ';
+}
+.sig-big-numbers .opt-py {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
 }

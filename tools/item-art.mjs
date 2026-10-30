@@ -152,6 +152,20 @@ export const ITEM_ART = {
   arc_flail: { from: 'Necklace_Choker', hue: 60 },
   stunning_blow: { from: 'Silver_Coin', tint: [255, 220, 90] },
   fanned_flames: { from: 'Folding_Fan', tint: [255, 140, 70] },
+  // build-defining items (recoloured so each one reads as its own thing)
+  red_thread: { from: 'Endless_Knot', tint: [255, 40, 60] },
+  borrowed_time: { from: 'Incense_Burner', hue: 190 },
+  tricksters_mask: { from: 'Ominous_Spectre2', hue: 120 },
+  thunderclap_drum: { from: 'Wood_Token', tint: [255, 225, 90] },
+  mirror_world: { from: 'Galaxy_Mirror', hue: 300 },
+  turtles_revenge: { from: 'Sacred_Egg', tint: [110, 190, 120] },
+  gravity_seal: { from: 'Ruyi_Cloud_Seal', hue: 250 },
+  ink_mine: { from: 'Dull_Black_Bead', tint: [170, 110, 255] },
+  paper_lanterns: { from: 'Pavillion2', tint: [255, 170, 90] },
+  ebb_tide: { from: 'Yin_Yang_Koi', hue: 170 },
+  contagion: { from: 'Poison', hue: 260 },
+  sword_ring: { from: 'Jade_Ring', sat: 0.15 },
+  blood_pact: { from: 'Vial', tint: [220, 40, 60] },
 };
 
 // scenery for encounters on the road (bigger, used as props in the exploration scene)

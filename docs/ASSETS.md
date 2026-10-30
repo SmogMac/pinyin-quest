@@ -102,11 +102,15 @@ Glyph names are listed in `src/assets/icons/Icons.jsx`. Badge colours come from 
 
 ## Backgrounds
 
-`src/assets/backgrounds/Backgrounds.jsx` draws four parallax layers per theme: sky, far hills, mid trees, near bushes and ground. Themes (`forest`, `dusk`, `ember`, `lair`) are chosen by floor in `themeForFloor`. To use painted backgrounds, replace the content of `BgSky`, `BgFar` and the rest with an `<img>` of your layer. Layers other than the sky are drawn twice side by side and scrolled by 50% during the walk-in, so each layer image must **tile horizontally**. Suggested layer size: 1600×800 (sky), 1600×400 (others), PNG or WebP with transparency.
+`src/assets/backgrounds/Backgrounds.jsx` draws four parallax layers per theme: sky, far hills, mid trees, near bushes and ground. Adventure maps use the ink-wash themes (`bamboo` … `volcano`, `inklair`, `beyond`), each with its own foreground decor in `BgDecor`; the quick-battle themes (`forest`, `dusk`, `ember`, `lair`) are chosen by floor in `themeForFloor`. To use painted backgrounds, replace the content of `BgSky`, `BgFar` and the rest with an `<img>` of your layer. Layers other than the sky are drawn twice side by side and scrolled by 50% during the walk-in, so each layer image must **tile horizontally**. Suggested layer size: 1600×800 (sky), 1600×400 (others), PNG or WebP with transparency.
 
 ## Effects
 
-Effects are CSS (`.fx-*` / `.sp-*` classes) coloured by element. `BattleScreen.jsx` picks them per event (`sig`, `fruit`, `zone`, `wallHit`, …). To use image effects, render an `<img>` inside the `.fx` element for that ability.
+Battle effects are sprite sheets from the **Super Pixel Effects Gigapack (free version) by Will Tice / unTied Games**, plus a few CSS effects where the pack has nothing equivalent (sword arcs, lightning bolts, projectiles: the free pack has no travelling projectiles).
+
+- Everything visual about a fight is data in `src/fx/fx.json`: sprite **effects** (sheet, scale, anchor, direction, layer, colour), **cues** (what plays on each battle event: effects, character animations, built-in CSS effects, shake, sounds, each with its own delay), **projectiles** (speed, arc, spin, launch point) and character **animations** (keyframed poses). Edit it with the **[FX Studio](FX_STUDIO.md)** (`npm run studio`), which previews on the real battle screen and packs the sheets on Compile.
+- The pack lives in `vfx/` and is **not committed** (its license allows bundling with the game, not redistributing the pack). Compile (or `npm run vfx`, `tools/fx-pack.mjs`) copies only the sheets the effects use into `public/assets/vfx/`, cropped to their frames, with recolours baked into `<sheet>@<hue>.png`. Every animation plays at 15 FPS, as the pack recommends.
+- `BattleScreen.jsx` decides *when* (which event, thresholds, rate limits) and plays cues by name; placement uses each unit's real sprite size, and a target's hit effects wait until the projectile actually arrives.
 
 ## Naming conventions
 

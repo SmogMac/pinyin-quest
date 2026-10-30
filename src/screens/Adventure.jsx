@@ -13,11 +13,12 @@ import { BLESSINGS } from '../game/data/blessings.js';
 import { STRANGERS, STRANGER_CONSOLATION, MERCHANT } from '../game/data/encounters.js';
 import { TEMPLATES, generateSigPuzzle } from '../learn/signaturePuzzles.js';
 import { SYNERGIES, synergiesCompletedBy, synergiesWith } from '../game/data/synergies.js';
-import { BIOMES } from '../game/data/biomes.js';
+import { BIOMES, ACTS } from '../game/data/biomes.js';
 import { ELEMENTS } from '../game/data/elements.js';
 import { heroDef } from '../game/data/heroes.js';
+import { ASCENSION, highestAscension, ascensionSummary, recordAscensionWin } from '../game/data/ascension.js';
 import { STORY } from '../game/data/story.js';
-import { unlockedItems, actBiomeOptions, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
+import { unlockedItems, codexSummary, requirementHint, learnedWords } from '../game/unlocks.js';
 import { checkAchievements, selectedHero, heroUnlocked } from '../game/achievements.js';
 import StudyCard from '../components/StudyCard.jsx';
 import BattleScreen from '../components/BattleScreen.jsx';
@@ -43,11 +44,6 @@ const reqDef = (id) => ITEMS[id] || SIGNATURES[id] || { py: id, en: id };
 const STORY_FOR_ACT = { 1: 'intro', 2: 'act2', 3: 'lair', 4: 'beyond' };
 const ENCOUNTER_PHASES = ['merchant', 'chest', 'stranger', 'spring', 'shrine', 'reward'];
 
-/** Biomes the player can be sent to for an act (random among unlocked; act 1 if none unlock yet). */
-function unlockedBiomes(act, save) {
-  const open = actBiomeOptions(act, save).filter((o) => o.unlocked).map((o) => o.id);
-  return open.length ? open : actBiomeOptions(1, save).map((o) => o.id);
-}
 /** Hidden extras revealed by vocabulary and progress. */
 function secretsFor(save) {
   const learned = learnedWords(save);
@@ -68,6 +64,7 @@ export default function Adventure({ go, params = {} }) {
   const [story, setStory] = useState(null);
   const [fading, setFading] = useState(null); // 'out' | 'in' | null
   const [toast, setToast] = useState(null);
+  const [reveal, setReveal] = useState(null); // the act's map, named as the act begins
   // A finished battle stays on screen (Victory/Defeat overlay) until Continue, while the saved
   // run has already moved on, so a reload never replays a completed fight. Set through a ref
   // first: saving re-renders synchronously, and the battle must not unmount in between.
@@ -106,9 +103,14 @@ export default function Adventure({ go, params = {} }) {
   function beginArea() {
     update((x) => {
       const r = x.adventure.current;
-      if (r?.phase === 'areaIntro') enterArea(r, { unlocked: unlockedBiomes(r.act, x), secrets: secretsFor(x) });
+      if (r?.phase === 'areaIntro') enterArea(r, { secrets: secretsFor(x) });
     });
     flush();
+    const r = getState().adventure.current;
+    if (r?.biome) {
+      setReveal({ act: r.act, biome: r.biome, key: Date.now() });
+      setTimeout(() => setReveal(null), 3200);
+    }
     setFading('in');
     setTimeout(() => setFading(null), 700);
   }
@@ -183,6 +185,19 @@ export default function Adventure({ go, params = {} }) {
             fading={fading}
             propState={run.phase === 'chest' || (run.phase === 'reward' && run.offer?.source === 'chest') ? 'open' : run.phase === 'spring' ? 'soak' : null}
             heroState={run.phase === 'spring' ? 'soak' : null}
+            children={
+              reveal && ACTS[reveal.act] ? (
+                <div key={reveal.key} className="act-reveal" aria-live="polite">
+                  <small>
+                    {reveal.act <= 3 ? `Act ${reveal.act}` : 'Beyond'} · {ACTS[reveal.act].py}
+                  </small>
+                  <b>{ACTS[reveal.act].en}</b>
+                  <span>
+                    {BIOMES[reveal.biome].py} · {BIOMES[reveal.biome].en}
+                  </span>
+                </div>
+              ) : null
+            }
             onArrive={() => {
               let t = null;
               update((x) => {
@@ -292,6 +307,7 @@ export default function Adventure({ go, params = {} }) {
                 else {
                   x.adventure.dragonWins += 1;
                   x.adventure.bosses += 1;
+                  r.ascUnlocked = recordAscensionWin(x, r.heroId, r.ascension || 0);
                 }
               }
               if (won && type === 'secretboss') x.adventure.secretBosses += 1;
@@ -375,9 +391,9 @@ function AdventureMenu({ go, accountLevel, onEnter, onCodex, codex, closeCodex }
     flush(); // a refresh must never bring an abandoned run back
     setConfirm(null);
   };
-  const begin = (heroId) => {
+  const begin = (heroId, ascension = 0) => {
     play('levelUp');
-    update((x) => startRun(x, { heroId, accountLevel }));
+    update((x) => startRun(x, { heroId, accountLevel, ascension }));
     flush();
     onEnter();
   };
@@ -391,6 +407,7 @@ function AdventureMenu({ go, accountLevel, onEnter, onCodex, codex, closeCodex }
               <Icon name="play" size={20} /> <Bi k="continueRun" />
               <small className="run-menu-sub">
                 {heroDef(current.heroId).py} · {current.biome ? BIOMES[current.biome].py : `Act ${current.act}`} · floor {current.floor}
+                {current.ascension ? ` · A${current.ascension}` : ''}
               </small>
             </Button>
           )}
@@ -424,16 +441,61 @@ function HeroPick({ go, onBack, onStart }) {
   const [shown, setShown] = useState(() => selectedHero(s));
   const h = heroDef(shown);
   const ok = heroUnlocked(shown, s);
+  const highest = highestAscension(s, shown);
+  // each hero remembers the level last picked for them (defaults to their highest)
+  const [picked, setPicked] = useState({});
+  const asc = Math.min(highest, picked[shown] ?? highest);
   return (
     <div className="screen adventure-start hero-pick">
       <TopBar title={<Bi k="chooseHero" />} onBack={onBack} />
       <HeroShowcase onShow={setShown} />
-      <Button className="wide big" disabled={!ok} onClick={() => ok && onStart(shown)}>
+      {ok && <AscensionPicker heroId={shown} level={asc} highest={highest} onPick={(lv) => setPicked((p) => ({ ...p, [shown]: lv }))} />}
+      <Button className="wide big" disabled={!ok} onClick={() => ok && onStart(shown, asc)}>
         <Icon name="swords" size={22} /> <Bi k="start" py={`kāi shǐ · ${h.py}`} en={ok ? `Begin as ${h.en}` : 'Locked'} />
       </Button>
       <button type="button" className="link-btn" onClick={() => go('home')}>
         <Bi k="home" inline />
       </button>
+    </div>
+  );
+}
+
+/** Ascension 0–10 for the shown hero: unlocked levels are pickable, the rest show as locked. */
+function AscensionPicker({ heroId, level, highest, onPick }) {
+  const sum = ascensionSummary(heroId, level);
+  return (
+    <div className="card asc-picker">
+      <div className="asc-head">
+        <b>
+          <Bi py="jìn jiē" en="Ascension" inline />
+        </b>
+        <span className="muted small">
+          highest unlocked: A{highest}
+          {highest < ASCENSION.max && ' · beat mò lóng on it to unlock the next'}
+        </span>
+      </div>
+      <div className="asc-levels" role="radiogroup" aria-label="Ascension level">
+        {Array.from({ length: ASCENSION.max + 1 }, (_, lv) => {
+          const locked = lv > highest;
+          return (
+            <button
+              key={lv}
+              type="button"
+              role="radio"
+              aria-checked={lv === level}
+              aria-label={locked ? `Ascension ${lv}, locked` : `Ascension ${lv}`}
+              disabled={locked}
+              className={`asc-lv ${lv === level ? 'on' : ''} ${locked ? 'locked' : ''}`}
+              onClick={() => onPick(lv)}
+            >
+              {locked ? <Icon name="lock" size={11} /> : lv}
+            </button>
+          );
+        })}
+      </div>
+      <p className="asc-desc small">
+        <b>A{level}</b> · enemy HP {sum.hp ? `+${sum.hp}%` : 'normal'} · {sum.puzzle}
+      </p>
     </div>
   );
 }
@@ -626,7 +688,7 @@ function StrangerView({ run, grantItem, onLevelUp, onDone }) {
   const [step, setStep] = useState(result ? 'result' : 'talk'); // talk | puzzle | result
   const practiced = useRef(new Set());
   const puzzle = useMemo(
-    () => (st.template === 'vocab' ? null : { ...generateSigPuzzle(st.template, { save: getState(), soundless: getState().settings.soundless }), sigId: null }),
+    () => (st.template === 'vocab' ? null : { ...generateSigPuzzle(st.template, { save: getState(), soundless: getState().settings.soundless, level: getState().adventure.current?.ascension || 0 }), sigId: null }),
     [], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const settle = (ok) => {
@@ -798,6 +860,11 @@ function VictoryView({ run, go, onLevelUp }) {
           <Bi k="victory" py="shèng lì!" en="mò lóng is defeated!" />
         </h1>
         <p className="muted">The stolen words rain back down. 了不起！ (liǎobuqǐ, amazing!)</p>
+        {run.ascUnlocked ? (
+          <p className="asc-unlocked">
+            <Icon name="sparkle" size={16} /> Ascension {run.ascUnlocked} unlocked for {heroDef(run.heroId).en}!
+          </p>
+        ) : null}
         <RunStats run={run} />
         {canGoOn && (
           <Button

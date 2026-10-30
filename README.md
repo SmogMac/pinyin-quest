@@ -6,7 +6,7 @@ Learn to **speak and understand** Mandarin with flashcards, spaced repetition an
 - Mandarin audio on every card (normal and slow) via the browser's zh-CN voice, with a slot for recorded clips.
 - Study modes: teaching card, flashcard (Again/Hard/Good/Easy), multiple choice, **listening**, recall (English → pinyin), plus optional speaking practice.
 - SM-2-style spaced repetition, tracked **separately** for recognition, listening, recall and speaking.
-- **Adventure:** real-time autobattles; six heroes, each with one signature move and its own Mandarin minigame (fruit, numbers, encouraging phrases, negation, body parts, tones; combat never pauses); positional combat (knockback, wall slams, dodge hops, a Hero Zone and an Enemy Zone, and **Momentum** for whoever holds the other side's half); a continuous side-scrolling journey through random lands with hidden, pre-rolled encounters (fights, the fox merchant, treasure chests, strangers' Mandarin quests, hot springs, rare shrine blessings); 140 universal passive items with icons, 54 synergies; 8 elements with status reactions and no elemental resistances; 9 biomes with battlefield effects; the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**.
+- **Adventure:** real-time autobattles; six heroes, each with one signature move and its own Mandarin minigame (fruit, numbers, encouraging phrases, negation, body parts, tones; combat never pauses); positional combat (knockback, wall slams, dodge hops, a Hero Zone and an Enemy Zone, and **Momentum** for whoever holds the other side's half); a continuous side-scrolling journey through random lands with hidden, pre-rolled encounters (fights, the fox merchant, treasure chests, strangers' Mandarin quests, hot springs, rare shrine blessings); 153 universal passive items with icons and 60 synergies, every one tested to work for every hero ([changelog](docs/ITEM_CHANGELOG.md)); 8 elements with status reactions and no elemental resistances; 9 biomes with battlefield effects; the Ink Dragon and the Word Eater. Full design in **[docs/ADVENTURE.md](docs/ADVENTURE.md)**. Every item and synergy: **[docs/ITEMS.md](docs/ITEMS.md)**.
 - **Soundless Mode:** play 100% of the game without audio; listening exercises are swapped for text and picture ones and never counted as missed.
 - Passive learning everywhere: enemies, items, moves, reactions and places are named in pinyin first (e.g. 石头人 shí tou rén, "stone person"), with Hanzi and English beside them. Tap a name to hear it.
 - Installable PWA that works offline. All progress stays on the device, with JSON export and import.
@@ -32,6 +32,8 @@ Open the printed URL (http://localhost:5173). `--host` is on, so the URL also wo
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Dev server with hot reload |
+| `npm run studio` | The **FX Studio**: edit effects, projectiles and character animations with a live preview, Compile into the game, Publish to GitHub ([docs/FX_STUDIO.md](docs/FX_STUDIO.md)) |
+| `npm run vfx` | Pack the sprite sheets `src/fx/fx.json` uses (Compile does this too) |
 | `npm run build` | Production build into `dist/` |
 | `npm run preview` | Serve the production build (http://localhost:4173) |
 | `npm test` | Engine, items, synergies, content and whole-run balance tests |
@@ -138,6 +140,8 @@ Recorded clips take priority over TTS, play at 0.7× in slow mode, and fall back
 | **Huǒ Jìn** 火烬, Grumpy Fire Master | account level 8 | **Burning Passion!** (pick every encouraging phrase): 8s of faster, harder, burning attacks and flame trails | **huǒ hou 火候:** fire attacks, every 4th is a burning bolt that blasts the target back; +20% damage to Burning enemies; fire items appear twice as often |
 | **Fú Yún** 浮云, Lucky Assassin | account level 10 | **Go All Out!** (name the body part): 5s frenzy, every hit a crit, Momentum anywhere | **yùn qi 运气:** every dodge sets up a guaranteed crit with a wind slash on all other enemies; once per battle survives a knockout at 1 HP |
 | **Léi** 雷, Thunder Brawler | account level 12 | **Knockback!** (pick the right tone): flings every enemy into the far wall, no damage | **pí qi 脾气 (Static Temper):** heavy swings also hit enemies beside the target; every 4 hits charge a lightning burst (charge pips shown over Léi) |
+
+**Maps and Ascension:** every act has three maps, one rolled per act when a run starts (27 journeys, revealed as each act begins); each hero has Ascension levels 0–10 (beat the dragon on your highest to unlock the next) that raise enemy HP and widen that hero's Mandarin puzzle. Details in [docs/ADVENTURE.md](docs/ADVENTURE.md).
 
 ### Changing battle balance
 

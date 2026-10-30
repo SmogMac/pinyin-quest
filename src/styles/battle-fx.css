@@ -61,99 +61,6 @@
     transform: translateY(-6px) scale(0.98, 1.03) rotate(-2deg);
   }
 }
-/* melee: anticipation, lunge with squash, settle */
-.side-hero .sprite.st-attack {
-  transform-origin: 50% 100%;
-  animation: melee-r 0.28s ease-out;
-}
-@keyframes melee-r {
-  25% {
-    transform: translateX(-6px) scale(0.96, 1.04) rotate(-4deg);
-  }
-  55% {
-    transform: translateX(22px) scale(1.08, 0.94) rotate(6deg);
-  }
-}
-.side-enemy .sprite.st-attack {
-  transform-origin: 50% 100%;
-  animation: melee-l 0.28s ease-out;
-}
-@keyframes melee-l {
-  25% {
-    transform: translateX(6px) scale(0.96, 1.04) rotate(4deg);
-  }
-  55% {
-    transform: translateX(-20px) scale(1.08, 0.94) rotate(-6deg);
-  }
-}
-/* ranged: quick recoil */
-.sprite.st-shoot {
-  transform-origin: 50% 100%;
-  animation: recoil 0.28s ease-out;
-}
-@keyframes recoil {
-  30% {
-    transform: translateX(-7px) rotate(-5deg) scale(1.03, 0.97);
-  }
-}
-/* heavy (ball and chain): big wind-up, overhead swing, slam */
-.sprite.st-smash {
-  transform-origin: 50% 100%;
-  animation: smash 0.42s cubic-bezier(0.3, 0, 0.3, 1);
-}
-@keyframes smash {
-  35% {
-    transform: translateX(-10px) rotate(-12deg) scale(0.95, 1.08);
-  }
-  60% {
-    transform: translateX(18px) rotate(9deg) scale(1.1, 0.9);
-  }
-  80% {
-    transform: translateX(10px) scale(1.04, 0.96);
-  }
-}
-/* casting: crouch, then rise with energy */
-.sprite.st-cast {
-  transform-origin: 50% 100%;
-  animation: cast2 0.42s ease-out;
-}
-@keyframes cast2 {
-  25% {
-    transform: scale(1.06, 0.9);
-  }
-  60% {
-    transform: translateY(-10px) scale(0.96, 1.08);
-  }
-}
-/* dodge: hop back */
-.side-hero .sprite.st-dodge {
-  animation: dodge-r 0.34s ease-out;
-}
-@keyframes dodge-r {
-  45% {
-    transform: translate(-18px, -12px) rotate(-10deg);
-    opacity: 0.75;
-  }
-}
-.side-enemy .sprite.st-dodge {
-  animation: dodge-l 0.34s ease-out;
-}
-@keyframes dodge-l {
-  45% {
-    transform: translate(18px, -12px) rotate(10deg);
-    opacity: 0.75;
-  }
-}
-/* block: brace */
-.sprite.st-block {
-  transform-origin: 50% 100%;
-  animation: brace 0.32s ease-out;
-}
-@keyframes brace {
-  35% {
-    transform: translateX(-4px) scale(0.94, 1.04);
-  }
-}
 .fx2-guard {
   bottom: 18%;
   width: 70px;
@@ -179,15 +86,29 @@
   font-size: 10px;
   animation: travel var(--dur, 260ms) linear forwards;
 }
-.fxp.big {
-  font-size: 16px;
-}
-.fxp.small {
-  font-size: 7px;
-}
 @keyframes travel {
   to {
-    transform: translateX(var(--to));
+    transform: translate(var(--to), var(--dy, 0px));
+  }
+}
+/* straight shots point along their path; thrown objects rise to an apex and drop onto the target */
+.fxp > i {
+  rotate: var(--tilt, 0deg);
+}
+.fxp.arc > i {
+  animation: arc-y var(--dur) forwards, fruit-spin var(--dur) linear forwards;
+}
+@keyframes arc-y {
+  0% {
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+  }
+  50% {
+    translate: 0 calc(-1 * var(--apex, 40px));
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  100% {
+    translate: 0 0;
   }
 }
 .fxp > i {
@@ -373,6 +294,7 @@
   height: 34px;
   bottom: calc(36% - 17px);
 }
+
 .fx-zap polyline,
 .slam-bolt polyline {
   fill: none;
@@ -1504,61 +1426,6 @@
   animation: none;
 }
 
-/* knockback: lean back while sliding, squash on landing; pulls lean forward */
-.side-enemy .sprite.st-knocked {
-  transform-origin: 50% 100%;
-  animation: knocked-r 0.32s ease-out;
-}
-.side-hero .sprite.st-knocked {
-  transform-origin: 50% 100%;
-  animation: knocked-l 0.32s ease-out;
-}
-@keyframes knocked-r {
-  30% {
-    transform: rotate(12deg) scale(0.95, 1.04);
-  }
-}
-@keyframes knocked-l {
-  30% {
-    transform: rotate(-12deg) scale(0.95, 1.04);
-  }
-}
-.sprite.st-pulled {
-  transform-origin: 50% 100%;
-  animation: knocked-l 0.32s ease-out;
-}
-.sprite.st-land {
-  transform-origin: 50% 100%;
-  animation: land 0.18s ease-out;
-}
-@keyframes land {
-  40% {
-    transform: scale(1.08, 0.9);
-  }
-}
-/* dodge: the hop is real displacement now, so the sprite only tucks and tilts */
-.side-hero .sprite.st-dodge {
-  animation: hop-r 0.36s ease-out;
-}
-.side-enemy .sprite.st-dodge {
-  animation: hop-l 0.36s ease-out;
-}
-@keyframes hop-r {
-  40% {
-    transform: translateY(-14px) rotate(-10deg) scale(0.96, 1.04);
-  }
-  85% {
-    transform: translateY(0) scale(1.06, 0.92);
-  }
-}
-@keyframes hop-l {
-  40% {
-    transform: translateY(-14px) rotate(10deg) scale(0.96, 1.04);
-  }
-  85% {
-    transform: translateY(0) scale(1.06, 0.92);
-  }
-}
 /* dust puffs at the feet (dodge hops, landings) */
 .fx-dust {
   position: absolute;
@@ -1697,4 +1564,91 @@
   margin: 4px 0 0;
   font-size: 0.72rem;
   opacity: 0.75;
+}
+
+/* ---------- sprite VFX (Super Pixel Effects Gigapack, free version: Will Tice / unTied Games) ---------- */
+.vfx {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  image-rendering: pixelated;
+  contain: strict;
+}
+.vfx > img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  image-rendering: pixelated;
+  will-change: transform;
+}
+.vfx-layer-ground {
+  z-index: 1;
+}
+.vfx-layer-unit {
+  z-index: 6;
+}
+.vfx-layer-air {
+  z-index: 7;
+}
+.vfx-layer-front {
+  z-index: 8;
+}
+.reduced-motion .vfx-layer-front.vfx {
+  opacity: 0.7;
+}
+
+/* recoloured enemy kin (enemies.js `tint`) */
+.sprite.tint-ember > :first-child {
+  filter: sepia(0.6) saturate(2.6) hue-rotate(-28deg) brightness(1.05);
+}
+.sprite.tint-ink > :first-child {
+  filter: grayscale(0.85) brightness(0.55) contrast(1.3) drop-shadow(0 0 3px #7a4dff);
+}
+
+/* a projectile drawn with a sprite effect (FX config `sprite`) */
+.proj-sprite {
+  position: absolute;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+.fxp.p-sprite > i::after {
+  display: none;
+}
+
+/* projectile trails (FX config `trail`): copies on the same path, started later and fading */
+.fxp.fxp-trail {
+  opacity: 0;
+  z-index: 4;
+  animation:
+    travel var(--dur) linear var(--lag) forwards,
+    trail-life var(--dur) linear var(--lag) forwards;
+}
+.fxp.fxp-trail.arc > i {
+  animation: arc-y var(--dur) var(--lag) forwards;
+}
+.fxp.t-glow > i {
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--tc) 0%, color-mix(in srgb, var(--tc) 55%, transparent) 35%, transparent 70%);
+}
+.fxp.t-glow > i::after,
+.fxp.no-tail > i::after {
+  display: none;
+}
+@keyframes trail-life {
+  0%,
+  70% {
+    opacity: var(--o);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Borrowed Time: a frozen, glassy afterimage of the hero */
+.sprite.afterimage {
+  filter: grayscale(0.6) brightness(1.4) hue-rotate(160deg) drop-shadow(0 0 6px #9fe8ff);
+  opacity: 0.6;
 }

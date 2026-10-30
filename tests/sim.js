@@ -14,9 +14,9 @@ const itemPool = Object.keys(ITEMS);
  * Plays a full run. castSuccess: how often the simulated player solves signature puzzles;
  * quizSuccess: strangers' questions; takeChance: how often an offered item is taken.
  */
-export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, quizSuccess = 0.8, accountLevel = 4, beyond = false, takeChance = 0.9, log = null } = {}) {
+export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, quizSuccess = 0.8, accountLevel = 4, beyond = false, takeChance = 0.9, log = null, ascension = 0 } = {}) {
   const r = makeRng(seed);
-  const run = newRun({ seed, accountLevel, heroId, beyondUnlocked: beyond });
+  const run = newRun({ seed, accountLevel, heroId, beyondUnlocked: beyond, ascension });
   const durations = { battle: [], elite: [], guardian: [], boss: [], secretboss: [] };
   const counts = {};
   for (let guard = 0; guard < 600; guard++) {
@@ -30,7 +30,7 @@ export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, quizSucces
       const hero = heroFor(run, accountLevel);
       const sim = simulateBattle({
         hero, heroHp: run.hp, enemies: run.battle.enemies, biome: run.battle.biome, floor: run.floor, seed: run.battle.seed,
-        runState: run.runState, autoCast: { delay: 3, success: castSuccess },
+        runState: run.runState, autoCast: { delay: 3, success: castSuccess }, ascension: run.ascension || 0,
       });
       durations[run.battle.type]?.push(sim.duration);
       sim.runState = { phoenixUsed: sim.battle.runState.phoenixUsed, blessPhoenixUsed: sim.battle.runState.blessPhoenixUsed };

@@ -4,12 +4,15 @@
 //   each frame:  const events = b.step(dt);       // advance the simulation
 //   player input: b.beginCast() -> the hero's signature puzzle -> b.finishCast(success, { choice })
 //                 | b.cancelCast()
+//   sigImpact (s): the signature's cast animation plays first (FX Studio) and the move takes
+//                 effect at its impact frame; the hero holds still meanwhile. 0 = immediately.
 //
 // The signature puzzle never pauses the simulation: the UI keeps calling step() while it is open.
 // Items, synergies, hero passives and signature moves are data with hook functions (see
 // data/items.js for every trigger); the engine fires them with a recursion depth limit and a
 // per-step proc budget so chain reactions can't lock up.
 import { COMBAT, SCALING, ACCOUNT_HP_PER_LEVEL, ACCOUNT_HP_CAP, COLLECTION_ATK_PER_ITEM } from './data/balance.js';
+import { ascensionHpMult } from './data/ascension.js';
 import { STATUSES, REACTIONS, STATUS_REACTIONS, TERRAIN_REACTIONS, DOT_STATUSES } from './data/elements.js';
 import { ITEMS } from './data/items.js';
 import { SYNERGIES, activeSynergies } from './data/synergies.js';
@@ -91,14 +94,15 @@ export function buildHero({ heroId = DEFAULT_HERO, items = [], accountLevel = 1,
   };
 }
 
-export function scaleEnemy(id, floor, empower = 0) {
+/** An enemy's stats on a floor. `ascension` (0–10) raises its HP (see data/ascension.js). */
+export function scaleEnemy(id, floor, empower = 0, ascension = 0) {
   const def = ENEMIES[id];
   const f = def.fixedStats ? 0 : Math.max(0, floor - 1);
   const st = def.stats;
   return {
     enemyId: id, edef: def, name: def.name, py: def.py, sprite: def.sprite,
     boss: !!def.boss, elite: !!def.elite, flying: !!def.flying,
-    maxHp: Math.round(st.maxHp * (1 + SCALING.hpPerFloor * f) * (def.boss ? SCALING.bossHp : SCALING.enemyHp)),
+    maxHp: Math.round(st.maxHp * (1 + SCALING.hpPerFloor * f) * (def.boss ? SCALING.bossHp : SCALING.enemyHp) * ascensionHpMult(ascension)),
     atk: st.atk * (1 + SCALING.atkPerFloor * f) * (1 + empower) * (def.boss ? SCALING.bossAtk : SCALING.enemyAtk),
     def: (st.def || 0) + Math.floor(SCALING.defPerFloor * f),
     aspd: st.aspd, crit: st.crit || 0, critDmg: 1.5, dodge: st.dodge || 0, block: 0, dr: 0,
@@ -115,8 +119,10 @@ export function scaleEnemy(id, floor, empower = 0) {
 const r2 = (n) => Math.round(n * 100) / 100;
 
 export class Battle {
-  constructor({ hero, heroHp, enemies, biome = 'bamboo', floor = 1, seed = 1, empower = 0, runState = {}, extraTerrain = [] }) {
+  constructor({ hero, heroHp, enemies, biome = 'bamboo', floor = 1, seed = 1, empower = 0, runState = {}, extraTerrain = [], ascension = 0, sigImpact = 0 }) {
     this.rng = makeRng(seed);
+    this.ascension = ascension;
+    this.sigImpact = sigImpact;
     this.t = 0;
     this.events = [];
     this.floor = floor;
@@ -177,7 +183,7 @@ export class Battle {
   }
 
   spawnEnemy(id, x, empower = 0, extra = {}) {
-    const s = scaleEnemy(id, this.floor, empower);
+    const s = scaleEnemy(id, this.floor, empower, this.ascension);
     const u = {
       id: `e${this.uid++}`, side: 1, ...s, ...extra, x: Math.min(COMBAT.worldW - 3, x), vx: 0, hp: s.maxHp, statuses: {}, shield: 0, alive: true,
       atkTimer: 0.8 + this.rng() * 0.6, buffs: [], immune: {},
@@ -250,6 +256,10 @@ export class Battle {
   // ---------------------------------------------------------------- events & hooks
   emit(e) {
     this.events.push({ t: r2(this.t), ...e });
+  }
+  /** A visual for an item effect (the battle screen plays FX cue `item.<kind>`). */
+  fx(kind, { tgt = null, src = null, x = null } = {}) {
+    this.emit({ type: 'itemFx', kind, tgt: tgt?.id ?? tgt, src: src?.id ?? src, x: x === null ? null : r2(x) });
   }
   label(unit, text, kind = 'proc') {
     this.emit({ type: 'label', tgt: unit?.id || 'hero', text, kind });
@@ -370,10 +380,12 @@ export class Battle {
     }
     // triggers
     if (src === H && total > 0) {
-      if (kind === 'attack') this.trigger('onHit', { target: tgt, dealt: total, crit: ctx.crit, element, sub: opts.sub, counter: opts.counter });
+      if (kind === 'attack') this.trigger('onHit', { target: tgt, dealt: total, crit: ctx.crit, element, sub: opts.sub, counter: opts.counter, copy: opts.copy });
       if (ctx.crit && (kind === 'attack' || kind === 'spell')) this.trigger('onCrit', { target: tgt, dealt: total, kind });
       if (kind === 'spell') this.trigger('onSigHit', { target: tgt, dealt: total, element, crit: ctx.crit });
     }
+    // any damage the hero deals (items like Red Thread share it); dots and shared damage excluded
+    if (src === H && total > 0 && kind !== 'dot' && !opts.shared) this.trigger('onDeal', { target: tgt, dealt: total, kind, element, crit: ctx.crit });
     if (tgt === H && total > 0) this.trigger('onDamaged', { src, dealt: total, kind });
     if (ctx.reaction) this.runReaction(ctx.reaction, ctx);
     // enemy reactive AI
@@ -641,6 +653,11 @@ export class Battle {
     if ((this.collisions[key] || -9) > this.t - 0.5) return;
     this.collisions[key] = this.t;
     this.emit({ type: 'collide', tgt: c.id, src: a.id });
+    // Knockback! echo (Echoing Soul): collisions hurt for a moment
+    if (this.t < (this.flags.collideBoost || 0)) {
+      this.damage(this.hero, c, this.hero.atk * 0.5, { element: 'lightning', kind: 'proc', noKnock: true });
+      this.damage(this.hero, a, this.hero.atk * 0.3, { element: 'lightning', kind: 'proc', noKnock: true });
+    }
     if (a.knockSrc === this.hero) this.trigger('onCollide', { target: c, other: a, speed });
   }
 
@@ -748,7 +765,13 @@ export class Battle {
     }
   }
 
+  /**
+   * Clones, illusions and spirits. spec: { sprite, ttl, interval, dmg, element, follow, decoy,
+   * asHero (strikes are copies of the hero's basic attack, with all on-hit items), mult (their
+   * strength), forceCrit, statusOnHit, x }. At most COMBAT.maxAllies at once (returns null).
+   */
   spawnAlly(spec) {
+    if (this.allies().length >= COMBAT.maxAllies) return null;
     const u = {
       id: `a${this.uid++}`, side: 0, alive: true, statuses: {}, shield: 0, buffs: [], immune: {}, crit: 0.1, critDmg: 1.5,
       def: 0, dodge: 0, maxHp: 1, hp: 1, x: this.hero.x - 6, ...spec, timer: 0.3,
@@ -810,13 +833,28 @@ export class Battle {
   }
 
   // ---------------------------------------------------------------- hero basic attack
-  /** opts.mult scales the swing; opts.counter marks counterattacks/echo swings (items can tell). */
-  heroAttack({ mult = 1, counter = false } = {}) {
+  /**
+   * opts.mult scales the swing; opts.counter marks counterattacks (items can tell). opts.copy marks
+   * a copied attack (clones, mirrors, afterimages, echoes): it has every on-hit effect but doesn't
+   * count toward "every Nth attack" and is never copied again. opts.from: who it visibly comes from
+   * (an ally id). opts.target overrides the target.
+   */
+  heroAttack({ mult = 1, counter = false, copy = false, from = null, forceCrit = false, target: forced = null, kbMult = 1 } = {}) {
     const H = this.hero;
-    const target = H.randomTarget ? this.randomFoe() : this.front();
+    if (copy && (this.copyDepth || 0) >= COMBAT.maxCopyDepth) return;
+    const target = forced?.alive ? forced : H.randomTarget ? this.randomFoe() : this.front();
     if (!target) return;
-    H.attackCount += 1;
-    const payload = { target, count: H.attackCount, mult, extra: [], element: H.attackElement, kbMult: 1, counter };
+    if (!copy) H.attackCount += 1;
+    this.copyDepth = (this.copyDepth || 0) + (copy ? 1 : 0);
+    try {
+      this.attackOnce({ target, mult, counter, copy, from, forceCrit, kbMult });
+    } finally {
+      this.copyDepth -= copy ? 1 : 0;
+    }
+  }
+  attackOnce({ target, mult, counter, copy, from, forceCrit, kbMult }) {
+    const H = this.hero;
+    const payload = { target, count: H.attackCount, mult, extra: [], element: H.attackElement, kbMult, counter, copy, forceCrit };
     this.trigger('onAttack', payload);
     const hits = [{ t: payload.target, mult: payload.mult, primary: true }];
     // pierce: also hit the next enemies behind the target
@@ -830,11 +868,11 @@ export class Battle {
       if (f) hits.push({ t: f, mult: payload.mult * 0.7 });
     }
     for (const e of payload.extra) if (e.target?.alive) hits.push({ t: e.target, mult: e.mult, extra: true });
-    this.emit({ type: 'attack', src: 'hero', tgt: payload.target.id });
+    if (!from) this.emit({ type: 'attack', src: 'hero', tgt: payload.target.id });
     for (const h of hits) {
       if (!h.t.alive) continue;
-      this.emit({ type: 'shot', src: 'hero', tgt: h.t.id, element: payload.element });
-      const dealt = this.damage(H, h.t, H.atk * h.mult, { element: payload.element, kind: 'attack', sub: !h.primary, kbMult: h.primary ? payload.kbMult : 1, forceCrit: h.primary && payload.forceCrit, counter });
+      this.emit({ type: 'shot', src: from || 'hero', tgt: h.t.id, element: payload.element, copy: copy || undefined });
+      const dealt = this.damage(H, h.t, H.atk * h.mult, { element: payload.element, kind: 'attack', sub: !h.primary, kbMult: h.primary ? payload.kbMult : 1, forceCrit: h.primary && payload.forceCrit, counter, copy });
       if (dealt > 0 && H.split > 0 && h.primary) {
         for (let i = 0; i < H.split; i++) {
           const f = this.randomFoe([h.t]);
@@ -886,13 +924,24 @@ export class Battle {
     }
     this.castsThisBattle += 1;
     const H = this.hero;
-    const ctx = { sig: s.id, power: 1 + (H.spellPower || 0), element: s.def.element, first: this.castsThisBattle === 1, echo: false, choice, hp: H.hp / H.maxHp };
+    const ctx = { sig: s.id, power: 1 + (H.spellPower || 0), element: s.def.element, first: this.castsThisBattle === 1, echo: false, choice, hp: H.hp / H.maxHp, momentum: this.hasMomentum() };
     if (s.corrupted) ctx.power *= 0.7;
-    this.trigger('modSignature', ctx);
-    this.castEffect(ctx);
-    this.trigger('onSignature', ctx);
-    this.startCooldown();
-    this.settle();
+    const resolve = () => {
+      this.trigger('modSignature', ctx);
+      this.castEffect(ctx);
+      this.trigger('onSignature', ctx);
+      this.startCooldown();
+      this.settle();
+    };
+    // the cast animation (FX Studio) plays first; the move lands on its impact frame
+    this.emit({ type: 'sigCast', id: s.id, impact: this.sigImpact, choice });
+    if (this.sigImpact > 0) {
+      s.state = 'casting';
+      H.busyUntil = this.t + this.sigImpact;
+      this.schedule(this.sigImpact, () => {
+        if (!this.result) resolve();
+      });
+    } else resolve();
     return { ok: true };
   }
   /** Runs the signature's combat effect (also used by echo items, with ctx.echo set). */
@@ -926,6 +975,10 @@ export class Battle {
   /** Chaotic Scroll: passive triggers now and then spark a random extra effect. */
   chaosProc() {
     if ((this.chaosAt || -9) > this.t - 0.6 || this.rng() >= 0.06) return;
+    this.chaosRoll();
+  }
+  /** One random Chaotic Scroll effect: a status, a shield, a lightning bolt or a shove. */
+  chaosRoll() {
     this.chaosAt = this.t;
     this.inChaos = true;
     const H = this.hero;
@@ -1161,7 +1214,8 @@ export class Battle {
     // hero
     if (H.alive && !this.disabled(H)) {
       const target = this.front();
-      if (target && this.staggered(H)) {
+      // staggered, or mid signature cast animation: hold still (the swing timer keeps counting)
+      if (target && (this.staggered(H) || this.t < (H.busyUntil || 0))) {
         // the swing timer keeps counting, so the hero strikes right after recovering
         H.still = 0;
         H.atkTimer = Math.max(0, H.atkTimer - dt);
@@ -1207,7 +1261,10 @@ export class Battle {
       if (a.follow) a.x = H.x - 7;
       a.timer -= dt;
       const target = this.front();
-      if (a.timer <= 0 && target && a.dmg > 0) {
+      if (a.timer <= 0 && target && a.asHero) {
+        a.timer += a.interval;
+        this.heroAttack({ mult: a.mult ?? 0.5, copy: true, from: a.id, forceCrit: Boolean(a.forceCrit) });
+      } else if (a.timer <= 0 && target && a.dmg > 0) {
         a.timer += a.interval;
         this.emit({ type: 'shot', src: a.id, tgt: target.id, element: a.element || 'physical' });
         this.damage({ ...a, side: 0 }, target, a.dmg, { element: a.element || 'physical', kind: 'proc', canCrit: false });
@@ -1345,6 +1402,15 @@ export class Battle {
       case 'mist':
         this.setTerrain('obscured', 5);
         break;
+      case 'eruption': {
+        // the ground bursts under someone (more often an enemy): fire damage and Burn
+        const target = this.rng() < 0.65 ? this.randomFoe() || H : H;
+        if (!target?.alive || target.flying) break;
+        this.emit({ type: 'biome', kind: 'eruption', tgt: target.id, text: ev.text });
+        this.damage(null, target, target.maxHp * (target === H ? 0.035 : 0.06), { element: 'fire', kind: 'terrain' });
+        this.applyStatus(target, 'burn', { dur: 3, dps: target === H ? 2 : 3 });
+        break;
+      }
       case 'inkrain':
         this.emit({ type: 'biome', kind: 'inkrain', text: ev.text });
         this.applyStatus(H, 'curse', { dur: 3 });
@@ -1359,8 +1425,8 @@ export class Battle {
  * ready after `delay` seconds and answers correctly with `success` probability (`choice` is passed
  * to the move, e.g. a fruit). Used by tests, balance sims and "Skip".
  */
-export function simulateBattle({ hero, heroHp, enemies, biome, floor, seed = 1, empower = 0, runState = {}, autoCast = null, maxT = 120 }) {
-  const b = new Battle({ hero, heroHp, enemies, biome, floor, seed, empower, runState });
+export function simulateBattle({ hero, heroHp, enemies, biome, floor, seed = 1, empower = 0, runState = {}, autoCast = null, maxT = 120, ascension = 0 }) {
+  const b = new Battle({ hero, heroHp, enemies, biome, floor, seed, empower, runState, ascension });
   const castRng = makeRng(seed * 31 + 7);
   const all = [];
   let readySince = null;

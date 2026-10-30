@@ -7,7 +7,10 @@ import { COMBAT } from '../src/game/data/balance.js';
 import { HEROES } from '../src/game/data/heroes.js';
 import { ITEMS } from '../src/game/data/items.js';
 import { SIGNATURES, FRUIT_EFFECTS } from '../src/game/data/signatures.js';
-import { TEMPLATES, FRUITS, NUMBERS, CHEERS, NEGATIONS, BODY_PARTS, TONE_WORDS, generateSigPuzzle, checkSigAnswer, toneOptions } from '../src/learn/signaturePuzzles.js';
+import { TEMPLATES, FRUITS, NUMBERS, CHEERS, NEGATIONS, BODY_PARTS, TONE_WORDS, generateSigPuzzle, checkSigAnswer, toneOptions, numberWord } from '../src/learn/signaturePuzzles.js';
+import { scaleEnemy } from '../src/game/combat.js';
+import { ASCENSION, highestAscension, recordAscensionWin } from '../src/game/data/ascension.js';
+import { startRun } from '../src/game/runManager.js';
 import { baseOf, toneOf } from '../src/learn/pinyinTools.js';
 import { defaultSave } from '../src/store/store.js';
 
@@ -71,8 +74,8 @@ test('every puzzle template generates solvable, varied questions (with and witho
 });
 
 test('fruit: emoji + four pinyin options; the named fruit is the one summoned', () => {
-  assert.equal(FRUITS.length, 10);
-  assert.deepEqual(FRUITS.map((f) => f.id).sort(), Object.keys(FRUIT_EFFECTS).sort(), 'every fruit has a combat effect');
+  assert.equal(FRUITS.filter((f) => !f.tier).length, 10, 'ten fruit before Ascension');
+  assert.deepEqual(FRUITS.filter((f) => !f.tier).map((f) => f.id).sort(), Object.keys(FRUIT_EFFECTS).sort(), 'every base fruit has its own combat effect');
   const p = generateSigPuzzle('fruit', { save: defaultSave(), rng: makeRng(2) });
   assert.equal(p.options.length, 4);
   assert.ok(p.prompt.emoji);
@@ -103,12 +106,13 @@ test('cheer: pick every encouraging phrase; partial or wrong picks fail', () => 
 
 test('negation: one grammatical answer per sentence, and the English meaning disambiguates', () => {
   for (const n of NEGATIONS) {
-    assert.ok(n.options.includes(n.answer), n.id);
+    for (const a of [n.answer].flat()) assert.ok(n.options.includes(a), n.id);
+    if (n.parts) assert.equal(n.parts.length - 1, n.answer.length, `${n.id}: one answer per blank`);
     assert.ok(!(n.options.includes('méi') && n.options.includes('méiyǒu')), `${n.id}: never méi and méiyǒu together`);
     assert.ok(n.en && n.why, `${n.id}: has a meaning and a rule`);
     // grammar spot-checks: shì and huì take bù; yǒu takes méi
-    if (/^(shì|huì)\b/.test(n.after)) assert.equal(n.answer, 'bù', n.id);
-    if (/^yǒu\b/.test(n.after)) assert.equal(n.answer, 'méi', n.id);
+    if (/^(shì|huì)\b/.test(n.after || '')) assert.equal(n.answer, 'bù', n.id);
+    if (/^yǒu\b/.test(n.after || '')) assert.equal(n.answer, 'méi', n.id);
   }
   const p = generateSigPuzzle('negation', { save: defaultSave(), rng: makeRng(5) });
   assert.equal(p.kind, 'blank');
@@ -249,8 +253,8 @@ test('passive triggers modify the real simulation', () => {
   // signature success → echo
   const e = ready('mei', ['golem'], { items: ['echo_cast'] });
   fire(e);
-  const casts = steps(e, 1.5).filter((x) => x.type === 'cast' && x.sig);
-  assert.ok(casts.some((x) => x.echo), 'Echoing Soul repeats the move');
+  const after = steps(e, 1.5);
+  assert.ok(after.some((x) => x.type === 'sig' && x.phase === 'wave'), 'Echoing Soul repeats the move (Mei: a follow-up slash)');
   // Momentum lost → shield
   const m = new Battle({ hero: buildHero({ heroId: 'mei', items: ['second_wind'] }), enemies: ['golem'], seed: 1 });
   m.hero.x = COMBAT.worldW / 2 + 10;
@@ -292,4 +296,72 @@ test('elemental status interactions still work (no resistances needed)', () => {
   b.damage(b.hero, a, 10, { element: 'light', kind: 'proc' });
   assert.ok(b.events.some((e) => e.id === 'purge'));
   assert.ok(b.events.some((e) => e.type === 'hit' && e.tgt === c.id && e.element === 'light'), 'explosion hits the neighbour');
+});
+
+test('Ascension: harder vocabulary joins gradually, every new word is taught first, and puzzles stay fair', () => {
+  const met = (zhs) => {
+    const save = defaultSave();
+    for (const zh of zhs) save.gameWords[zh] = { seen: 3, ok: 3, bad: 0 };
+    return save;
+  };
+  const tiers = { fruit: FRUITS, body: BODY_PARTS, negation: NEGATIONS, cheer: CHEERS };
+  for (const [tpl, pool] of Object.entries(tiers)) {
+    // level 0 never shows a higher-tier word
+    const tier0 = new Set(pool.filter((x) => !x.tier).map((x) => x.zh));
+    for (let s = 1; s < 40; s++) {
+      const p = generateSigPuzzle(tpl, { save: defaultSave(), rng: makeRng(s), level: 0 });
+      for (const zh of p.words) assert.ok(tier0.has(zh), `${tpl} A0 showed ${zh}`);
+    }
+  }
+  // a word never met is taught (answer shown), not tested
+  for (const tpl of Object.keys(TEMPLATES)) {
+    for (let s = 1; s < 25; s++) {
+      const p = generateSigPuzzle(tpl, { save: defaultSave(), rng: makeRng(s), level: 10 });
+      if (tpl !== 'cheer') assert.ok(p.teach, `${tpl}: a brand-new word is taught`);
+      assert.ok(checkSigAnswer(p, p.answer), `${tpl}: the answer checks`);
+      if (p.kind === 'choice') {
+        assert.equal(new Set(p.options.map((o) => o.id)).size, p.options.length, `${tpl}: options are distinct`);
+        assert.ok(p.options.some((o) => o.id === p.answer), `${tpl}: the answer is offered`);
+      }
+    }
+  }
+  // numbers: bigger numbers on higher levels, with four close options and no 2xx
+  const save = met(['num:teens', 'num:tens', 'num:hundreds', ...NUMBERS.map((n) => n.zh)]);
+  let big = 0;
+  for (let s = 1; s < 60; s++) {
+    const p = generateSigPuzzle('number', { save, rng: makeRng(s), level: 8 });
+    if (!p.close) continue;
+    big++;
+    assert.equal(p.options.length, 4);
+    for (const o of p.options) assert.ok(!/^2\d\d$/.test(o.py), 'no 2xx');
+  }
+  assert.ok(big > 20, 'most A8 number puzzles are big numbers');
+  assert.equal(numberWord(12).py, "shí'èr");
+  assert.equal(numberWord(350).py, 'sānbǎi wǔshí');
+  // multi-blank negation: answers in order
+  const nb = NEGATIONS.find((n) => n.parts);
+  const p = { kind: 'blank', answer: nb.answer };
+  assert.ok(checkSigAnswer(p, nb.answer));
+  assert.ok(!checkSigAnswer(p, [nb.answer[0]]), 'every blank must be filled');
+  // tones on Ascension 6+: some two-syllable and sandhi questions, soundless or not
+  const seenKinds = new Set();
+  for (let s = 1; s < 60; s++) {
+    const q = generateSigPuzzle('tone', { save: defaultSave(), rng: makeRng(s), level: 7, soundless: true });
+    seenKinds.add(q.prompt.sandhi ? 'sandhi' : q.prompt.tones ? 'two' : 'one');
+    if (q.prompt.sandhi) assert.ok(q.why && q.prompt.written, 'sandhi explains its rule and shows the written form');
+  }
+  assert.deepEqual([...seenKinds].sort(), ['one', 'sandhi', 'two']);
+});
+
+test('Ascension: enemy HP +10% per level, and each hero unlocks levels independently', () => {
+  assert.equal(scaleEnemy('slime', 1, 0, 0).maxHp * 2, scaleEnemy('slime', 1, 0, 10).maxHp);
+  const save = defaultSave();
+  assert.equal(highestAscension(save, 'mei'), 0);
+  assert.equal(recordAscensionWin(save, 'mei', 0), 1);
+  assert.equal(recordAscensionWin(save, 'mei', 0), null, 'a lower level than the highest unlocks nothing');
+  assert.equal(highestAscension(save, 'lei'), 0, 'other heroes are unaffected');
+  startRun(save, { heroId: 'mei', ascension: 5 });
+  assert.equal(save.adventure.current.ascension, 1, 'clamped to what is unlocked');
+  for (let i = 0; i < 20; i++) recordAscensionWin(save, 'mei', highestAscension(save, 'mei'));
+  assert.equal(highestAscension(save, 'mei'), ASCENSION.max);
 });

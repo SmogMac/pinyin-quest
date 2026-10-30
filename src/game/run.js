@@ -121,20 +121,40 @@ export function generateArea(seed, { act, biome, secrets = {} }) {
   return { act, biome, seed, idx: 0, seq };
 }
 
-/** Picks the next area's biome at random from what is unlocked, avoiding repeats within a run. */
-export function pickBiome(run, unlocked, r = rng(run)) {
-  const pool = unlocked.length ? unlocked : ACT_BIOMES[1];
-  const seen = run.biomesSeen || [];
-  return weighted(r, pool, (id) => (seen.includes(id) ? 0.25 : 1));
+/**
+ * Picks the run's map for each act (one of three per act, 27 combinations). Rolled once when the
+ * run starts and saved; the player only learns an act's map when that act begins. A map already
+ * entered (older saves) is kept.
+ */
+export function rollMaps(seed, current = {}) {
+  const r = makeRng(seed * 7 + 3);
+  const maps = {};
+  for (const act of [1, 2, 3]) {
+    const pool = ACT_BIOMES[act];
+    const pick = pool[Math.floor(r() * pool.length)];
+    maps[act] = current[act] && pool.includes(current[act]) ? current[act] : pick;
+  }
+  return maps;
+}
+/** The map an act uses in this run (act 4 is always the Forgotten Beyond). */
+export function mapForAct(run, act = run.act) {
+  if (act >= 4) return 'beyond';
+  if (!run.maps) {
+    const known = {};
+    if (run.biome && BIOMES[run.biome]?.act === run.act) known[run.act] = run.biome;
+    run.maps = rollMaps(run.seed, known);
+  }
+  return run.maps[act];
 }
 
 // ------------------------------------------------------------------ run lifecycle
-export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId = DEFAULT_HERO, beyondUnlocked = false } = {}) {
+export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId = DEFAULT_HERO, beyondUnlocked = false, ascension = 0 } = {}) {
   const hero = buildHero({ heroId, accountLevel });
   return {
     v: RUN_VERSION,
     seed,
     heroId,
+    ascension, // 0–10, fixed for the whole run (data/ascension.js)
     startedAt: Date.now(),
     act: 1,
     biome: null,
@@ -152,6 +172,7 @@ export function newRun({ seed = (Date.now() % 1e9) | 0, accountLevel = 1, heroId
     stranger: null,
     spring: null,
     beyondUnlocked,
+    maps: rollMaps(seed), // hidden: which map each act uses
     biomesSeen: [],
     strangersSeen: [],
     runState: { phoenixUsed: false },
@@ -185,12 +206,12 @@ export function gainInk(run, base) {
 }
 
 /**
- * Begins the next area: picks its biome (random among `unlocked`, never chosen by the player) and
- * pre-generates its hidden encounter sequence. Only ever called from the areaIntro phase.
+ * Begins the next area: reveals the act's map (rolled when the run started, never chosen by the
+ * player) and pre-generates its hidden encounter sequence. Only ever called from areaIntro.
  */
-export function enterArea(run, { unlocked = [], secrets = {} } = {}) {
+export function enterArea(run, { secrets = {} } = {}) {
   if (run.phase !== 'areaIntro') return;
-  const biome = run.act >= 4 ? 'beyond' : run.act === 3 ? 'lair' : pickBiome(run, unlocked);
+  const biome = mapForAct(run);
   run.biome = biome;
   run.biomesSeen = [...(run.biomesSeen || []), biome];
   run.area = generateArea(run.seed * 13 + run.act * 101 + (run.stats.areas || 0) * 7, { act: run.act, biome, secrets });

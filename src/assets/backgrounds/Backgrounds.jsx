@@ -14,8 +14,9 @@ export const THEMES = {
   thunder: { sky: ['#4a4e62', '#7a7e90'], sun: '#ffe14a', far: '#5f6478', mid: '#4a4f62', midDark: '#3a3e50', near: '#2f3344', ground: '#6a7a5a', dirt: '#4a4a3e', accent: '#ffe14a', ink: true, decor: 'storm' },
   marsh: { sky: ['#4a4458', '#6e6680'], sun: '#c9b8ff', far: '#5a5268', mid: '#463f55', midDark: '#363044', near: '#2a2536', ground: '#4f5a48', dirt: '#2f3328', accent: '#9b6bff', ink: true, decor: 'reeds' },
   temple: { sky: ['#f3e3c6', '#fbf2e0'], sun: '#e8604a', far: '#d8c2a0', mid: '#b89a72', midDark: '#8f7252', near: '#7a3f2e', ground: '#c8a87a', dirt: '#8a6a48', accent: '#e5484d', ink: true, decor: 'lanterns' },
+  volcano: { sky: ['#5a2a22', '#c0603a'], sun: '#ffcf6a', far: '#7a3a2e', mid: '#5a2a24', midDark: '#44201c', near: '#2e1614', ground: '#4a2e26', dirt: '#2a1814', accent: '#ff7a3a', ink: true, decor: 'embers' },
   inklair: { sky: ['#1a1428', '#3a2f52'], sun: '#c9d2ff', far: '#2a2240', mid: '#211a36', midDark: '#18132a', near: '#120e20', ground: '#2f2848', dirt: '#16121f', accent: '#9f7bff', ink: true, decor: 'void' },
-  beyond: { sky: ['#e9e4d2', '#ffffff'], sun: '#111111', far: '#c8c4b8', mid: '#9a968c', midDark: '#6a665e', near: '#3a3732', ground: '#d8d2c2', dirt: '#8a8478', accent: '#111111', ink: true, decor: 'void' },
+  beyond: { sky: ['#e9e4d2', '#ffffff'], sun: '#111111', far: '#c8c4b8', mid: '#9a968c', midDark: '#6a665e', near: '#3a3732', ground: '#d8d2c2', dirt: '#8a8478', accent: '#111111', ink: true, decor: 'scrolls' },
 };
 
 /** Theme-specific foreground details (bamboo stalks, waves, lanterns …). */
@@ -74,6 +75,38 @@ export function BgDecor({ theme }) {
         ))}
       </>
     );
+  } else if (t.decor === 'embers') {
+    // lava glow along the horizon, smoke plumes and rising sparks
+    body = (
+      <>
+        <ellipse cx="200" cy="196" rx="230" ry="16" fill="#ff6a2a" opacity=".22" />
+        {[70, 300].map((x, i) => (
+          <path key={i} d={`M${x} 60 q-14 -20 4 -34 q18 -14 6 -26`} stroke="#3a2420" strokeWidth="10" strokeLinecap="round" fill="none" opacity=".35" />
+        ))}
+        {[24, 88, 150, 212, 268, 330, 384].map((x, i) => (
+          <circle key={x} className="ember-spark" style={{ animationDelay: `${(i * 0.37) % 2}s` }} cx={x} cy={150 + ((i * 23) % 40)} r={1.6 + (i % 2)} fill="#ffb24a" />
+        ))}
+      </>
+    );
+  } else if (t.decor === 'scrolls') {
+    // torn scrolls hanging in the air, fading ink and drifting calligraphy
+    const chars = ['字', '忘', '言', '书', '墨', '心'];
+    body = (
+      <>
+        {[50, 250].map((x, i) => (
+          <g key={x} opacity=".55" transform={`rotate(${i ? 4 : -5} ${x} 20)`}>
+            <rect x={x - 3} y="6" width="46" height="5" rx="2" fill="#6a4a30" />
+            <path d={`M${x} 11 h40 v${48 + i * 10} l-6 -5 l-7 7 l-8 -6 l-9 8 l-10 -6z`} fill="#f4eedc" stroke="#8a8478" strokeWidth="1" />
+            <path d={`M${x + 10} 20 v${24 + i * 6} M${x + 22} 18 v${18 + i * 8} M${x + 32} 22 v14`} stroke="#111" strokeWidth="2.4" opacity=".4" />
+          </g>
+        ))}
+        {chars.map((c, i) => (
+          <text key={c} className="drift-char" style={{ animationDelay: `${i * 0.9}s` }} x={30 + i * 64} y={60 + ((i * 41) % 70)} fontSize={14 + (i % 3) * 5} fill="#111" opacity=".28" fontFamily="serif">
+            {c}
+          </text>
+        ))}
+      </>
+    );
   } else if (t.decor === 'void') {
     body = [40, 130, 220, 320].map((x, i) => <path key={i} d={`M${x} ${30 + i * 12} q20 -8 40 0`} stroke={t.accent} strokeWidth="2" fill="none" opacity=".35" />);
   }
@@ -109,7 +142,7 @@ function Trees({ color, dark, base, scale = 1 }) {
 
 export function BgSky({ theme }) {
   const t = THEMES[theme];
-  const night = ['lair', 'ember', 'inklair', 'caves', 'marsh', 'thunder'].includes(theme);
+  const night = ['lair', 'ember', 'volcano', 'inklair', 'caves', 'marsh', 'thunder'].includes(theme);
   return (
     <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" className="bg-layer-svg">
       <defs>

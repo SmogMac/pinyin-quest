@@ -1,0 +1,3507 @@
+{
+ "version": 1,
+ "sheets": {
+  "hit_dir": {
+   "path": "Impacts/directional_impact_001/directional_impact_001_large_blue",
+   "w": 64,
+   "h": 64,
+   "frames": 7,
+   "cols": 7,
+   "rows": 1
+  },
+  "hit_dust": {
+   "path": "Impacts/directional_impact_002/directional_impact_002_large_white",
+   "w": 140,
+   "h": 50,
+   "frames": 7,
+   "cols": 7,
+   "rows": 1
+  },
+  "hit_ground": {
+   "path": "Impacts/directional_impact_004/directional_impact_004_large_yellow",
+   "w": 80,
+   "h": 80,
+   "frames": 5,
+   "cols": 5,
+   "rows": 1
+  },
+  "hit_spark": {
+   "path": "Impacts/symmetrical_impact_001/symmetrical_impact_001_large_yellow",
+   "w": 96,
+   "h": 96,
+   "frames": 7,
+   "cols": 7,
+   "rows": 1
+  },
+  "hit_ice": {
+   "path": "Impacts/symmetrical_impact_002/symmetrical_impact_002_large_blue",
+   "w": 96,
+   "h": 96,
+   "frames": 10,
+   "cols": 10,
+   "rows": 1
+  },
+  "hit_ring": {
+   "path": "Impacts/symmetrical_impact_003/symmetrical_impact_003_large_yellow",
+   "w": 96,
+   "h": 96,
+   "frames": 7,
+   "cols": 7,
+   "rows": 1
+  },
+  "hit_ring2": {
+   "path": "Impacts/symmetrical_impact_004/symmetrical_impact_004_large_yellow",
+   "w": 96,
+   "h": 96,
+   "frames": 8,
+   "cols": 8,
+   "rows": 1
+  },
+  "hit_crit": {
+   "path": "Impacts/symmetrical_impact_006/symmetrical_impact_006_large_yellow",
+   "w": 160,
+   "h": 160,
+   "frames": 8,
+   "cols": 8,
+   "rows": 1
+  },
+  "boom_fire": {
+   "path": "Explosions/symmetrical_explosion_001/symmetrical_explosion_001_large_orange",
+   "w": 64,
+   "h": 64,
+   "frames": 8,
+   "cols": 8,
+   "rows": 1
+  },
+  "boom_ring": {
+   "path": "Explosions/symmetrical_explosion_004/symmetrical_explosion_004_large_orange",
+   "w": 96,
+   "h": 96,
+   "frames": 12,
+   "cols": 12,
+   "rows": 1
+  },
+  "boom_ground": {
+   "path": "Explosions/epic_explosion_001/epic_explosion_001_large_orange",
+   "w": 128,
+   "h": 128,
+   "frames": 13,
+   "cols": 13,
+   "rows": 1
+  },
+  "boom_big": {
+   "path": "Explosions/epic_explosion_002/epic_explosion_002_large_yellow",
+   "w": 192,
+   "h": 192,
+   "frames": 15,
+   "cols": 15,
+   "rows": 1
+  },
+  "boom_dark": {
+   "path": "Explosions/stylized_explosion_002/stylized_explosion_002_large_violet",
+   "w": 96,
+   "h": 96,
+   "frames": 10,
+   "cols": 10,
+   "rows": 1
+  },
+  "zap_burst": {
+   "path": "Lightning/lightning_burst_001/lightning_burst_001_large_violet",
+   "w": 64,
+   "h": 64,
+   "frames": 8,
+   "cols": 8,
+   "rows": 1,
+   "baked": [
+    140
+   ]
+  },
+  "zap_burst2": {
+   "path": "Lightning/lightning_burst_003/lightning_burst_003_large_violet",
+   "w": 96,
+   "h": 96,
+   "frames": 10,
+   "cols": 10,
+   "rows": 1,
+   "baked": [
+    140
+   ]
+  },
+  "zap_strike": {
+   "path": "Lightning/lightning_strike_001/lightning_strike_001_large_violet",
+   "w": 128,
+   "h": 128,
+   "frames": 7,
+   "cols": 7,
+   "rows": 1,
+   "baked": [
+    140
+   ]
+  },
+  "fire_loop": {
+   "path": "Fire/fire_looping_003A/fire_looping_003A_small_orange",
+   "w": 40,
+   "h": 64,
+   "frames": 5,
+   "cols": 3,
+   "rows": 2
+  },
+  "buff_attack": {
+   "path": "Fantasy Spells/spell_attack_up_001/spell_attack_up_001_large_red",
+   "w": 128,
+   "h": 128,
+   "frames": 18,
+   "cols": 18,
+   "rows": 1
+  },
+  "buff_defense": {
+   "path": "Fantasy Spells/spell_defense_up_001/spell_defense_up_001_large_blue",
+   "w": 128,
+   "h": 128,
+   "frames": 18,
+   "cols": 18,
+   "rows": 1
+  },
+  "buff_haste": {
+   "path": "Fantasy Spells/spell_haste_001/spell_haste_001_large_green",
+   "w": 128,
+   "h": 128,
+   "frames": 29,
+   "cols": 29,
+   "rows": 1
+  },
+  "buff_heal": {
+   "path": "Fantasy Spells/spell_heal_001/spell_heal_001_large_red",
+   "w": 128,
+   "h": 128,
+   "frames": 16,
+   "cols": 16,
+   "rows": 1
+  },
+  "absorb": {
+   "path": "Fantasy Spells/spell_absorb_001/spell_absorb_001_large_violet",
+   "w": 128,
+   "h": 128,
+   "frames": 31,
+   "cols": 31,
+   "rows": 1
+  },
+  "status_poison": {
+   "path": "Fantasy Spells/status_poison_001/status_poison_001_small_green",
+   "w": 48,
+   "h": 48,
+   "frames": 24,
+   "cols": 5,
+   "rows": 5
+  },
+  "status_sparkle": {
+   "path": "Fantasy Spells/status_sparkling_001/status_sparkling_001_small_yellow",
+   "w": 48,
+   "h": 48,
+   "frames": 24,
+   "cols": 5,
+   "rows": 5
+  },
+  "glint": {
+   "path": "Magic Bursts/round_light_burst_001/round_light_burst_001_large_yellow",
+   "w": 256,
+   "h": 144,
+   "frames": 9,
+   "cols": 9,
+   "rows": 1
+  },
+  "sparkle_green": {
+   "path": "Magic Bursts/round_sparkle_burst_002/round_sparkle_burst_002_large_green",
+   "w": 64,
+   "h": 64,
+   "frames": 18,
+   "cols": 18,
+   "rows": 1
+  },
+  "sparkle_red": {
+   "path": "Magic Bursts/round_sparkle_burst_003/round_sparkle_burst_003_large_red",
+   "w": 64,
+   "h": 64,
+   "frames": 17,
+   "cols": 17,
+   "rows": 1
+  },
+  "firework": {
+   "path": "Magic Bursts/round_firework_burst_002/round_firework_burst_002_large_yellow",
+   "w": 96,
+   "h": 96,
+   "frames": 27,
+   "cols": 10,
+   "rows": 3
+  },
+  "coins": {
+   "path": "Magic Bursts/directional_coin_burst_001/directional_coin_burst_001_large_yellow",
+   "w": 128,
+   "h": 128,
+   "frames": 31,
+   "cols": 31,
+   "rows": 1
+  },
+  "bubbles": {
+   "path": "Magic Bursts/directional_bubble_burst_001/directional_bubble_burst_001_small_green",
+   "w": 64,
+   "h": 64,
+   "frames": 40,
+   "cols": 40,
+   "rows": 1,
+   "baked": [
+    90
+   ]
+  },
+  "charge": {
+   "path": "Sci-fi/scifi_charge_up_001/scifi_charge_up_001_large_yellow",
+   "w": 96,
+   "h": 96,
+   "frames": 12,
+   "cols": 12,
+   "rows": 1
+  },
+  "muzzle": {
+   "path": "Sci-fi/scifi_muzzle_flash_003/scifi_muzzle_flash_003_large_yellow",
+   "w": 96,
+   "h": 48,
+   "frames": 8,
+   "cols": 2,
+   "rows": 4
+  },
+  "sparks": {
+   "path": "Sci-fi/scifi_spark_burst_001/scifi_spark_burst_001_large_yellow",
+   "w": 128,
+   "h": 128,
+   "frames": 12,
+   "cols": 12,
+   "rows": 1
+  },
+  "warp": {
+   "path": "Sci-fi/scifi_warp_003/scifi_warp_003_large_blue",
+   "w": 128,
+   "h": 128,
+   "frames": 12,
+   "cols": 12,
+   "rows": 1
+  },
+  "dust": {
+   "path": "Smoke Bursts/directional_smoke_burst_001/directional_smoke_burst_001_large_white",
+   "w": 64,
+   "h": 64,
+   "frames": 21,
+   "cols": 21,
+   "rows": 1
+  },
+  "dust_ring": {
+   "path": "Smoke Bursts/symmetrical_smoke_burst_001/symmetrical_smoke_burst_001_large_brown",
+   "w": 64,
+   "h": 64,
+   "frames": 10,
+   "cols": 10,
+   "rows": 1
+  },
+  "poof": {
+   "path": "Smoke Bursts/stylized_skull_smoke_burst_001/stylized_skull_smoke_burst_001_large_white",
+   "w": 64,
+   "h": 64,
+   "frames": 12,
+   "cols": 12,
+   "rows": 1
+  },
+  "juice_red": {
+   "path": "Splatters/burst_splatter_001/burst_splatter_001_large_red",
+   "w": 64,
+   "h": 64,
+   "frames": 10,
+   "cols": 10,
+   "rows": 1,
+   "baked": [
+    -70,
+    25,
+    50
+   ]
+  },
+  "juice_green": {
+   "path": "Splatters/burst_splatter_003/burst_splatter_003_large_green",
+   "w": 96,
+   "h": 96,
+   "frames": 8,
+   "cols": 5,
+   "rows": 2
+  },
+  "alert": {
+   "path": "Symbols/symbol_alert_001/symbol_alert_001_large_red",
+   "w": 80,
+   "h": 80,
+   "frames": 14,
+   "cols": 14,
+   "rows": 1
+  }
+ },
+ "effects": {
+  "hit_melee": {
+   "sheet": "hit_dir",
+   "scale": 0.75,
+   "anchor": "mid",
+   "dir": "left",
+   "layer": "unit"
+  },
+  "hit_ranged": {
+   "sheet": "hit_spark",
+   "scale": 0.5,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "hit_crit": {
+   "sheet": "hit_crit",
+   "scale": 0.5,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "front"
+  },
+  "hit_spell": {
+   "sheet": "hit_ring2",
+   "scale": 0.55,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "hit_fire": {
+   "sheet": "boom_fire",
+   "scale": 0.7,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "hit_lightning": {
+   "sheet": "zap_burst",
+   "scale": 0.8,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": 140,
+   "blend": "screen"
+  },
+  "hit_ice": {
+   "sheet": "hit_ice",
+   "scale": 0.5,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "hit_dark": {
+   "sheet": "boom_dark",
+   "scale": 0.5,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "hit_earth": {
+   "sheet": "hit_ground",
+   "scale": 0.5,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit"
+  },
+  "hit_wind": {
+   "sheet": "dust",
+   "scale": 0.8,
+   "anchor": "mid",
+   "dir": "right",
+   "layer": "unit"
+  },
+  "hit_light": {
+   "sheet": "hit_ring",
+   "scale": 0.5,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "sparks": {
+   "sheet": "sparks",
+   "scale": 0.45,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "front",
+   "blend": "screen"
+  },
+  "muzzle": {
+   "sheet": "muzzle",
+   "scale": 0.55,
+   "anchor": "front",
+   "dir": "right",
+   "layer": "air"
+  },
+  "hop_dust": {
+   "sheet": "hit_dust",
+   "scale": 0.45,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "ground"
+  },
+  "land_dust": {
+   "sheet": "hit_dust",
+   "scale": 0.6,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "ground"
+  },
+  "knock_dust": {
+   "sheet": "dust",
+   "scale": 0.7,
+   "anchor": "ground",
+   "dir": "right",
+   "layer": "ground"
+  },
+  "wall_slam": {
+   "sheet": "hit_ground",
+   "scale": 0.85,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit"
+  },
+  "wall_dust": {
+   "sheet": "dust_ring",
+   "scale": 0.9,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "ground"
+  },
+  "collide": {
+   "sheet": "hit_ring",
+   "scale": 0.4,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "explode": {
+   "sheet": "boom_ground",
+   "scale": 0.75,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit"
+  },
+  "explode_big": {
+   "sheet": "boom_big",
+   "scale": 0.8,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit"
+  },
+  "shatter": {
+   "sheet": "hit_ice",
+   "scale": 0.9,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "front"
+  },
+  "conduct": {
+   "sheet": "zap_burst2",
+   "scale": 0.75,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": 140,
+   "blend": "screen"
+  },
+  "purify": {
+   "sheet": "firework",
+   "scale": 0.8,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "eclipse": {
+   "sheet": "absorb",
+   "scale": 0.45,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "fire_burst": {
+   "sheet": "boom_ring",
+   "scale": 0.8,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "strike": {
+   "sheet": "zap_strike",
+   "scale": 0.9,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "front",
+   "hue": 140,
+   "blend": "screen"
+  },
+  "buff_attack": {
+   "sheet": "buff_attack",
+   "scale": 0.42,
+   "anchor": "beside",
+   "dir": null,
+   "layer": "unit"
+  },
+  "buff_haste": {
+   "sheet": "buff_haste",
+   "scale": 0.42,
+   "anchor": "beside",
+   "dir": null,
+   "layer": "unit"
+  },
+  "buff_defense": {
+   "sheet": "buff_defense",
+   "scale": 0.42,
+   "anchor": "beside",
+   "dir": null,
+   "layer": "unit"
+  },
+  "heal": {
+   "sheet": "buff_heal",
+   "scale": 0.45,
+   "anchor": "beside",
+   "dir": null,
+   "layer": "unit"
+  },
+  "shield_break": {
+   "sheet": "hit_ice",
+   "scale": 0.7,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "front"
+  },
+  "shield_burst": {
+   "sheet": "hit_ice",
+   "scale": 1.15,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "st_burn": {
+   "sheet": "fire_loop",
+   "scale": 0.8,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit",
+   "loops": 3
+  },
+  "st_shock": {
+   "sheet": "zap_burst",
+   "scale": 0.55,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": 140,
+   "blend": "screen"
+  },
+  "st_weaken": {
+   "sheet": "status_poison",
+   "scale": 0.9,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "st_mark": {
+   "sheet": "status_sparkle",
+   "scale": 0.9,
+   "anchor": "head",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "st_wet": {
+   "sheet": "bubbles",
+   "scale": 0.8,
+   "anchor": "mid",
+   "dir": "right",
+   "layer": "unit",
+   "hue": 90
+  },
+  "st_curse": {
+   "sheet": "absorb",
+   "scale": 0.35,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "st_freeze": {
+   "sheet": "hit_ice",
+   "scale": 0.6,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "st_bleed": {
+   "sheet": "juice_red",
+   "scale": 0.45,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "death_poof": {
+   "sheet": "poof",
+   "scale": 0.7,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "front"
+  },
+  "summon": {
+   "sheet": "warp",
+   "scale": 0.55,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "alert": {
+   "sheet": "alert",
+   "scale": 0.45,
+   "anchor": "head",
+   "dir": null,
+   "layer": "front"
+  },
+  "fruit_splat_red": {
+   "sheet": "juice_red",
+   "scale": 0.75,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "fruit_splat_yellow": {
+   "sheet": "juice_red",
+   "scale": 0.75,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": 50
+  },
+  "fruit_splat_orange": {
+   "sheet": "juice_red",
+   "scale": 0.75,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": 25
+  },
+  "fruit_splat_purple": {
+   "sheet": "juice_red",
+   "scale": 0.75,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": -70
+  },
+  "fruit_splat_green": {
+   "sheet": "juice_green",
+   "scale": 0.55,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "eat_sparkle": {
+   "sheet": "sparkle_red",
+   "scale": 0.8,
+   "anchor": "beside",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "eat_sparkle_green": {
+   "sheet": "sparkle_green",
+   "scale": 0.8,
+   "anchor": "beside",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "blade_glint": {
+   "sheet": "glint",
+   "scale": 0.4,
+   "anchor": "front",
+   "dir": null,
+   "layer": "front",
+   "blend": "screen"
+  },
+  "passion_flare": {
+   "sheet": "boom_ring",
+   "scale": 1,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit"
+  },
+  "frenzy_sparks": {
+   "sheet": "sparks",
+   "scale": 0.7,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "lei_charge": {
+   "sheet": "charge",
+   "scale": 0.55,
+   "anchor": "head",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
+  },
+  "lei_quake": {
+   "sheet": "hit_ground",
+   "scale": 1.2,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit"
+  },
+  "lei_zap": {
+   "sheet": "zap_burst2",
+   "scale": 1,
+   "anchor": "front",
+   "dir": null,
+   "layer": "front",
+   "hue": 140,
+   "blend": "screen"
+  },
+  "chest_burst": {
+   "sheet": "coins",
+   "scale": 0.8,
+   "anchor": "mid",
+   "dir": "right",
+   "layer": "front"
+  },
+  "bless_burst": {
+   "sheet": "firework",
+   "scale": 1,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "front",
+   "blend": "screen"
+  }
+ },
+ "cues": {
+  "hit.crit": {
+   "label": "Critical hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_crit"
+    }
+   ]
+  },
+  "hit.crit.spell": {
+   "label": "Critical signature hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_crit",
+     "scale": 1.2
+    },
+    {
+     "type": "effect",
+     "effect": "sparks"
+    }
+   ]
+  },
+  "hit.crit.frenzy": {
+   "label": "Critical hit during Go All Out!",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_crit"
+    },
+    {
+     "type": "effect",
+     "effect": "sparks"
+    }
+   ]
+  },
+  "hit.spell": {
+   "label": "Signature move hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_spell"
+    }
+   ]
+  },
+  "hit.melee": {
+   "label": "Melee hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_melee",
+     "mirror": "reverse",
+     "x": 0.46,
+     "anchor": "mid",
+     "y": -0.06,
+     "scale": 1.2
+    }
+   ]
+  },
+  "hit.ranged": {
+   "label": "Ranged hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ranged",
+     "x": 0.09,
+     "y": -0.13,
+     "anchor": "mid",
+     "scale": 1.6
+    }
+   ]
+  },
+  "hit.fire": {
+   "label": "Fire hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_fire",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.lightning": {
+   "label": "Lightning hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_lightning",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.ice": {
+   "label": "Ice hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ice",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.water": {
+   "label": "Water hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ice",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.dark": {
+   "label": "Dark hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_dark",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.earth": {
+   "label": "Earth hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_earth",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.wind": {
+   "label": "Wind hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_wind",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "hit.light": {
+   "label": "Light hit",
+   "group": "Hits",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_light",
+     "scale": 0.85,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "unit.hurt": {
+   "label": "Hurt (any unit)",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "hurt",
+     "attach": "target"
+    }
+   ]
+  },
+  "attack.hero.melee": {
+   "label": "Hero melee swing",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "attack",
+     "attach": "target"
+    }
+   ]
+  },
+  "attack.hero.ranged": {
+   "label": "Hero shot",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "shoot",
+     "attach": "target"
+    }
+   ]
+  },
+  "attack.hero.heavy": {
+   "label": "Hero heavy swing (Lei)",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "smash",
+     "attach": "target"
+    }
+   ]
+  },
+  "attack.enemy": {
+   "label": "Enemy attack",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "attack",
+     "attach": "target"
+    }
+   ]
+  },
+  "shot.muzzle": {
+   "label": "Shot launch flash",
+   "group": "Projectiles",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "muzzle",
+     "scale": 0.9,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "unit.dodge": {
+   "label": "Dodge",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "dodge",
+     "attach": "target"
+    }
+   ]
+  },
+  "hero.block": {
+   "label": "Block",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "block",
+     "attach": "target"
+    },
+    {
+     "type": "classic",
+     "fx": "guard",
+     "attach": "target",
+     "dur": 320
+    }
+   ]
+  },
+  "move.hop": {
+   "label": "Hop (dodge jump)",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hop_dust"
+    }
+   ]
+  },
+  "move.land": {
+   "label": "Landing after a push",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "land",
+     "attach": "target"
+    },
+    {
+     "type": "effect",
+     "effect": "land_dust",
+     "scale": 0.8
+    }
+   ]
+  },
+  "move.knock": {
+   "label": "Knocked back (pose)",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "knocked",
+     "attach": "target"
+    }
+   ]
+  },
+  "move.pull": {
+   "label": "Pulled in (pose)",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "pulled",
+     "attach": "target"
+    }
+   ]
+  },
+  "move.knock.big": {
+   "label": "Big knockback burst",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_melee",
+     "scale": 0.8,
+     "mirror": "auto"
+    },
+    {
+     "type": "effect",
+     "effect": "knock_dust",
+     "mirror": "reverse"
+    },
+    {
+     "type": "punch",
+     "dur": 180
+    }
+   ]
+  },
+  "wall.hit": {
+   "label": "Slammed into the wall",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "slammed",
+     "attach": "target"
+    },
+    {
+     "type": "effect",
+     "effect": "wall_slam",
+     "x": 0.35
+    },
+    {
+     "type": "effect",
+     "effect": "wall_dust"
+    },
+    {
+     "type": "punch",
+     "dur": 140
+    },
+    {
+     "type": "sound",
+     "sound": "hit"
+    }
+   ]
+  },
+  "wall.hit.lei": {
+   "label": "Wall slam during Lei’s fights (extra)",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_shock"
+    }
+   ]
+  },
+  "unit.collide": {
+   "label": "Units collide",
+   "group": "Movement",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "collide"
+    }
+   ]
+  },
+  "status.burn": {
+   "label": "Status applied: burn",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_burn"
+    }
+   ]
+  },
+  "status.shock": {
+   "label": "Status applied: shock",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_shock"
+    }
+   ]
+  },
+  "status.weaken": {
+   "label": "Status applied: weaken",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_weaken"
+    }
+   ]
+  },
+  "status.mark": {
+   "label": "Status applied: mark",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_mark"
+    }
+   ]
+  },
+  "status.dazzle": {
+   "label": "Status applied: dazzle",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_mark"
+    }
+   ]
+  },
+  "status.wet": {
+   "label": "Status applied: wet",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_wet"
+    }
+   ]
+  },
+  "status.curse": {
+   "label": "Status applied: curse",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_curse"
+    }
+   ]
+  },
+  "status.frozen": {
+   "label": "Status applied: frozen",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_freeze"
+    }
+   ]
+  },
+  "status.bleed": {
+   "label": "Status applied: bleed",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_bleed"
+    }
+   ]
+  },
+  "reaction.shatter": {
+   "label": "Reaction: shatter",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "shatter"
+    }
+   ]
+  },
+  "reaction.explode": {
+   "label": "Reaction: explode",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "explode"
+    }
+   ]
+  },
+  "reaction.plasma": {
+   "label": "Reaction: plasma",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "explode"
+    }
+   ]
+  },
+  "reaction.conduct": {
+   "label": "Reaction: conduct",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "conduct"
+    }
+   ]
+  },
+  "reaction.wildfire": {
+   "label": "Reaction: wildfire",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fire_burst"
+    }
+   ]
+  },
+  "reaction.purge": {
+   "label": "Reaction: purge",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "purify"
+    }
+   ]
+  },
+  "reaction.eclipse": {
+   "label": "Reaction: eclipse",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "eclipse"
+    }
+   ]
+  },
+  "reaction.melt": {
+   "label": "Reaction: melt",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ice"
+    }
+   ]
+  },
+  "reaction.steam": {
+   "label": "Reaction: steam",
+   "group": "Reactions",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hop_dust"
+    }
+   ]
+  },
+  "buff.passion": {
+   "label": "Buff gained: passion",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_attack",
+     "y": 0.3,
+     "x": 0.8,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.frenzy": {
+   "label": "Buff gained: frenzy",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_attack",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.fierce": {
+   "label": "Buff gained: fierce",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_attack",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.roar": {
+   "label": "Buff gained: roar",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.mango": {
+   "label": "Buff gained: mango",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.hourglass": {
+   "label": "Buff gained: hourglass",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.slipstream": {
+   "label": "Buff gained: slipstream",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.hit_and_run": {
+   "label": "Buff gained: hit_and_run",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.relentless": {
+   "label": "Buff gained: relentless",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.vanguard": {
+   "label": "Buff gained: vanguard",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste",
+     "x": 0.8,
+     "y": 0.3,
+     "scale": 0.6
+    }
+   ]
+  },
+  "buff.pear": {
+   "label": "Buff gained: pear",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense",
+     "x": 0.8
+    }
+   ]
+  },
+  "buff.composure": {
+   "label": "Buff gained: composure",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense",
+     "x": 0.8
+    }
+   ]
+  },
+  "buff.wall": {
+   "label": "Buff gained: wall",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense",
+     "x": 0.8
+    }
+   ]
+  },
+  "buff.wind_rider": {
+   "label": "Buff gained: wind_rider",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense",
+     "x": 0.8
+    }
+   ]
+  },
+  "shield.gain": {
+   "label": "Shield gained",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense",
+     "x": 0.8
+    }
+   ]
+  },
+  "shield.break": {
+   "label": "Shield broken",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "shield_break"
+    }
+   ]
+  },
+  "unit.heal": {
+   "label": "Big heal",
+   "group": "Buffs",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "heal",
+     "anchor": "mid",
+     "scale": 2
+    }
+   ]
+  },
+  "unit.summon": {
+   "label": "Unit summoned / spawned",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "summon",
+     "scale": 2.65
+    }
+   ]
+  },
+  "unit.death": {
+   "label": "Enemy defeated",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "death_poof",
+     "delay": 250,
+     "scale": 3.05
+    }
+   ]
+  },
+  "unit.revive": {
+   "label": "Unit revived",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "cast",
+     "attach": "target"
+    }
+   ]
+  },
+  "enemy.telegraph": {
+   "label": "Enemy charges a big attack",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "alert",
+     "scale": 1.8
+    }
+   ]
+  },
+  "enemy.cast": {
+   "label": "Enemy spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_dark",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.fire": {
+   "label": "Enemy fire spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_fire",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.lightning": {
+   "label": "Enemy lightning spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_lightning",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.ice": {
+   "label": "Enemy ice spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ice",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.water": {
+   "label": "Enemy water spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ice",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.dark": {
+   "label": "Enemy dark spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_dark",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.earth": {
+   "label": "Enemy earth spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_earth",
+     "scale": 2.4,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.wind": {
+   "label": "Enemy wind spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_wind",
+     "scale": 2.8,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "enemy.cast.light": {
+   "label": "Enemy light spell on the hero",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_light",
+     "scale": 1.2,
+     "mirror": "auto"
+    }
+   ]
+  },
+  "biome.lightning": {
+   "label": "Lightning strike (Thunder Highlands)",
+   "group": "Maps",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "strike"
+    }
+   ]
+  },
+  "biome.eruption": {
+   "label": "Eruption (Burning Highlands)",
+   "group": "Maps",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "explode"
+    }
+   ]
+  },
+  "fruit.throw": {
+   "label": "Xinyi throws a fruit",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "throw",
+     "attach": "hero"
+    }
+   ]
+  },
+  "fruit.apple": {
+   "label": "apple: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_red"
+    }
+   ]
+  },
+  "fruit.banana": {
+   "label": "banana: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_yellow"
+    }
+   ]
+  },
+  "fruit.orange": {
+   "label": "orange (tangerine): eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.grape": {
+   "label": "grape: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_purple"
+    }
+   ]
+  },
+  "fruit.watermelon": {
+   "label": "watermelon: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_red",
+     "scale": 1.6
+    },
+    {
+     "type": "effect",
+     "effect": "hit_earth",
+     "scale": 1.6
+    }
+   ]
+  },
+  "fruit.strawberry": {
+   "label": "strawberry: eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.mango": {
+   "label": "mango: eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle_green",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.pear": {
+   "label": "pear: eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle_green",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.peach": {
+   "label": "peach: eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.lemon": {
+   "label": "lemon: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_yellow"
+    }
+   ]
+  },
+  "fruit.pineapple": {
+   "label": "pineapple: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_yellow"
+    }
+   ]
+  },
+  "fruit.cherry": {
+   "label": "cherry: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_red"
+    }
+   ]
+  },
+  "fruit.kiwi": {
+   "label": "kiwi fruit: eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle_green",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.blueberry": {
+   "label": "blueberry: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_purple"
+    }
+   ]
+  },
+  "fruit.cantaloupe": {
+   "label": "cantaloupe (Hami melon): eaten",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "eat",
+     "attach": "hero"
+    },
+    {
+     "type": "effect",
+     "effect": "eat_sparkle",
+     "attach": "hero",
+     "delay": 500
+    }
+   ]
+  },
+  "fruit.coconut": {
+   "label": "coconut: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_green",
+     "scale": 1.6
+    },
+    {
+     "type": "effect",
+     "effect": "hit_earth",
+     "scale": 1.6
+    }
+   ]
+  },
+  "fruit.green_apple": {
+   "label": "green apple: lands",
+   "group": "Xinyi · Fruit Salad!",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fruit_splat_green"
+    }
+   ]
+  },
+  "sig.patient_blade.windup": {
+   "label": "Patient Blade: wind-up",
+   "group": "Mei · Patient Blade",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "stance",
+     "attach": "hero",
+     "dur": 460
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "glint",
+     "attach": "hero",
+     "dur": 460
+    },
+    {
+     "type": "effect",
+     "effect": "blade_glint",
+     "attach": "hero",
+     "delay": 120
+    }
+   ]
+  },
+  "sig.patient_blade.strike": {
+   "label": "Patient Blade: strike",
+   "group": "Mei · Patient Blade",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "attack",
+     "attach": "hero",
+     "dur": 320
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "bladearc",
+     "attach": "hero",
+     "at": "center",
+     "dur": 800
+    },
+    {
+     "type": "punch",
+     "dur": 200
+    }
+   ]
+  },
+  "sig.patient_blade.wave": {
+   "label": "Patient Blade: echo wave",
+   "group": "Mei · Patient Blade",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "attack",
+     "attach": "hero",
+     "dur": 320
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "bladewave",
+     "attach": "hero",
+     "at": "center",
+     "dur": 800
+    },
+    {
+     "type": "punch",
+     "dur": 200
+    }
+   ]
+  },
+  "sig.burning_passion.aura": {
+   "label": "Burning Passion!",
+   "group": "Huojin · Burning Passion!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "cast",
+     "attach": "hero",
+     "dur": 520
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "passion",
+     "color": "#ff7a3d",
+     "attach": "hero",
+     "dur": 1100
+    },
+    {
+     "type": "effect",
+     "effect": "passion_flare",
+     "attach": "hero"
+    }
+   ]
+  },
+  "sig.deny_danger.scroll": {
+   "label": "Deny Danger!: shield",
+   "group": "Ruizhe · Deny Danger!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "cast",
+     "attach": "hero",
+     "dur": 520
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "scroll",
+     "attach": "hero",
+     "dur": 900
+    },
+    {
+     "type": "effect",
+     "effect": "shield_burst",
+     "attach": "hero"
+    }
+   ]
+  },
+  "sig.deny_danger.repel": {
+   "label": "Deny Danger!: shockwave",
+   "group": "Ruizhe · Deny Danger!",
+   "layers": [
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "repel",
+     "attach": "hero",
+     "dur": 800
+    },
+    {
+     "type": "effect",
+     "effect": "land_dust",
+     "attach": "hero",
+     "scale": 1.6
+    },
+    {
+     "type": "punch",
+     "dur": 180
+    }
+   ]
+  },
+  "sig.go_all_out.frenzy": {
+   "label": "Go All Out!",
+   "group": "Fuyun · Go All Out!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "cast",
+     "attach": "hero",
+     "dur": 360
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "frenzy",
+     "color": "#62e0b4",
+     "attach": "hero",
+     "dur": 900
+    },
+    {
+     "type": "effect",
+     "effect": "frenzy_sparks",
+     "attach": "hero"
+    }
+   ]
+  },
+  "sig.knockback.swing": {
+   "label": "Knockback!: wind-up",
+   "group": "Lei · Knockback!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "windup",
+     "attach": "hero",
+     "dur": 380
+    },
+    {
+     "type": "classic",
+     "fx": "spell",
+     "kind": "swing",
+     "attach": "hero",
+     "dur": 420
+    },
+    {
+     "type": "effect",
+     "effect": "lei_charge",
+     "attach": "hero"
+    }
+   ]
+  },
+  "sig.knockback.blast": {
+   "label": "Knockback!: blast",
+   "group": "Lei · Knockback!",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "smash",
+     "attach": "hero",
+     "dur": 520,
+     "delay": 30
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "attach": "hero",
+     "x": 6,
+     "delay": 780,
+     "scale": 1.65
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "attach": "hero",
+     "x": 5,
+     "delay": 690,
+     "scale": 1.65
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "attach": "hero",
+     "x": 4,
+     "delay": 610,
+     "scale": 1.65
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "attach": "hero",
+     "x": 3,
+     "delay": 510,
+     "scale": 1.65
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "attach": "hero",
+     "x": 2,
+     "delay": 400,
+     "scale": 1.65
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "attach": "hero",
+     "x": 0.98,
+     "delay": 290,
+     "scale": 1.65
+    },
+    {
+     "type": "shake",
+     "dur": 450,
+     "delay": 210
+    },
+    {
+     "type": "punch",
+     "dur": 260,
+     "delay": 240
+    }
+   ]
+  },
+  "sig.fizzle": {
+   "label": "Signature move fizzles",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "hurt",
+     "attach": "hero",
+     "dur": 300
+    }
+   ]
+  },
+  "enemy.slam": {
+   "label": "Enemy ground slam",
+   "group": "Creatures",
+   "layers": [
+    {
+     "type": "shake",
+     "dur": 300
+    },
+    {
+     "type": "punch",
+     "dur": 220
+    },
+    {
+     "type": "effect",
+     "effect": "land_dust",
+     "attach": "target",
+     "anchor": "ground",
+     "scale": 2.45
+    },
+    {
+     "type": "pose",
+     "state": "land",
+     "attach": "target"
+    }
+   ]
+  },
+  "item.bomb": {
+   "label": "Item explosion (bombs, mines, lanterns)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "explode",
+     "scale": 0.6
+    }
+   ]
+  },
+  "item.thread": {
+   "label": "Red Thread link",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_light",
+     "hue": -70,
+     "scale": 0.8
+    },
+    {
+     "type": "effect",
+     "effect": "eclipse",
+     "attach": "source",
+     "scale": 0.6
+    }
+   ]
+  },
+  "item.splash": {
+   "label": "Water splash (Tide Tip, Rain Dancer)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_wet",
+     "scale": 1.2
+    }
+   ]
+  },
+  "item.ember": {
+   "label": "Ember ring / healing ember",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fire_burst",
+     "scale": 0.6
+    }
+   ]
+  },
+  "item.shockwave": {
+   "label": "Shockwave (Pile-Up, items)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "wall_dust",
+     "scale": 0.7
+    },
+    {
+     "type": "effect",
+     "effect": "land_dust",
+     "scale": 0.7
+    }
+   ]
+  },
+  "item.rock": {
+   "label": "Rock wall / boundary stone",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "scale": 0.9
+    },
+    {
+     "type": "punch",
+     "dur": 120
+    }
+   ]
+  },
+  "item.healwave": {
+   "label": "Healing wave",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "purify",
+     "hue": 150,
+     "scale": 1.2
+    }
+   ]
+  },
+  "item.glow": {
+   "label": "Glowing aura (Afterglow, spirit spark)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "bless_burst",
+     "scale": 0.6
+    }
+   ]
+  },
+  "item.windblade": {
+   "label": "Spinning wind blade",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_wind",
+     "mirror": "auto"
+    }
+   ]
+  },
+  "item.wallcrack": {
+   "label": "Wall slam crack (Wallbreaker)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "wall_slam",
+     "scale": 0.8
+    }
+   ]
+  },
+  "item.tide": {
+   "label": "Tidal wave (Ebb and Flow)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "knock_dust",
+     "scale": 1.3
+    },
+    {
+     "type": "effect",
+     "effect": "st_wet",
+     "scale": 1.4,
+     "delay": 80
+    }
+   ]
+  },
+  "item.thrust": {
+   "label": "Long Spear thrust",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_melee",
+     "mirror": "auto",
+     "scale": 0.8,
+     "x": 0.4
+    }
+   ]
+  },
+  "item.thorns": {
+   "label": "Thorn burst",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "shield_break",
+     "hue": 80,
+     "scale": 1.1
+    }
+   ]
+  },
+  "item.swords": {
+   "label": "Ring of Swords",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "sparks",
+     "scale": 0.6
+    }
+   ]
+  },
+  "item.swap": {
+   "label": "Trickster’s Mask swap",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "summon",
+     "scale": 0.8
+    },
+    {
+     "type": "effect",
+     "effect": "summon",
+     "attach": "source",
+     "scale": 0.8
+    }
+   ]
+  },
+  "item.star": {
+   "label": "Falling star (Lucky Star)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "strike",
+     "hue": -100,
+     "scale": 0.8
+    },
+    {
+     "type": "effect",
+     "effect": "bless_burst",
+     "delay": 120,
+     "scale": 0.7
+    }
+   ]
+  },
+  "item.standard": {
+   "label": "Battle Standard planted",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_attack"
+    }
+   ]
+  },
+  "item.shieldblast": {
+   "label": "Bursting Shield explosion",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "explode_big",
+     "scale": 0.6
+    },
+    {
+     "type": "punch",
+     "dur": 120
+    }
+   ]
+  },
+  "item.seal": {
+   "label": "Gravity Seal opens",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "eclipse",
+     "scale": 1.4,
+     "loops": 2
+    }
+   ]
+  },
+  "item.implode": {
+   "label": "Gravity Seal detonates",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "eclipse",
+     "scale": 1.8
+    },
+    {
+     "type": "effect",
+     "effect": "explode",
+     "scale": 0.8,
+     "delay": 80
+    },
+    {
+     "type": "shake",
+     "dur": 220
+    }
+   ]
+  },
+  "item.reservoir": {
+   "label": "Reservoir blades released",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ice",
+     "hue": -40
+    }
+   ]
+  },
+  "item.reflect": {
+   "label": "Rebound reflection",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_light",
+     "scale": 0.8
+    }
+   ]
+  },
+  "item.radiance": {
+   "label": "Resonance burst",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "purify",
+     "scale": 1.4
+    }
+   ]
+  },
+  "item.pool": {
+   "label": "Still Water pool",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_wet",
+     "scale": 1.8,
+     "loops": 2
+    }
+   ]
+  },
+  "item.phoenix": {
+   "label": "Paper Phoenix rebirth",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "passion_flare",
+     "scale": 1.2
+    },
+    {
+     "type": "shake",
+     "dur": 300
+    }
+   ]
+  },
+  "item.petal": {
+   "label": "Five Petals released",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "eat_sparkle",
+     "scale": 0.8
+    }
+   ]
+  },
+  "item.peach": {
+   "label": "Peach dropped (Bumper Crop)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "eat_sparkle_green"
+    },
+    {
+     "type": "effect",
+     "effect": "heal",
+     "delay": 100
+    }
+   ]
+  },
+  "item.mine": {
+   "label": "Ink Mine planted",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_curse",
+     "scale": 0.8
+    }
+   ]
+  },
+  "item.lantern": {
+   "label": "Paper lantern drifts down",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_burn",
+     "loops": 2,
+     "scale": 0.8
+    }
+   ]
+  },
+  "item.lance": {
+   "label": "Ink lance (Overflowing Ink)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_dark",
+     "scale": 1.2
+    }
+   ]
+  },
+  "item.impact": {
+   "label": "Turtle’s Revenge impact",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "lei_quake"
+    },
+    {
+     "type": "effect",
+     "effect": "hit_crit",
+     "delay": 40
+    },
+    {
+     "type": "punch",
+     "dur": 160
+    }
+   ]
+  },
+  "item.hourglass": {
+   "label": "Broken Hourglass surge",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_haste"
+    }
+   ]
+  },
+  "item.fortress": {
+   "label": "Stone fortress (Rooted Mountain)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense"
+    },
+    {
+     "type": "effect",
+     "effect": "lei_quake",
+     "scale": 0.6
+    }
+   ]
+  },
+  "item.firestorm": {
+   "label": "Firestorm",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "fire_burst",
+     "scale": 1.4
+    }
+   ]
+  },
+  "item.field": {
+   "label": "Lingering field",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "eclipse",
+     "scale": 1.2,
+     "loops": 2
+    }
+   ]
+  },
+  "item.elements": {
+   "label": "Elemental storm (Erudite Storm)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "purify",
+     "scale": 1.2
+    },
+    {
+     "type": "effect",
+     "effect": "conduct",
+     "delay": 100
+    }
+   ]
+  },
+  "item.drum": {
+   "label": "Thunderclap Drum boom",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "lei_quake"
+    },
+    {
+     "type": "effect",
+     "effect": "wall_dust",
+     "delay": 60
+    },
+    {
+     "type": "shake",
+     "dur": 200
+    }
+   ]
+  },
+  "item.crescent": {
+   "label": "Blood Moon crescent",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_dark",
+     "scale": 0.9
+    }
+   ]
+  },
+  "item.clone": {
+   "label": "Clone appears",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "summon",
+     "scale": 0.7
+    }
+   ]
+  },
+  "item.spirit": {
+   "label": "Spirit companion appears",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "summon",
+     "scale": 0.5
+    },
+    {
+     "type": "effect",
+     "effect": "bless_burst",
+     "scale": 0.4
+    }
+   ]
+  },
+  "item.calm": {
+   "label": "Poised Mind calm wave",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "bless_burst",
+     "scale": 0.5,
+     "hue": 120
+    }
+   ]
+  },
+  "item.blood": {
+   "label": "Hemorrhage tear",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_bleed",
+     "scale": 1.2
+    }
+   ]
+  },
+  "item.blight": {
+   "label": "Contagion blight",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "st_weaken",
+     "scale": 1.4
+    }
+   ]
+  },
+  "item.blade": {
+   "label": "Honed Edge spectral blade",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "blade_glint",
+     "attach": "target"
+    }
+   ]
+  },
+  "item.bell_small": {
+   "label": "Golden Bell rings",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "buff_defense",
+     "hue": 40
+    }
+   ]
+  },
+  "item.bell": {
+   "label": "Giant golden bell falls (Golden Light)",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "explode_big",
+     "hue": 40,
+     "scale": 1.3,
+     "delay": 150
+    },
+    {
+     "type": "shake",
+     "dur": 350
+    },
+    {
+     "type": "sound",
+     "sound": "crit",
+     "delay": 150
+    }
+   ]
+  },
+  "item.beam": {
+   "label": "Sun Mirror beam",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_light",
+     "scale": 1.3
+    }
+   ]
+  },
+  "item.barrier": {
+   "label": "Storm Barrier raised",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "conduct",
+     "scale": 1.2
+    }
+   ]
+  },
+  "item.ball": {
+   "label": "Bouncing ball",
+   "group": "Items",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hit_ranged",
+     "scale": 0.8
+    }
+   ]
+  }
+ },
+ "projectiles": {
+  "orb": {
+   "label": "orb shot",
+   "look": "orb",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 6,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "dart": {
+   "label": "dart shot",
+   "look": "dart",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 6,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "fire": {
+   "label": "fire shot",
+   "look": "fire",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 6,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "ice": {
+   "label": "ice shot",
+   "look": "ice",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 10,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "water": {
+   "label": "water shot",
+   "look": "water",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 10,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "dark": {
+   "label": "dark shot",
+   "look": "dark",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 13,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "light": {
+   "label": "light shot",
+   "look": "light",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 13,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "physical": {
+   "label": "physical shot",
+   "look": "physical",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 13,
+   "minMs": 160,
+   "maxMs": 380,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "earth": {
+   "label": "earth shot",
+   "look": "earth",
+   "sprite": null,
+   "size": 1.3,
+   "msPerPct": 20,
+   "minMs": 140,
+   "maxMs": 490,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "wind": {
+   "label": "wind shot",
+   "look": "wind",
+   "sprite": null,
+   "size": 3.45,
+   "msPerPct": 6.9,
+   "minMs": 184,
+   "maxMs": 437,
+   "delay": 0,
+   "arc": false,
+   "apex": 1,
+   "spin": 540,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": "shot.muzzle"
+  },
+  "thrown": {
+   "label": "Thrown by enemies (goblin ink, embers)",
+   "look": "inherit",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 20,
+   "minMs": 250,
+   "maxMs": 730,
+   "delay": 0,
+   "arc": true,
+   "apex": 0.25,
+   "spin": 10,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0.08,
+   "launch": null,
+   "enemies": [
+    "goblin",
+    "ember_imp"
+   ]
+  },
+  "fruit.shot": {
+   "label": "Grapes and fruit shards",
+   "look": "fruit",
+   "sprite": null,
+   "size": 1.5,
+   "msPerPct": 6,
+   "minMs": 420,
+   "maxMs": 420,
+   "delay": 0,
+   "arc": true,
+   "apex": 0.8,
+   "spin": 0,
+   "tilt": true,
+   "launchX": 0.19,
+   "launchY": 0.11,
+   "launch": null
+  },
+  "fruit.throw": {
+   "label": "Xinyi’s thrown fruit",
+   "look": "fruit",
+   "sprite": null,
+   "size": 1.6,
+   "msPerPct": 6,
+   "minMs": 560,
+   "maxMs": 560,
+   "delay": 140,
+   "arc": true,
+   "apex": 0.95,
+   "spin": 0,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0.08,
+   "launch": null
+  },
+  "Iron Ball": {
+   "label": "Iron Ball",
+   "look": "physical",
+   "sprite": null,
+   "size": 3.4,
+   "msPerPct": 1,
+   "minMs": 270,
+   "maxMs": 380,
+   "delay": 200,
+   "arc": true,
+   "apex": 0.25,
+   "spin": 0,
+   "tilt": false,
+   "launchX": 0.15,
+   "launchY": 0.6,
+   "launch": "attack.hero.heavy",
+   "trail": {
+    "count": 6,
+    "gap": 16,
+    "size": 1.2,
+    "opacity": 0.3,
+    "color": "#ffffff",
+    "style": "echo",
+    "blend": true
+   },
+   "tail": false
+  }
+ },
+ "poses": {
+  "attack": {
+   "dur": 280,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.09,
+     "x": -6,
+     "rot": -4,
+     "sx": 0.96,
+     "sy": 1.04
+    },
+    {
+     "at": 0.3,
+     "x": 22,
+     "rot": 6,
+     "sx": 1.08,
+     "sy": 0.94
+    }
+   ]
+  },
+  "shoot": {
+   "dur": 280,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.18,
+     "x": -7,
+     "rot": -5,
+     "sx": 1.03,
+     "sy": 0.97
+    }
+   ]
+  },
+  "smash": {
+   "dur": 420,
+   "ease": "cubic-bezier(0.3, 0, 0.3, 1)",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.35,
+     "x": -10,
+     "rot": -12,
+     "sx": 0.95,
+     "sy": 1.08
+    },
+    {
+     "at": 0.58,
+     "x": 18,
+     "rot": 9,
+     "sx": 1.1,
+     "sy": 0.9
+    },
+    {
+     "at": 0.8,
+     "x": 10,
+     "sx": 1.04,
+     "sy": 0.96
+    }
+   ]
+  },
+  "cast": {
+   "dur": 420,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.25,
+     "sx": 1.06,
+     "sy": 0.9
+    },
+    {
+     "at": 0.6,
+     "y": -10,
+     "sx": 0.96,
+     "sy": 1.08
+    }
+   ]
+  },
+  "hurt": {
+   "dur": 220,
+   "ease": "linear",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.11,
+     "x": -8
+    },
+    {
+     "at": 0.21,
+     "x": 5
+    },
+    {
+     "at": 0.32,
+     "x": -2
+    },
+    {
+     "at": 0.49,
+     "x": 1
+    }
+   ]
+  },
+  "dodge": {
+   "dur": 360,
+   "ease": "linear",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.29,
+     "y": -27,
+     "rot": -10,
+     "sx": 0.96,
+     "sy": 1.04,
+     "x": -20
+    },
+    {
+     "at": 0.88,
+     "sx": 1.06,
+     "sy": 0.92
+    },
+    {
+     "at": 0.05,
+     "sy": 0.86,
+     "y": 28,
+     "rot": 11
+    },
+    {
+     "at": 0.65,
+     "rot": 5,
+     "y": 0
+    },
+    {
+     "at": 0.59,
+     "y": 0
+    },
+    {
+     "at": 0.51,
+     "y": -10,
+     "rot": 7,
+     "x": -9
+    }
+   ]
+  },
+  "block": {
+   "dur": 320,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.35,
+     "x": -4,
+     "sx": 0.94,
+     "sy": 1.04
+    }
+   ]
+  },
+  "knocked": {
+   "dur": 320,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.3,
+     "rot": -12,
+     "sx": 0.95,
+     "sy": 1.04,
+     "x": 3
+    },
+    {
+     "at": 0,
+     "x": -33,
+     "rot": 26
+    },
+    {
+     "at": 0.03,
+     "x": -50,
+     "rot": -5
+    }
+   ]
+  },
+  "pulled": {
+   "dur": 320,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.3,
+     "rot": 12,
+     "sx": 0.95,
+     "sy": 1.04
+    }
+   ]
+  },
+  "land": {
+   "dur": 180,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.4,
+     "sx": 1.17,
+     "sy": 0.82
+    },
+    {
+     "at": 0,
+     "sy": 1.2,
+     "sx": 0.85
+    }
+   ]
+  },
+  "eat": {
+   "dur": 600,
+   "ease": "ease-in-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.2,
+     "rot": -3,
+     "sx": 1.04,
+     "sy": 0.96
+    },
+    {
+     "at": 0.4,
+     "rot": 3,
+     "sx": 0.98,
+     "sy": 1.04
+    },
+    {
+     "at": 0.6,
+     "rot": -3,
+     "sx": 1.04,
+     "sy": 0.96
+    },
+    {
+     "at": 0.8,
+     "rot": 3,
+     "sx": 0.98,
+     "sy": 1.04
+    }
+   ]
+  },
+  "throw": {
+   "dur": 380,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.3,
+     "x": -6,
+     "rot": -10
+    },
+    {
+     "at": 0.6,
+     "x": 10,
+     "rot": 8,
+     "sx": 1.05,
+     "sy": 1.05
+    }
+   ]
+  },
+  "stance": {
+   "dur": 460,
+   "ease": "ease-in",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 1,
+     "x": -6,
+     "sx": 1.04,
+     "sy": 0.9,
+     "bright": 1.15
+    }
+   ],
+   "hold": true
+  },
+  "windup": {
+   "dur": 380,
+   "ease": "ease-in",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 1,
+     "x": -10,
+     "rot": -14,
+     "sx": 0.95,
+     "sy": 1.08
+    }
+   ],
+   "hold": true
+  },
+  "slammed": {
+   "dur": 380,
+   "ease": "ease-out",
+   "origin": 0,
+   "keys": [
+    {
+     "at": 0.3,
+     "x": -4,
+     "sx": 0.8,
+     "sy": 1.1
+    },
+    {
+     "at": 0.6,
+     "sx": 1.06,
+     "sy": 0.94
+    }
+   ]
+  },
+  "Jump Smash": {
+   "dur": 400,
+   "ease": "ease-out",
+   "origin": 50,
+   "keys": [
+    {
+     "at": 0.5,
+     "y": -8
+    },
+    {
+     "at": 0.14,
+     "y": 21,
+     "x": -25,
+     "rot": -90
+    },
+    {
+     "at": 0.14,
+     "y": -32
+    }
+   ],
+   "group": "Lei"
+  }
+ }
+}

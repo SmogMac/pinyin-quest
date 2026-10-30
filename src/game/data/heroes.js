@@ -170,7 +170,7 @@ export const HEROES = {
   lei: {
     py: 'Léi', zh: '雷', en: 'Lei', title: 'Thunder Brawler', sprite: 'lei',
     blurb: 'Cocky, impatient and always spoiling for a fight. Swings a ball and chain and dares the storm to keep up.',
-    stats: { maxHp: 160, atk: 18, def: 5, aspd: 0.7, crit: 0.05, critDmg: 1.6, dodge: 0, speedPct: -0.1, kbRes: 0.35 },
+    stats: { maxHp: 155, atk: 16.5, def: 5, aspd: 0.7, crit: 0.05, critDmg: 1.6, dodge: 0, speedPct: -0.1, kbRes: 0.35 },
     attack: { range: 20, element: 'physical', style: 'Ball and chain (slow, heavy, hits around the target, knocks foes far back)', fx: 'chain', kb: 7 },
     signature: 'knockback',
     strength: 'Heavy hits that splash; controls the whole battlefield with Knockback!.',

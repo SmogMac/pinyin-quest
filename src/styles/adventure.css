@@ -1244,3 +1244,50 @@
 .hero-pick .link-btn {
   align-self: center;
 }
+
+/* Ascension picker (hero selection) */
+.asc-picker {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.asc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+.asc-levels {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  gap: 4px;
+}
+.asc-lv {
+  min-width: 0;
+  height: 32px;
+  border: 1.5px solid var(--line, rgba(0, 0, 0, 0.15));
+  border-radius: 8px;
+  background: var(--card, #fff);
+  color: inherit;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.asc-lv.on {
+  background: var(--violet, #7a4dff);
+  border-color: var(--violet, #7a4dff);
+  color: #fff;
+}
+.asc-lv.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.asc-desc {
+  margin: 0;
+  line-height: 1.35;
+}
+.asc-unlocked {
+  font-weight: 800;
+  color: var(--violet, #7a4dff);
+}

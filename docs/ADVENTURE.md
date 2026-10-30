@@ -88,23 +88,44 @@ Reactions (element hitting a status): **dǎo diàn** Conduct (lightning + wet, c
 
 Terrain states: wet, frozen, burning, electrified, corrupted, blessed, obscured, unstable. Elements change terrain (frozen + fire → wet; wet + lightning → electrified; corrupted + light → blessed; …).
 
-## Biomes (`data/biomes.js`)
+## Acts and maps (`data/biomes.js`)
 
-| Act | Biome | Mechanics | Unlock |
+Every act has three maps. When a run starts, one map per act is rolled from the run's seed and saved in `run.maps` (27 possible journeys); the player only learns an act's map when that act begins (fade to black, then a title card names the act and the map). Maps are never picked by the player and no longer need vocabulary. Acts 1 and 2 end with the map's guardian; every Act 3 map ends with the Ink Dragon.
+
+| Act | Map | Mechanics |
+| --- | --- | --- |
+| 1 · yí wàng jiāo yě, The Forgotten Outskirts | zhú lín 竹林 Bamboo Forest | wind gusts push enemies and spread fire; wind/fire +15% |
+| | hǎi biān 海边 Coastal Ruins | waves make everyone Wet; lightning +20%, fire −15% |
+| | shān dòng 山洞 Earthen Caves | tremors stun at random; earth +20% |
+| 2 · pò suì zhī dì, The Fractured Lands | xuě shān 雪山 Frozen Mountain | frozen ground slows and Chills; fire melts it to water |
+| | léi yǔ 雷雨 Thunder Highlands | lightning strikes; wet ground electrifies |
+| | zhǎo zé 沼泽 Shadow Marsh | corrupted ground: healing −40%, dark +30%, shadows regenerate |
+| 3 · lóng zhī lǐng yù, The Dragon's Dominion | dēng lóng sì 灯笼寺 Lantern Temple | blessed ground; floors reflect 20% of enemy shots; the Lantern King appears as an elite |
+| | huǒ shān 火山 Burning Highlands | eruptions burn random fighters; fire +25%, ice −20%; Ember Imps, Cinder Bats, Magma Golems |
+| | mò rǎn shān gǔ 墨染山谷 Ink-Corrupted Valley | corrupted ground and ink rain; Ink Knights |
+| 4 · tūn zì zhī lù, The Word Eater's Road | yí wàng zhī dì 遗忘之地 The Forgotten Beyond | torn scrolls and drifting characters; tremors, mist, ink rain; harder fights, rare rewards (after 3 dragon victories) |
+
+New enemy kin reuse existing sprites with a `tint` (`ember`, `ink`; CSS filters in `battle-fx.css`). A run saved before maps existed keeps the map it is in and gets the rest rolled (`mapForAct`).
+
+Secrets: a **secret merchant** (better stock, discounts) appears once you know qián (钱, money); the **Jade Rabbit** (玉兔, a secret boss with an epic reward) waits before the dragon in the Lantern Temple once you know yuè liang and have beaten the dragon.
+
+## Ascension (`data/ascension.js`)
+
+Each hero has Ascension levels 0–10, unlocked independently: beating the Ink Dragon on a hero's highest unlocked level opens the next one for that hero (`save.adventure.ascension[heroId]`). The level is picked on the hero-selection screen (locked levels show a padlock) and fixed for the run (`run.ascension`).
+
+- **Enemy HP** +10% per level, cumulative (`ASCENSION.enemyHpPerLevel`; A10 = double).
+- **Mandarin difficulty** rises inside each hero's own minigame. Pool entries carry a `tier` (tier 1 from A3, tier 2 from A6); a word the player hasn't met is always taught on the spot first, never tested, and every puzzle stays answerable in Soundless Mode.
+
+| Hero | A0–2 | A3–5 | A6–10 |
 | --- | --- | --- | --- |
-| 1 | zhú lín 竹林 Bamboo Forest | wind gusts push enemies and spread fire; wind/fire +15% | always |
-| 1 | hǎi biān 海边 Coastal Ruins | waves make everyone Wet; lightning +20%, fire −15% | always |
-| 1 | shān dòng 山洞 Earthen Caves | tremors stun at random; earth +20% | always |
-| 2 | xuě shān 雪山 Frozen Mountain | frozen ground slows and Chills; fire melts it to water | learn lěng / xuě / dōng tiān |
-| 2 | léi yǔ 雷雨 Thunder Highlands | lightning strikes; wet ground electrifies | learn diàn / yǔ |
-| 2 | zhǎo zé 沼泽 Shadow Marsh | corrupted ground: healing −40%, dark +30%, shadows regenerate | learn hēi / yè |
-| 2 | sì miào 寺庙 Lantern Temple | blessed ground; floors reflect 20% of enemy shots | learn guāng / dēng / yáng guāng |
-| 3 | mò lóng dòng 墨龙洞 Ink Dragon's Lair | ink rain Curses you | always |
-| 4 | yí wàng zhī dì 遗忘之地 The Forgotten Beyond | tremors, mist, ink rain | 3 dragon victories |
+| Xinyi (fruit) | 10 common fruit | + pineapple, cherry, kiwi, blueberry; look-alike options | + cantaloupe, coconut, green apple |
+| Mei (numbers) | 1–10 | 11–20 (A3–4), then 21–99 (A5–6); four close options (15/50, 14/40) | hundreds (A7+, no 2xx) |
+| Huojin (phrases) | short phrases | longer phrases, some with a context line | nuanced: encouraging negations (bié fàngqì), gentle put-downs (suàn le ba) |
+| Ruizhe (negation) | bù / méi / méiyǒu | + bié, “can’t manage it” (tīng bu dǒng) | two or three blanks in one sentence |
+| Fuyun (body) | everyday parts | + tongue, arm, finger, shoulder, knee, neck; same-region options | + bone, brain, heart, lungs, wrist, elbow |
+| Lei (tones) | one syllable | two-syllable words | tone sandhi (nǐ hǎo → ní hǎo, bù shì → bú shì, yī + tone) |
 
-If no Act-2 land is unlocked yet, Act-1 lands are offered again (harder), so nobody is stranded.
-
-Secrets: a **secret merchant** (better stock, discounts) appears once you know qián (钱, money); the **Jade Rabbit** (玉兔, a secret boss with an epic reward) waits before the guardian of the Lantern Temple once you know yuè liang and have beaten the dragon.
+With the simulated player (85% puzzle success, same skill at every level) dragon wins fall from 58–70% at A0 to about 40% at A3, 25% at A6 and 12–23% at A10.
 
 ## Bosses
 
@@ -114,7 +135,17 @@ Secrets: a **secret merchant** (better stock, discounts) appears once you know q
 
 ## Passive items and synergies (`data/items.js`, `data/synergies.js`)
 
-140 passive items and 54 synergies, all universal: every item and synergy is built on systems every hero shares, so none is ever useless for the hero you play (they can still be stronger on some heroes). Each item has an icon (`src/assets/itemArt.js`), a stable id and derived `tags`. Items are real gameplay triggers, not descriptions: on basic attack, crit, dodge, block, taking damage, healing, shield creation and break, knockback, wall slams and enemy collisions, entering the enemy half, while Momentum is active or inactive, when it expires, on signature success or failure, while a signature buff runs, on status application, on enemy death, on elemental reactions and on entering a new battlefield. Examples: Ghost Step (dodges leave a decoy), Counterstrike, Afterimage, Last Stand, Overextension, Second Wind, Invader's Mark, Cursed Crown, Echoing Soul, Lingering Power, Final Word, Ink Resonance, Reckless Magic, Wallbreaker, Chain Collision, Mirror Brush, Ink Parasite, Broken Hourglass, Chaotic Scroll, Twin Shadows, Overflowing Ink. Synergies chain them: e.g. Thunder Counter (counterattacks always crit → Spark Arc lightning), Demolition (wall slams explode), Double Helping (Echoing Soul serves a second fruit at full power), Storm Flail (wall slams arc lightning), Peel Dancer (slipping enemies trigger your dodge effects).
+153 passive items and 60 synergies, all universal: every item and synergy is built on systems every hero shares, and `tests/items.test.js` proves it. The same seeded battles run with and without each item, for all six heroes, against one enemy, a group and the dragon; every item must change at least two of the three, and every synergy must change something for every hero. Items can still be stronger on some heroes. Each item has an icon (`src/assets/itemArt.js`), a stable id and derived `tags`.
+
+How items stay universal:
+
+- **Create your own condition.** Dodge items grant dodge; shield, heal and status items make their own shields, heals and statuses; knockback items have their own shoves.
+- **Secondary projectiles.** Item projectiles are separate from the hero's attack, so melee heroes fire them too.
+- **Bosses count.** Area effects include their centre, and bosses give kill-based items a "milestone" every 10% of their health.
+- **Copied attacks.** Clones, mirrors and afterimages make real copies of your basic attack, carrying every on-hit effect. Copies never count toward "every Nth attack" and are never copied again. At most 6 allies at once.
+- **Visuals.** Item effects play FX Studio cues `item.<kind>`.
+
+Building blocks live in `data/itemKit.js`. The overhaul and its reasoning: **[ITEM_CHANGELOG.md](ITEM_CHANGELOG.md)**. Every item: **[ITEMS.md](ITEMS.md)**.
 
 ## Extending the game
 
@@ -126,7 +157,7 @@ Everything below is data; the engine never needs to change for normal content.
 - **Minigame**: add a template in `learn/signaturePuzzles.js` (`TEMPLATES`: pool, `generate`) and, if it needs a new interaction, a body in `components/SignaturePuzzle.jsx` (`BODIES`).
 - **Hero** (`data/heroes.js`): stats, `attack` style (`attack.fx` picks the attack visuals), `signature` move id, `passive` with hooks (passives are never silenced; optional `meter` shows a charge gauge), unlock rule, sprite key.
 - **Enemy** (`data/enemies.js`): stats, `element`, `onHitStatus`, `ai` behaviours (charge, summon, guard, hex, silence, hazard, shell, corrupt, devour, regen, nuke, onSpellHit) and boss `phases`.
-- **Biome** (`data/biomes.js`): terrain, periodic events, element modifiers, enemy pools, guardian/boss, unlock words; add it to `ACT_BIOMES`.
+- **Biome** (`data/biomes.js`): terrain, periodic events, element modifiers, enemy pools, guardian or boss; add it to its act in `ACT_BIOMES` (three maps per act; a run rolls one per act).
 - **Story / events**: `data/story.js` (beats shown once) and `data/events.js` (encounter questions and rewards).
 
 Safety: hooks run with a recursion depth limit (`COMBAT.maxHookDepth`) and a per-step proc budget (`COMBAT.maxProcsPerStep`), self-feeding items keep short internal cooldowns, ground effects are capped, and a crashing hook is logged instead of breaking the battle. `npm test` runs every item and synergy in a real battle and checks that, for every hero, a build holding *every* item at once still resolves quickly.

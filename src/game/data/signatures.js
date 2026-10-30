@@ -28,6 +28,8 @@ export const FRUIT_EFFECTS = {
   peach: { thrown: false, desc: 'Eaten: heals steadily over a few seconds.' },
 };
 export const FRUIT_IDS = Object.keys(FRUIT_EFFECTS);
+// Ascension fruit (learned on higher Ascensions) act like a base fruit (`as`)
+const FRUIT_ALIAS = { pineapple: 'apple', green_apple: 'apple', cherry: 'grape', blueberry: 'grape', coconut: 'watermelon', kiwi: 'peach', cantaloupe: 'orange' };
 
 /**
  * Summons one fruit and resolves it. `bonus` fruit (from items) don't trigger "every Nth fruit"
@@ -36,12 +38,13 @@ export const FRUIT_IDS = Object.keys(FRUIT_EFFECTS);
 export function serveFruit(b, id, c, { bonus = false } = {}) {
   const H = b.hero;
   const p = c.power;
-  const fx = FRUIT_EFFECTS[id] || FRUIT_EFFECTS.apple;
+  const kind = FRUIT_ALIAS[id] || id;
+  const fx = FRUIT_EFFECTS[kind] || FRUIT_EFFECTS.apple;
   const target = b.front();
   b.emit({ type: 'fruit', fruit: id, thrown: fx.thrown, tgt: target?.id, bonus });
   const dur = (s) => b.sigDur(s);
   const hit = (f, amount, opts = {}) => b.damage(H, f, amount, { kind: 'spell', element: 'physical', ...opts, fruit: id });
-  switch (id) {
+  switch (kind) {
     case 'apple':
       if (!target) break;
       hit(target, 45 * p, { element: 'earth' });
@@ -102,7 +105,7 @@ export function serveFruit(b, id, c, { bonus = false } = {}) {
       break;
     default:
   }
-  b.trigger('onFruit', { fruit: id, thrown: fx.thrown, target, power: p, bonus });
+  b.trigger('onFruit', { fruit: kind, thrown: fx.thrown, target, power: p, bonus });
 }
 
 // ------------------------------------------------------------------ signature moves
@@ -112,7 +115,11 @@ export const SIGNATURES = {
     blurb: 'Xinyi wants to summon a fruit, but she can’t remember what it’s called. Help her name it!',
     desc: 'Name the fruit and Xinyi summons it. Apples, grapes, watermelons, bananas and lemons are thrown at enemies; oranges, strawberries, mangoes, pears and peaches she eats.',
     cast(b, c) {
-      serveFruit(b, FRUIT_EFFECTS[c.choice] ? c.choice : pick(b, FRUIT_IDS), c);
+      serveFruit(b, FRUIT_EFFECTS[c.choice] || FRUIT_ALIAS[c.choice] ? c.choice : pick(b, FRUIT_IDS), c);
+    },
+    // Echoing Soul: a second, random fruit
+    echo(b, c) {
+      serveFruit(b, pick(b, FRUIT_IDS), c, { bonus: true });
     },
   },
   patient_blade: {
@@ -135,7 +142,16 @@ export const SIGNATURES = {
         b.trigger('onBlade', { targets, power: c.power, echo: c.echo });
       });
     },
+    // Echoing Soul: a weaker follow-up sword slash across the field
+    echo(b, c) {
+      b.emit({ type: 'sig', id: 'patient_blade', phase: 'wave' });
+      for (const f of b.foes()) {
+        b.damage(b.hero, f, b.hero.atk * 0.8 * c.power, { kind: 'spell', element: 'physical', blade: true });
+        b.knockback(f, 2, { src: b.hero });
+      }
+    },
   },
+
   burning_passion: {
     hero: 'huojin', py: 'rèqíng ránshāo', zh: '热情燃烧', en: 'Burning Passion!', template: 'cheer', element: 'fire', cd: 11, icon: 'flame',
     blurb: 'Huojin is fuelled by a fiery fighting spirit. Hype him up with every encouraging phrase!',
@@ -157,6 +173,15 @@ export const SIGNATURES = {
       onBuffEnd(b, p) {
         if (p.id === 'passion') b.flags.passionPower = 0;
       },
+    },
+    // Echoing Soul: the passion burns 3s longer and a fire pulse rolls across the field
+    echo(b, c) {
+      if (!b.extendBuff(b.hero, 'passion', 3, 6)) b.addBuff(b.hero, { id: 'passion', sig: true, dur: 3, stats: { aspdPct: 0.35, dmgPct: 0.2 } });
+      b.emit({ type: 'cast', spell: 'burst', element: 'fire' });
+      for (const f of b.foes()) {
+        b.damage(b.hero, f, b.hero.atk * 0.5 * c.power, { kind: 'spell', element: 'fire' });
+        b.applyStatus(f, 'burn', { dps: 5 * c.power, src: b.hero });
+      }
     },
   },
   deny_danger: {
@@ -180,6 +205,16 @@ export const SIGNATURES = {
       }
       b.trigger('onRepel', { targets: pushed, power: c.power });
     },
+    // Echoing Soul: another shield pulse and a second repelling shockwave
+    echo(b, c) {
+      const H = b.hero;
+      b.emit({ type: 'sig', id: 'deny_danger', phase: 'repel' });
+      b.addShield(H, 22 * c.power);
+      for (const f of b.foes()) {
+        b.damage(H, f, 6, { kind: 'spell', element: 'earth', noKnock: true });
+        b.knockback(f, f.x - H.x < 45 ? 14 : 9, { src: H });
+      }
+    },
   },
   go_all_out: {
     hero: 'fuyun', py: 'quánlì yǐfù', zh: '全力以赴', en: 'Go All Out!', template: 'body', element: 'wind', cd: 11, icon: 'wind',
@@ -190,6 +225,11 @@ export const SIGNATURES = {
       b.addBuff(b.hero, { id: 'frenzy', sig: true, dur, stats: { crit: 1, aspdPct: 0.15, critDmg: 0.25 * Math.max(0, c.power - 1) } });
       b.grantMomentum(b.hero, dur);
       b.emit({ type: 'sig', id: 'go_all_out', phase: 'frenzy' });
+    },
+    // Echoing Soul: a shadow clone of Fuyun whose strikes are all critical hits
+    echo(b, c) {
+      b.spawnAlly({ sprite: 'shade', ttl: 3, interval: 0.32, asHero: true, mult: 0.5 * c.power, forceCrit: true });
+      b.fx('clone', { tgt: 'hero' });
     },
   },
   knockback: {
@@ -218,6 +258,15 @@ export const SIGNATURES = {
         }
         b.trigger('onLaunch', { targets: pushed, total, power: c.power });
       });
+    },
+    // Echoing Soul: a second shockwave, and for a moment every collision crackles with lightning
+    echo(b, c) {
+      b.emit({ type: 'sig', id: 'knockback', phase: 'blast' });
+      b.flags.collideBoost = b.t + 1.5;
+      for (const f of b.foes()) {
+        b.damage(b.hero, f, b.hero.atk * 0.3 * c.power, { kind: 'spell', element: 'lightning', noKnock: true });
+        b.knockback(f, f.boss ? 8 : 14, { src: b.hero, force: true });
+      }
     },
   },
 };

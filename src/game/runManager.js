@@ -7,6 +7,7 @@
 // synergies found, and lifetime statistics (which only ever grow).
 import { RUN } from './data/balance.js';
 import { RUN_VERSION, newRun, scoreOf } from './run.js';
+import { allowedAscension } from './data/ascension.js';
 
 /** An unfinished run the player can continue (runs from an older version don't count). */
 export function activeRun(save) {
@@ -29,12 +30,13 @@ function recordRun(save, run, { won = false, abandoned = false } = {}) {
  * The new run always begins from the hero's base build: their signature move, no items, no route,
  * no battle.
  */
-export function startRun(save, { heroId, accountLevel, seed } = {}) {
+export function startRun(save, { heroId, accountLevel, seed, ascension = 0 } = {}) {
   abandonRun(save);
   save.adventure.current = newRun({
     heroId,
     accountLevel,
     seed,
+    ascension: allowedAscension(save, heroId, ascension),
     beyondUnlocked: (save.adventure.dragonWins || 0) >= RUN.dragonWinsForBeyond,
   });
   return save.adventure.current;

@@ -6,3 +6,6 @@ tools/source/
 
 # source art (large originals); processed copies live in public/assets
 icon_asset_pack/
+
+# VFX pack source (license: bundle with the game, do not redistribute the pack); packed copies live in public/assets/vfx
+/vfx/

@@ -5,7 +5,7 @@ export const ACCOUNT_HP_PER_LEVEL = 2;
 export const ACCOUNT_HP_CAP = 30;
 
 // Each passive item held adds this much basic-attack damage (keeps passive-only builds viable).
-export const COLLECTION_ATK_PER_ITEM = 0.06;
+export const COLLECTION_ATK_PER_ITEM = 0.03;
 
 export const RUN = {
   dragonWinsForBeyond: 3,
@@ -28,10 +28,10 @@ export const SCALING = {
   atkPerFloor: 0.04,
   defPerFloor: 0.2, // flat def added per floor
   // global knobs applied to every enemy (bosses use their own)
-  enemyHp: 1.0,
-  enemyAtk: 0.38,
-  bossHp: 1.2,
-  bossAtk: 0.66,
+  enemyHp: 1.27,
+  enemyAtk: 0.44,
+  bossHp: 1.45,
+  bossAtk: 0.74,
 };
 
 export const COMBAT = {
@@ -42,6 +42,8 @@ export const COMBAT = {
   maxDodge: 0.6,
   maxHookDepth: 6, // chain reactions stop recursing past this depth
   maxProcsPerStep: 400, // safety valve for absurd builds
+  maxAllies: 6, // clones, illusions and spirits on the field at once
+  maxCopyDepth: 1, // copied attacks (clones, mirrors, afterimages) never copy themselves again
   // positioning (world units; the camera maps the world onto the stage separately)
   worldW: 130, // battlefield width; the Hero Zone is the left half, the Enemy Zone the right
   zoneBuffer: 3, // Momentum hysteresis around the midpoint, so standing on the line can't flicker

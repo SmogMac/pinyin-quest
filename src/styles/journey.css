@@ -550,3 +550,82 @@
   font-weight: 900;
   white-space: nowrap;
 }
+
+/* the act's map is revealed as the act begins */
+.act-reveal {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  z-index: 7;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: rgba(10, 6, 20, 0.62);
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: act-reveal 3.2s ease-out forwards;
+}
+.act-reveal small {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.act-reveal b {
+  font-size: clamp(1rem, 4.5vw, 1.35rem);
+}
+.act-reveal span {
+  color: var(--gold, #f5c84a);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+@keyframes act-reveal {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  15%,
+  75% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Burning Highlands sparks and the Beyond's drifting characters */
+.ember-spark {
+  animation: ember-rise 2.4s linear infinite;
+}
+@keyframes ember-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-120px);
+    opacity: 0;
+  }
+}
+.drift-char {
+  animation: drift-char 6s ease-in-out infinite alternate;
+}
+@keyframes drift-char {
+  to {
+    transform: translate(10px, -14px);
+    opacity: 0.08;
+  }
+}
+.reduced-motion .ember-spark,
+.reduced-motion .drift-char {
+  animation: none;
+}

@@ -102,6 +102,7 @@ function SignaturePuzzle({ puzzle, sig, practiced, onDone, onCancel }) {
             <Bi py="xīn cí" en="New word" inline />
           </b>{' '}
           {puzzle.kind === 'multi' ? 'Phrases you haven’t met yet show their meaning.' : 'Here’s the answer: tap it to learn it.'}
+          {puzzle.why && puzzle.kind === 'choice' && <small className="sig-why">{puzzle.why}</small>}
         </div>
       )}
       <Body puzzle={puzzle} submit={submit} result={result} soundless={s.settings.soundless} hideHanzi={s.settings.hideHanzi} />
@@ -117,14 +118,26 @@ function SignaturePuzzle({ puzzle, sig, practiced, onDone, onCancel }) {
 }
 
 // ------------------------------------------------------------------------------- prompts
-/** A simple body with one part lit (for parts with no clear emoji, like the head or belly). */
+// joints and small parts, lit as rings on the figure: [cx, cy] for each side
+const FIGURE_SPOTS = {
+  shoulder: [[19, 32], [41, 32]],
+  elbow: [[13, 42], [47, 42]],
+  wrist: [[8.5, 50], [51.5, 50]],
+  knee: [[22.5, 71], [37.5, 71]],
+};
+/** A simple body with one part lit (for parts with no clear emoji, like the head, knee or neck). */
 function BodyFigure({ part }) {
-  const on = (p) => (p === part ? 'var(--el, #ff7a3d)' : '#e9e2f5');
+  const lit = 'var(--el, #ff7a3d)';
+  const on = (p) => (p === part ? lit : '#e9e2f5');
   return (
     <svg className="sig-figure" viewBox="0 0 60 90" aria-hidden="true">
+      <rect x="26" y="24" width="8" height="8" rx="2" fill={on('neck')} stroke="#2b1d4e" strokeWidth="2" />
       <circle cx="30" cy="16" r="11" fill={on('head')} stroke="#2b1d4e" strokeWidth="2.5" />
       <rect x="18" y="29" width="24" height="30" rx="9" fill={on('belly')} stroke="#2b1d4e" strokeWidth="2.5" />
       <path d="M18 34 8 50M42 34l10 16M24 58l-3 26M36 58l3 26" stroke="#2b1d4e" strokeWidth="5" strokeLinecap="round" />
+      {(FIGURE_SPOTS[part] || []).map(([cx, cy]) => (
+        <circle key={cx} cx={cx} cy={cy} r="4.2" fill={lit} stroke="#2b1d4e" strokeWidth="1.5" />
+      ))}
     </svg>
   );
 }
@@ -152,10 +165,12 @@ function Prompt({ puzzle, soundless, result, hideHanzi }) {
     if (puzzle.template === 'tone' && !soundless) speak(p.zh);
   }, [puzzle.template, p.zh, soundless]);
   if (puzzle.template === 'tone') {
-    const showClue = soundless || hint || puzzle.teach || result;
+    // sandhi is about the rule, so its clue is the written form (always shown), not a contour
+    const showClue = !p.sandhi && (soundless || hint || puzzle.teach || result);
     return (
       <div className="cast-prompt">
         <p className="cast-en">“{p.en}”</p>
+        {p.sandhi && <span className="sig-word">{p.written}</span>}
         {!soundless && (
           <div className="cast-audio">
             <button type="button" className="audio-btn" onClick={() => speak(p.zh)} aria-label="Play the word again">
@@ -171,7 +186,13 @@ function Prompt({ puzzle, soundless, result, hideHanzi }) {
             )}
           </div>
         )}
-        {showClue && <ToneContour tone={p.tone} />}
+        {showClue && (
+          <div className="tone-clues">
+            {(p.tones || [p.tone]).map((t, i) => (
+              <ToneContour key={i} tone={t} />
+            ))}
+          </div>
+        )}
         <p className="cast-sub">{p.q}</p>
       </div>
     );
@@ -193,11 +214,12 @@ function Prompt({ puzzle, soundless, result, hideHanzi }) {
 function ChoiceBody({ puzzle, submit, result, soundless, hideHanzi }) {
   const [picked, setPicked] = useState(null);
   const locked = Boolean(result);
-  const numbers = puzzle.template === 'number';
+  // 1–10 sit in a fixed grid; bigger numbers are four close options
+  const numbers = puzzle.template === 'number' && !puzzle.close;
   return (
     <div className="cast-body">
       <Prompt puzzle={puzzle} soundless={soundless} result={result} hideHanzi={hideHanzi} />
-      <div className={`cast-options pinyin-opts ${numbers ? 'sig-numbers' : ''}`}>
+      <div className={`cast-options pinyin-opts ${numbers ? 'sig-numbers' : ''} ${puzzle.close ? 'sig-big-numbers' : ''}`}>
         {puzzle.options.map((o) => {
           const correct = o.id === puzzle.answer;
           const teachOff = puzzle.teach && !correct && !locked;
@@ -214,7 +236,7 @@ function ChoiceBody({ puzzle, submit, result, soundless, hideHanzi }) {
             >
               <span className="opt-py">{o.py}</span>
               {/* meanings show once answered (and while teaching), never as a giveaway */}
-              {(locked || (puzzle.teach && correct)) && o.en && (!numbers || locked || correct) && <small className="opt-en">{o.en}</small>}
+              {(locked || (puzzle.teach && correct)) && o.en && (puzzle.template !== 'number' || locked || correct) && <small className="opt-en">{o.en}</small>}
               {locked && !hideHanzi && o.zh && <small className="opt-zh">{o.zh}</small>}
             </button>
           );
@@ -242,6 +264,7 @@ function MultiBody({ puzzle, submit, result, hideHanzi }) {
           return (
             <button key={o.id} type="button" className={`sig-chip ${state}`} aria-pressed={on} disabled={locked} onClick={() => toggle(o.id)}>
               <span className="opt-py">{o.py}</span>
+              {o.ctx && <small className="opt-ctx">({o.ctx})</small>}
               {(locked || o.fresh) && <small className="opt-en">{o.en}</small>}
               {locked && !hideHanzi && <small className="opt-zh">{o.zh}</small>}
               {locked && <i className="chip-mark">{o.positive ? '✓' : on ? '✗' : ''}</i>}
@@ -258,19 +281,27 @@ function MultiBody({ puzzle, submit, result, hideHanzi }) {
   );
 }
 
-/** Drag a negation into the blank, or tap it. */
+/** Drag a negation into the blank, or tap it. Several blanks fill left to right. */
 function BlankBody({ puzzle, submit, result, hideHanzi }) {
-  const [filled, setFilled] = useState(null);
-  const [drag, setDrag] = useState(null); // { id, x, y }
-  const slotRef = useRef(null);
-  const locked = Boolean(result);
   const p = puzzle.prompt;
+  const parts = p.parts || [p.before, p.after];
+  const answers = Array.isArray(puzzle.answer) ? puzzle.answer : [puzzle.answer];
+  const n = parts.length - 1;
+  const [fills, setFills] = useState([]);
+  const [drag, setDrag] = useState(null); // { id, x, y }
+  const slotRef = useRef(null); // the blank being filled next
+  const locked = Boolean(result);
+  const full = fills.length >= n;
+  const filled = full ? fills[n - 1] : null;
   const place = (id) => {
-    if (locked || filled) return;
+    if (locked || full) return;
     play('pick');
-    setFilled(id);
-    setTimeout(() => submit(id), 280);
+    const next = [...fills, id];
+    setFills(next);
+    if (next.length >= n) setTimeout(() => submit(n > 1 ? next : id), 280);
   };
+  // while teaching, only the right tile for the next blank is offered
+  const wanted = answers[fills.length];
   const overSlot = (x, y) => {
     const r = slotRef.current?.getBoundingClientRect();
     return r && x >= r.left - 24 && x <= r.right + 24 && y >= r.top - 24 && y <= r.bottom + 24;
@@ -279,25 +310,33 @@ function BlankBody({ puzzle, submit, result, hideHanzi }) {
     <div className="cast-body">
       <Prompt puzzle={puzzle} result={result} hideHanzi={hideHanzi} />
       <p className="sig-sentence">
-        <span>{p.before}</span>
-        <span ref={slotRef} className={`sig-blank ${filled ? 'filled' : ''} ${drag && overSlot(drag.x, drag.y) ? 'hover' : ''} ${locked ? (result.ok ? 'right' : 'wrong') : ''}`}>
-          {filled || '＿＿'}
-        </span>
-        <span>{p.after}</span>
+        {parts.map((part, i) => (
+          <span key={i} className="sig-part">
+            {part && <span>{part}</span>}
+            {i < n && (
+              <span
+                ref={i === fills.length ? slotRef : undefined}
+                className={`sig-blank ${fills[i] ? 'filled' : ''} ${i === fills.length && drag && overSlot(drag.x, drag.y) ? 'hover' : ''} ${locked ? (fills[i] === answers[i] ? 'right' : 'wrong') : ''}`}
+              >
+                {fills[i] || '＿＿'}
+              </span>
+            )}
+          </span>
+        ))}
       </p>
       {puzzle.teach && !locked && <p className="sig-why center">{puzzle.why}</p>}
       <div className="sig-tiles">
         {puzzle.options.map((o) => {
-          const correct = o.id === puzzle.answer;
+          const correct = o.id === wanted;
           return (
             <button
               key={o.id}
               type="button"
               className={`sig-tile ${filled === o.id ? 'used' : ''} ${puzzle.teach && correct && !locked ? 'teach-glow' : ''}`}
-              disabled={locked || Boolean(filled) || (puzzle.teach && !correct)}
+              disabled={locked || full || (puzzle.teach && !correct)}
               style={drag?.id === o.id ? { transform: `translate(${drag.dx}px, ${drag.dy}px)`, zIndex: 3 } : undefined}
               onPointerDown={(e) => {
-                if (locked || filled) return;
+                if (locked || full) return;
                 e.currentTarget.setPointerCapture?.(e.pointerId);
                 setDrag({ id: o.id, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, dx: 0, dy: 0, moved: false });
               }}

@@ -1,9 +1,10 @@
-// Biomes (battlefields). Each one changes combat: starting terrain, periodic events, element
-// modifiers and its own enemies. Acts pick from these; locked biomes need vocabulary.
+// Biomes (battlefields, called maps in the game). Each one changes combat: starting terrain,
+// periodic events, element modifiers and its own enemies. Every act has three maps; a run picks one
+// per act at random when it starts (hidden until the act begins), so a run is one of 27 journeys.
 //
 // terrain: terrain states present all battle · events: periodic {kind, every, text}
 // elementMods: damage multiplier by element (both sides) · reflect: chance enemy shots bounce back
-// pools: enemy groups for battle / elite nodes · guardian: act boss · unlock: vocabulary (any one)
+// pools: enemy groups for battle / elite nodes · guardian: act boss · boss: final boss (acts 3, 4)
 
 export const BIOMES = {
   bamboo: {
@@ -40,7 +41,7 @@ export const BIOMES = {
     guardian: 'stone_king',
   },
   frozen: {
-    py: 'xuě shān', zh: '雪山', en: 'Frozen Mountain', act: 2, theme: 'frozen', unlock: ['冷', '雪', '冬天'],
+    py: 'xuě shān', zh: '雪山', en: 'Frozen Mountain', act: 2, theme: 'frozen',
     desc: 'Frozen ground slows and Chills. Fire melts it into water, which lightning can electrify. Ice +20%.',
     terrain: ['frozen'],
     events: [{ kind: 'snow', every: 11, text: 'xià xuě · Snow' }],
@@ -52,7 +53,7 @@ export const BIOMES = {
     guardian: 'frost_matriarch',
   },
   thunder: {
-    py: 'léi yǔ', zh: '雷雨', en: 'Thunder Highlands', act: 2, theme: 'thunder', unlock: ['电', '雨'],
+    py: 'léi yǔ', zh: '雷雨', en: 'Thunder Highlands', act: 2, theme: 'thunder',
     desc: 'Lightning strikes the battlefield (more often enemies). Wet ground becomes Electrified. Lightning +25%.',
     events: [{ kind: 'lightning', every: 6, text: 'dǎ léi · Thunder' }],
     elementMods: { lightning: 1.25 },
@@ -63,7 +64,7 @@ export const BIOMES = {
     guardian: 'thunder_qilin',
   },
   marsh: {
-    py: 'zhǎo zé', zh: '沼泽', en: 'Shadow Marsh', act: 2, theme: 'marsh', unlock: ['黑', '夜'],
+    py: 'zhǎo zé', zh: '沼泽', en: 'Shadow Marsh', act: 2, theme: 'marsh',
     desc: 'Corrupted ground: healing −40%, Dark +30%, shadows regenerate. Light purifies it.',
     terrain: ['corrupted'],
     events: [{ kind: 'mist', every: 12, text: 'mí wù · Mist' }],
@@ -74,31 +75,45 @@ export const BIOMES = {
     },
     guardian: 'bog_witch',
   },
+  // ----------------------------------------------------------- act 3: the Dragon's Dominion
+  // every act-3 map ends with the Ink Dragon
   temple: {
-    py: 'sì miào', zh: '寺庙', en: 'Lantern Temple', act: 2, theme: 'temple', unlock: ['光', '灯', '阳光'],
-    desc: 'Blessed ground: light and healing +25%. Polished floors reflect 20% of enemy shots.',
+    py: 'dēng lóng sì', zh: '灯笼寺', en: 'Lantern Temple', act: 3, theme: 'temple',
+    desc: 'Blessed ground: light and healing +25%. Polished floors reflect 20% of enemy shots. The dragon waits behind the last gate.',
     terrain: ['blessed'],
     reflect: 0.2,
     elementMods: { light: 1.1 },
     pools: {
-      battle: [['lantern'], ['lantern', 'turtle'], ['lantern', 'lantern'], ['zombie', 'lantern'], ['goblin', 'lantern']],
-      elite: [['knight', 'lantern'], ['wisp']],
+      battle: [['lantern', 'lantern'], ['lantern', 'turtle'], ['zombie', 'zombie', 'lantern'], ['goblin', 'lantern', 'bat'], ['ink_knight']],
+      elite: [['lantern_king'], ['knight', 'lantern'], ['wisp', 'zombie']],
     },
-    guardian: 'lantern_king',
+    boss: 'wyrm',
+  },
+  volcano: {
+    py: 'huǒ shān', zh: '火山', en: 'Burning Highlands', act: 3, theme: 'volcano',
+    desc: 'The ground erupts under random fighters (fire damage and Burn). Fire +25%, ice −20%. The dragon waits at the summit.',
+    events: [{ kind: 'eruption', every: 7, text: 'pēn fā · Eruption' }],
+    elementMods: { fire: 1.25, ice: 0.8 },
+    pools: {
+      battle: [['ember_imp', 'cinder_bat'], ['magma_golem'], ['ember_imp', 'ember_imp'], ['magma_golem', 'cinder_bat'], ['cinder_bat', 'cinder_bat', 'ember_imp']],
+      elite: [['magma_golem', 'ember_imp'], ['knight', 'cinder_bat'], ['wisp', 'ember_imp']],
+    },
+    boss: 'wyrm',
   },
   lair: {
-    py: 'mò lóng dòng', zh: '墨龙洞', en: "Ink Dragon's Lair", act: 3, theme: 'inklair',
-    desc: 'Ink rains down and Curses you. The dragon waits at the end.',
+    py: 'mò rǎn shān gǔ', zh: '墨染山谷', en: 'Ink-Corrupted Valley', act: 3, theme: 'inklair',
+    desc: 'Ink rains down and Curses you; the corrupted ground lets shadows regenerate. The dragon’s lair is at the valley’s end.',
+    terrain: ['corrupted'],
     events: [{ kind: 'inkrain', every: 9, text: 'mò yǔ · Ink rain' }],
     pools: {
-      battle: [['goblin', 'bat'], ['wisp', 'goblin'], ['golem', 'goblin', 'bat'], ['shadow', 'goblin'], ['zombie', 'zombie', 'bat']],
-      elite: [['wisp', 'knight']],
+      battle: [['goblin', 'bat'], ['shadow', 'goblin'], ['ink_knight', 'bat'], ['shadow', 'shadow'], ['zombie', 'zombie', 'bat']],
+      elite: [['wisp', 'knight'], ['ink_knight', 'shadow']],
     },
     boss: 'wyrm',
   },
   beyond: {
     py: 'yí wàng zhī dì', zh: '遗忘之地', en: 'The Forgotten Beyond', act: 4, theme: 'beyond', secretUnlock: 'dragonWins3',
-    desc: 'A land of lost meanings. Tremors, mist and ink rain. The Word Eater lives here.',
+    desc: 'Torn scrolls, fading ink and drifting characters: a land of lost meanings. Tremors, mist and ink rain. The Word Eater lives here.',
     terrain: ['unstable'],
     events: [{ kind: 'mist', every: 10, text: 'mí wù · Mist' }, { kind: 'inkrain', every: 11, text: 'mò yǔ · Ink rain' }],
     pools: {
@@ -109,9 +124,17 @@ export const BIOMES = {
   },
 };
 
+/** The act names shown when an act begins. */
+export const ACTS = {
+  1: { py: 'yí wàng jiāo yě', zh: '遗忘郊野', en: 'The Forgotten Outskirts' },
+  2: { py: 'pò suì zhī dì', zh: '破碎之地', en: 'The Fractured Lands' },
+  3: { py: 'lóng zhī lǐng yù', zh: '龙之领域', en: "The Dragon's Dominion" },
+  4: { py: 'tūn zì zhī lù', zh: '吞字之路', en: 'The Word Eater’s Road' },
+};
+
 export const ACT_BIOMES = {
   1: ['bamboo', 'coast', 'caves'],
-  2: ['frozen', 'thunder', 'marsh', 'temple'],
-  3: ['lair'],
+  2: ['frozen', 'thunder', 'marsh'],
+  3: ['temple', 'volcano', 'lair'],
   4: ['beyond'],
 };

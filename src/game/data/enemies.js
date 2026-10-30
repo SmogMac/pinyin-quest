@@ -109,6 +109,35 @@ export const ENEMIES = {
     blurb: 'A stolen word given form. Fragile, but it comes in swarms.',
   },
 
+  // Burning Highlands / Ink-Corrupted Valley: recoloured kin of the common enemies (`tint`)
+  ember_imp: {
+    stance: 'aggressive', py: 'huǒ yāo', zh: '火妖', name: 'Ember Imp', sprite: 'goblin', tint: 'ember', element: 'fire',
+    stats: { maxHp: 88, atk: 6, def: 2, aspd: 0.9, crit: 0.12 },
+    ai: { range: 36 },
+    onHitStatus: { id: 'burn', dur: 3, dps: 2 },
+    blurb: 'Throws embers that Burn. Douse it, or out-burn it.',
+  },
+  cinder_bat: {
+    py: 'huǒ biān fú', zh: '火蝙蝠', name: 'Cinder Bat', sprite: 'bat', tint: 'ember', element: 'fire', flying: true,
+    stats: { maxHp: 52, atk: 4, aspd: 1.3, dodge: 0.2 },
+    ai: { speed: 17 },
+    blurb: 'A bat made of sparks. Fast, flying and hard to hit.',
+  },
+  magma_golem: {
+    kbRes: 0.5, kb: 4, py: 'róng yán rén', zh: '熔岩人', name: 'Magma Golem', sprite: 'golem', tint: 'ember', element: 'fire',
+    stats: { maxHp: 150, atk: 8, def: 5, aspd: 0.5 },
+    ai: { speed: 7, charge: { every: 7, windup: 1.6, mult: 2.5, text: 'Lava slam!' } },
+    onHitStatus: { id: 'burn', dur: 3, dps: 3 },
+    blurb: 'Slow and molten. Its slams Burn; Freeze or Stun interrupts them.',
+  },
+  ink_knight: {
+    kbRes: 0.4, kb: 3, py: 'mò qí shì', zh: '墨骑士', name: 'Ink Knight', sprite: 'knight', tint: 'ink', element: 'dark',
+    stats: { maxHp: 140, atk: 8, def: 4, aspd: 0.75 },
+    ai: { charge: { every: 8, windup: 1.4, mult: 2.2, text: 'Ink lance!' } },
+    onHitStatus: { id: 'curse', dur: 2 },
+    blurb: 'A knight the dragon drowned in ink. Its lance Curses.',
+  },
+
   // ----------------------------------------------------------- elites
   wisp: {
     py: 'guǐ huǒ', zh: '鬼火', name: 'Ghost Fire', sprite: 'wisp', element: 'dark', elite: true, flying: true,

@@ -1652,31 +1652,6 @@ kbd {
     transform: translateY(-5px) rotate(-2deg);
   }
 }
-.side-hero .st-attack {
-  animation: lunge-r 0.26s ease-out;
-}
-.side-enemy .st-attack {
-  animation: lunge-l 0.26s ease-out;
-}
-@keyframes lunge-r {
-  40% {
-    transform: translateX(22px) rotate(4deg);
-  }
-}
-@keyframes lunge-l {
-  40% {
-    transform: translateX(-22px) rotate(-4deg);
-  }
-}
-.st-cast {
-  animation: cast 0.38s ease-out;
-}
-@keyframes cast {
-  40% {
-    transform: translateY(-8px) scale(1.06);
-    filter: brightness(1.3);
-  }
-}
 .st-hurt {
   animation: hurt 0.22s;
   filter: brightness(1.8) saturate(0.4);

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   newRun, generateArea, enterArea, arrive, finishEncounter, resolveBattle, afterReward, takeItem, takeBlessing, buy, finishSpring,
   nextArea, enterBeyond, nextEncounter, heroFor, draftItem, RUN_VERSION,
+  mapForAct,
 } from '../src/game/run.js';
 import { ITEMS } from '../src/game/data/items.js';
 import { BLESSINGS, BLESSING_IDS } from '../src/game/data/blessings.js';
@@ -215,15 +216,36 @@ test('beating a guardian leads to the next area (new random biome); the dragon e
   assert.equal(nextEncounter(r).type, 'battle');
 });
 
-test('biomes rarely repeat within a run', () => {
-  let repeats = 0;
-  for (let seed = 1; seed <= 200; seed++) {
-    const r = newRun({ seed });
-    r.biomesSeen = ['bamboo'];
-    enterArea(r, { unlocked: ['bamboo', 'coast', 'caves'] });
-    if (r.biome === 'bamboo') repeats++;
+test('each act has three maps, rolled at run start: all 27 journeys happen, and the dragon ends act 3', () => {
+  for (const act of [1, 2, 3]) {
+    assert.equal(ACT_BIOMES[act].length, 3, `act ${act}`);
+    for (const id of ACT_BIOMES[act]) assert.equal(BIOMES[id].act, act, id);
   }
-  assert.ok(repeats < 40, `repeat rate ${repeats}/200`);
+  for (const id of ACT_BIOMES[3]) assert.equal(BIOMES[id].boss, 'wyrm', `${id} ends with the Ink Dragon`);
+  const combos = new Set();
+  for (let seed = 1; seed <= 600; seed++) {
+    const r = newRun({ seed });
+    assert.deepEqual(Object.keys(r.maps), ['1', '2', '3']);
+    combos.add(`${r.maps[1]}/${r.maps[2]}/${r.maps[3]}`);
+  }
+  assert.equal(combos.size, 27);
+});
+
+test('the act map is revealed only when the act begins, and the same seed gives the same journey', () => {
+  const a = newRun({ seed: 42 });
+  const b = newRun({ seed: 42 });
+  assert.deepEqual(a.maps, b.maps);
+  assert.equal(a.biome, null);
+  enterArea(a);
+  assert.equal(a.biome, a.maps[1]);
+  // a run saved before maps existed keeps the map it is already in, and gets the rest rolled
+  const old = newRun({ seed: 9 });
+  delete old.maps;
+  old.act = 2;
+  old.biome = 'marsh';
+  assert.equal(mapForAct(old, 2), 'marsh');
+  assert.ok(ACT_BIOMES[3].includes(mapForAct(old, 3)));
+  assert.equal(mapForAct(old, 4), 'beyond');
 });
 
 test('whole journeys always finish, for every hero, and every encounter type resolves', () => {

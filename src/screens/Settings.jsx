@@ -205,6 +205,7 @@ export default function Settings({ go }) {
           dataset (MIT, meanings from CC-CEDICT). Example sentences are written for this app. Keyboard: 1–4 answer, Space continue/reveal, R replay,
           S slow.
         </p>
+        <p className="small muted">Battle effects: Super Pixel Effects Gigapack - Will Tice / unTied Games.</p>
         <p className="small muted">Version: {__BUILD_TIME__}</p>
       </section>
     </div>
