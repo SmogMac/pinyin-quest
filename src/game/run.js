@@ -241,7 +241,8 @@ export function arrive(run, { itemPool, accountLevel = 1 }) {
     openShop(run, itemPool, { secret: !!e.secret });
     run.phase = 'merchant';
   } else if (t === 'chest') {
-    run.offer = { kind: 'item', id: draftItem(run, itemPool, { r: rng(run) }), source: 'chest' };
+    // found items are locked: one question to claim them (claimItem)
+    run.offer = { kind: 'item', id: draftItem(run, itemPool, { r: rng(run) }), source: 'chest', locked: true };
     run.phase = 'chest';
   } else if (t === 'stranger') {
     const fresh = STRANGERS.filter((s) => !(run.strangersSeen || []).includes(s.id));
@@ -362,15 +363,26 @@ export function resolveBattle(run, sim, accountLevel, { itemPool = [] } = {}) {
     run.stats.guardians += 1;
     healRun(run, accountLevel, RUN.actHealPct);
   }
-  // one item, never a choice of three: always after elites, guardians and secret bosses,
-  // sometimes after ordinary fights
+  // one item, never a choice of three: an epic after bosses (guardians, secret bosses), a rare or
+  // better after elites, sometimes one after ordinary fights. Locked: one question to claim it.
   let item = null;
-  if (t === 'secretboss') item = draftItem(run, itemPool, { minRarity: 'epic', r });
-  else if (t === 'elite' || t === 'guardian') item = draftItem(run, itemPool, { minRarity: 'rare', r });
+  if (t === 'secretboss' || t === 'guardian') item = draftItem(run, itemPool, { minRarity: 'epic', r });
+  else if (t === 'elite') item = draftItem(run, itemPool, { minRarity: 'rare', r });
   else if (r() < RUN.battleItemChance) item = draftItem(run, itemPool, { r });
-  run.offer = { kind: 'item', id: item, ink, source: t };
+  run.offer = { kind: 'item', id: item, ink, source: t, locked: true };
   run.phase = 'reward';
 }
+
+/**
+ * The answer to a locked item's question, recorded once (a reload can't ask again): right unlocks
+ * the item, wrong loses it.
+ */
+export function answerLock(run, ok) {
+  if (!run.offer?.locked || run.offer.gate) return;
+  run.offer.gate = ok ? 'open' : 'lost';
+}
+/** True if the offered item may be taken (unlocked, or never locked). */
+export const canClaim = (offer) => Boolean(offer?.id) && (!offer.locked || offer.gate === 'open');
 
 /** After the reward screen (item taken or left): walk on, or leave the area after its guardian. */
 export function afterReward(run) {

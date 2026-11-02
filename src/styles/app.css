@@ -1606,8 +1606,10 @@ kbd {
   object-fit: contain;
   image-rendering: auto;
 }
+/* mirrored with the scale property, not transform: the idle/walk animations animate transform,
+   and would otherwise tween the mirror from -1 to 1 (the sprite seems to spin in place) */
 .sprite.flip {
-  transform: scaleX(-1);
+  scale: -1 1;
 }
 @keyframes sprite-sheet-play {
   from {

@@ -36,7 +36,7 @@ export const STRANGERS = [
   {
     id: 'farmer', py: 'nóng mín', zh: '农民', en: 'A worried farmer', npc: 'xinyi', template: 'fruit',
     text: '“My cart tipped over and I can’t remember what this fruit is called! Can you help me sort it?”',
-    reward: { kind: 'ink', amount: 35 }, thanks: 'The farmer laughs with relief and pays you in ink.',
+    reward: { kind: 'ink', amount: 21 }, thanks: 'The farmer laughs with relief and pays you in ink.',
   },
   {
     id: 'scholar', py: 'shū shēng', zh: '书生', en: 'A forgetful scholar', npc: 'ruizhe', template: 'number',
@@ -46,7 +46,7 @@ export const STRANGERS = [
   {
     id: 'child', py: 'xiǎo hái', zh: '小孩', en: 'A curious child', npc: 'fuyun', template: 'body',
     text: 'A child points at a drawing in their book. “Dà gē gē, dà jiě jie, what’s this part called?”',
-    reward: { kind: 'ink', amount: 30 }, thanks: 'The child giggles and gives you a handful of shiny ink drops.',
+    reward: { kind: 'ink', amount: 18 }, thanks: 'The child giggles and gives you a handful of shiny ink drops.',
   },
   {
     id: 'spirit', py: 'yōu líng', zh: '幽灵', en: 'A shy spirit', npc: 'mei', template: 'negation',
@@ -56,7 +56,7 @@ export const STRANGERS = [
   {
     id: 'student', py: 'xué sheng', zh: '学生', en: 'A nervous student', npc: 'huojin', template: 'cheer',
     text: '“My exam is tomorrow and I’m so scared! Can you tell me only the encouraging words?”',
-    reward: { kind: 'ink', amount: 40 }, thanks: 'The student stands a little taller and shares their lunch money with you.',
+    reward: { kind: 'ink', amount: 24 }, thanks: 'The student stands a little taller and shares their lunch money with you.',
   },
   {
     id: 'traveller', py: 'lǚ kè', zh: '旅客', en: 'A lost traveller', npc: 'lei', template: 'tone',
@@ -66,7 +66,7 @@ export const STRANGERS = [
   {
     id: 'shopkeeper', py: 'diàn zhǔ', zh: '店主', en: 'A muddled shopkeeper', npc: 'xinyi', template: 'vocab',
     text: '“A customer asked for something and I’ve forgotten what the word means. Do you know it?”',
-    reward: { kind: 'ink', amount: 30 }, thanks: 'The shopkeeper pays you for your help.',
+    reward: { kind: 'ink', amount: 18 }, thanks: 'The shopkeeper pays you for your help.',
   },
   {
     id: 'poet', py: 'shī rén', zh: '诗人', en: 'A wandering poet', npc: 'ruizhe', template: 'vocab',
@@ -74,7 +74,7 @@ export const STRANGERS = [
     reward: { kind: 'item' }, thanks: 'The poet recites a verse in your honour and gives you a keepsake.',
   },
 ];
-export const STRANGER_CONSOLATION = { kind: 'ink', amount: 8, text: 'No harm done. They thank you for trying and share a little ink anyway.' };
+export const STRANGER_CONSOLATION = { kind: 'ink', amount: 5, text: 'No harm done. They thank you for trying and share a little ink anyway.' };
 
 // The merchant: one polished character for now (merchants can get their own looks and stock later).
 export const MERCHANT = {

@@ -1,6 +1,6 @@
 // Simulated player for balance tests and sweeps: walks a whole journey (areas, encounters, battles).
 import {
-  newRun, enterArea, arrive, finishEncounter, resolveBattle, afterReward, takeItem, takeBlessing, buy, finishSpring,
+  newRun, enterArea, arrive, finishEncounter, resolveBattle, afterReward, takeItem, takeBlessing, buy, finishSpring, answerLock, canClaim,
   nextArea, enterBeyond, heroFor, gainInk,
 } from '../src/game/run.js';
 import { simulateBattle, makeRng } from '../src/game/combat.js';
@@ -35,12 +35,14 @@ export function playRun(seed, { heroId = 'xinyi', castSuccess = 0.85, quizSucces
       durations[run.battle.type]?.push(sim.duration);
       sim.runState = { phoenixUsed: sim.battle.runState.phoenixUsed, blessPhoenixUsed: sim.battle.runState.blessPhoenixUsed };
       resolveBattle(run, sim, accountLevel, { itemPool });
-    } else if (p === 'reward') {
-      if (run.offer?.id && r() < takeChance) takeItem(run, run.offer.id, accountLevel);
-      afterReward(run);
-    } else if (p === 'chest') {
-      if (run.offer?.id && r() < takeChance) takeItem(run, run.offer.id, accountLevel);
-      finishEncounter(run);
+    } else if (p === 'reward' || p === 'chest') {
+      // found items are locked behind one question
+      if (run.offer?.id && r() < takeChance) {
+        answerLock(run, r() < quizSuccess);
+        if (canClaim(run.offer)) takeItem(run, run.offer.id, accountLevel);
+      }
+      if (p === 'reward') afterReward(run);
+      else finishEncounter(run);
     } else if (p === 'merchant') {
       // buy whatever is affordable, cheapest first
       const order = run.shop.stock.map((s, i) => [s, i]).filter(([s]) => s.kind === 'item').sort((a, b) => a[0].price - b[0].price);

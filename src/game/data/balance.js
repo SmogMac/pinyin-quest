@@ -14,11 +14,11 @@ export const RUN = {
   springHealPct: 0.42, // a hot spring (at full health it gives +springMaxHp max HP instead)
   springMaxHp: 12,
   battleItemChance: 0.15, // an ordinary fight sometimes offers one item
-  inkPerBattle: [14, 22],
-  inkPerElite: 40,
-  inkPerGuardian: 60,
-  inkPerCast: 3, // successful signature move
-  inkPerAnswer: 8, // correct answer to a stranger's vocabulary question
+  inkPerBattle: [8, 13],
+  inkPerElite: 24,
+  inkPerGuardian: 36,
+  inkPerCast: 1, // successful signature move
+  inkPerAnswer: 5, // correct answer to a stranger's vocabulary question
   prices: { common: 50, rare: 85, epic: 140, heal: 40 },
   maxNewWordsPerQuiz: 2, // new words are always taught first with a teaching card
 };
@@ -29,7 +29,7 @@ export const SCALING = {
   defPerFloor: 0.2, // flat def added per floor
   // global knobs applied to every enemy (bosses use their own)
   enemyHp: 1.27,
-  enemyAtk: 0.5,
+  enemyAtk: 0.46,
   bossHp: 1.45,
   bossAtk: 0.74,
 };

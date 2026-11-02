@@ -3,7 +3,7 @@ import { useStore, update, getState, flush } from '../store/store.js';
 import { levelInfo, addXp } from '../store/progress.js';
 import { pickAdventureTasks } from '../learn/adventurePicker.js';
 import {
-  enterArea, arrive, finishEncounter, nextEncounter, nextArea, takeItem, takeBlessing, resolveBattle, afterReward, enterBeyond,
+  enterArea, arrive, finishEncounter, nextEncounter, nextArea, takeItem, takeBlessing, resolveBattle, afterReward, answerLock, enterBeyond,
   heroFor, healRun, gainInk, buy, finishSpring, scoreOf, RUN_VERSION, runSignatures, runSynergies,
 } from '../game/run.js';
 import { RUN } from '../game/data/balance.js';
@@ -140,7 +140,7 @@ export default function Adventure({ go, params = {} }) {
   const walkOn = (ink = 0) => {
     mutate((r) => finishEncounter(r));
     flush();
-    if (ink) setToast({ text: `+${ink} 墨`, key: Date.now() });
+    if (ink) setToast({ text: `+${ink} 🪙`, key: Date.now() });
   };
 
   if (outdated) return <OutdatedRun go={go} />;
@@ -214,10 +214,10 @@ export default function Adventure({ go, params = {} }) {
       {!inBattle && run.phase === 'areaIntro' && <div className="journey-black" aria-hidden="true" />}
       {/* the encounter panels sit under the road, so the world stays visible */}
       {!inBattle && run.phase === 'chest' && run.offer && (
-        <ItemReveal
+        <LockedItem
           run={run}
-          id={run.offer.id}
           title={<Bi py="bǎo xiāng" en="A treasure chest!" />}
+          onLevelUp={setLevelUp}
           onTake={() => {
             grantItem(run.offer.id);
             walkOn();
@@ -226,10 +226,16 @@ export default function Adventure({ go, params = {} }) {
         />
       )}
       {!held && run.phase === 'reward' && run.offer && (
-        <ItemReveal
+        <LockedItem
           run={run}
-          id={run.offer.id}
-          title={<Bi py="zhàn lì pǐn" en={`Spoils of battle${run.offer.ink ? ` · +${run.offer.ink} 墨` : ''}`} />}
+          title={
+            run.offer.source === 'guardian' || run.offer.source === 'secretboss' ? (
+              <Bi py="bǎo wù" en={`The guardian's treasure${run.offer.ink ? ` · +${run.offer.ink} 🪙` : ''}`} />
+            ) : (
+              <Bi py="zhàn lì pǐn" en={`Spoils of battle${run.offer.ink ? ` · +${run.offer.ink} 🪙` : ''}`} />
+            )
+          }
+          onLevelUp={setLevelUp}
           onTake={() => {
             grantItem(run.offer.id);
             mutate((r) => afterReward(r));
@@ -336,8 +342,8 @@ function NoticeCard({ run }) {
   const n = run.notice;
   const text =
     n.kind === 'journey'
-      ? `Adventures are now a continuous journey: no more route maps. Your run carries on from the start of this act with everything you own.${n.refund ? ` Items that only worked for one hero were traded for ${n.refund} 墨 ink.` : ''}`
-      : `Spells are gone: ${heroDef(run.heroId).py} now has a single signature move with its own Mandarin minigame.${n.refund ? ` The spells you had found were traded for ${n.refund} 墨 ink.` : ''}`;
+      ? `Adventures are now a continuous journey: no more route maps. Your run carries on from the start of this act with everything you own.${n.refund ? ` Items that only worked for one hero were traded for ${n.refund} 🪙.` : ''}`
+      : `Spells are gone: ${heroDef(run.heroId).py} now has a single signature move with its own Mandarin minigame.${n.refund ? ` The spells you had found were traded for ${n.refund} 🪙.` : ''}`;
   return (
     <div className="card notice-card">
       <b>
@@ -614,7 +620,7 @@ function ItemCard({ id, run, onClick, price, disabled }) {
         <span className="element-tag" style={{ '--el': el.color }}>
           {el.py} · {el.name}
         </span>
-        {price !== undefined && <span className="price-tag">{price} 墨</span>}
+        {price !== undefined && <span className="price-tag">{price} 🪙</span>}
       </span>
       {completes.map((sid) => (
         <span key={sid} className="uc-combo">
@@ -627,6 +633,40 @@ function ItemCard({ id, run, onClick, price, disabled }) {
 }
 
 // ------------------------------------------------------------------------------ encounters
+/**
+ * A found item (chest or battle spoils) that is sealed: one vocabulary question to claim it. The
+ * answer is saved the moment it's known (answerLock), so a reload can't ask again; a wrong answer
+ * shows the right one (in the question card) and the item is lost.
+ */
+function LockedItem({ run, title, onTake, onLeave, onLevelUp }) {
+  const [asking, setAsking] = useState(false);
+  const offer = run.offer;
+  const lock = offer.locked && offer.id ? (offer.gate === 'open' ? null : offer.gate === 'lost' ? 'lost' : 'locked') : null;
+  if (asking && lock === 'locked') {
+    return (
+      <div className="journey-panel stranger-quiz">
+        <QuizRunner
+          title="jiě fēng · Break the seal"
+          count={1}
+          run={run}
+          onLevelUp={onLevelUp}
+          onDone={(score) => {
+            const ok = score.ok > 0 && score.bad === 0;
+            update((x) => {
+              const r = x.adventure.current;
+              if (r) answerLock(r, ok);
+            });
+            flush();
+            play(ok ? 'reveal' : 'wrong');
+            setAsking(false);
+          }}
+        />
+      </div>
+    );
+  }
+  return <ItemReveal run={run} id={offer.id} title={title} lock={lock} onUnlock={() => setAsking(true)} onTake={onTake} onLeave={onLeave} />;
+}
+
 /** Runs a short series of vocabulary questions (StudyCard), with a callback per correct answer. */
 function QuizRunner({ title, count, run, perCorrect, onDone, onLevelUp, listeningFocus = false }) {
   const tasks = useMemo(() => pickAdventureTasks(getState(), count, { listeningFocus }), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -774,7 +814,7 @@ function StrangerView({ run, grantItem, onLevelUp, onDone }) {
     <div className="journey-panel card stranger-panel">
       {head}
       <p className={ok ? 'good-text' : ''}>{ok ? st.thanks : STRANGER_CONSOLATION.text}</p>
-      {ok && st.reward.kind === 'ink' && <p className="center gold-text">+ink 墨</p>}
+      {ok && st.reward.kind === 'ink' && <p className="center gold-text">+🪙</p>}
       <Button className="wide" onClick={() => onDone()}>
         <Bi k="continue" />
       </Button>
@@ -812,7 +852,7 @@ function MerchantView({ run, grantItem, accountLevel, onLeave }) {
           <small className="muted"> · {shop.secret ? 'Secret ' : ''}{MERCHANT.en}</small>
           <p className="small">{hello}</p>
         </div>
-        <span className="merchant-ink gold-text">{run.ink} 墨</span>
+        <span className="merchant-ink gold-text">{run.ink} 🪙</span>
       </div>
       <div className="pick-cards">
         {forSale.map((st) =>
@@ -829,7 +869,7 @@ function MerchantView({ run, grantItem, accountLevel, onLeave }) {
                 <b>Tea and rest</b>
                 <small>Heal 30% HP</small>
               </span>
-              <span className="price-tag">{st.price} 墨</span>
+              <span className="price-tag">{st.price} 🪙</span>
             </button>
           ),
         )}
@@ -1015,7 +1055,7 @@ function InventoryModal({ run, accountLevel, onClose }) {
         {hero.dodge > 0 && <span>DODGE {pct(hero.dodge)}</span>}
         {hero.block > 0 && <span>BLOCK {pct(hero.block)}</span>}
         {hero.spellPower > 0 && <span>SIGNATURE +{pct(hero.spellPower)}</span>}
-        <span>墨 {run.ink}</span>
+        <span>🪙 {run.ink}</span>
       </div>
       <div className="build-row">
         <Sprite id={def.sprite} scale={0.4} />

@@ -92,7 +92,7 @@ function EncounterProp({ type, enemies, npc, state }) {
         <div className="prop-merchant">
           <img src={asset('assets/props/cart.webp')} alt="" className="prop-img cart" />
           <span className="prop-fox">
-            <Sprite id="companion" scale={0.9} />
+            <Sprite id="companion" scale={0.9} flip />
           </span>
           <img src={asset('assets/props/lantern.webp')} alt="" className="prop-img lantern-post" />
         </div>
@@ -205,7 +205,11 @@ export function ExploreScene({ run, encounter, walking, speed = 1, onArrive, pro
 
 // ------------------------------------------------------------------------------ panels
 /** One item, revealed with a flourish: Take or Leave. Nothing is equipped before Take. */
-export function ItemReveal({ run, id, title, onTake, onLeave }) {
+/**
+ * One found item, revealed. `lock` (optional): 'locked' (one question to claim it: the take button
+ * asks it via onUnlock) or 'lost' (answered wrong: the item can only be left behind).
+ */
+export function ItemReveal({ run, id, title, onTake, onLeave, lock = null, onUnlock }) {
   const [busy, setBusy] = useState(false);
   const it = ITEMS[id];
   if (!it) {
@@ -226,11 +230,16 @@ export function ItemReveal({ run, id, title, onTake, onLeave }) {
     fn();
   };
   return (
-    <div className={`journey-panel card reveal-panel rarity-${it.rarity}`} style={{ '--el': el.color, '--el-glow': el.glow }}>
+    <div className={`journey-panel card reveal-panel rarity-${it.rarity} ${lock ? `lock-${lock}` : ''}`} style={{ '--el': el.color, '--el-glow': el.glow }}>
       {title && <div className="reveal-title">{title}</div>}
       <div className="reveal-item">
         <i className="reveal-rays" aria-hidden="true" />
         <ItemIcon id={id} def={it} size={92} />
+        {lock && (
+          <span className="reveal-lock" aria-label={lock === 'lost' ? 'lost' : 'locked'}>
+            {lock === 'lost' ? '💨' : '🔒'}
+          </span>
+        )}
       </div>
       <CnName def={{ ...it, name: it.en }} speakable className="reveal-name" />
       <p className="reveal-meta">
@@ -245,13 +254,29 @@ export function ItemReveal({ run, id, title, onTake, onLeave }) {
           COMBO → {SYNERGIES[sid].py} ({SYNERGIES[sid].en}): {SYNERGIES[sid].desc}
         </p>
       ))}
+      {lock === 'locked' && <p className="reveal-lock-note">Sealed with a word. Answer one question to claim it; a wrong answer and it's gone.</p>}
+      {lock === 'lost' && <p className="reveal-lock-note lost">The seal held and the item faded away. Better luck with the next one!</p>}
       <div className="reveal-actions">
-        <Button variant="secondary" onClick={once(onLeave)} disabled={busy}>
-          <Bi py="fàng xià" en="Leave it" />
-        </Button>
-        <Button onClick={once(onTake)} disabled={busy}>
-          <Bi py="ná zǒu" en="Take it" />
-        </Button>
+        {lock === 'lost' ? (
+          <Button className="wide" onClick={once(onLeave)} disabled={busy}>
+            <Bi py="jì xù zǒu" en="Walk on" />
+          </Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={once(onLeave)} disabled={busy}>
+              <Bi py="fàng xià" en="Leave it" />
+            </Button>
+            {lock === 'locked' ? (
+              <Button onClick={onUnlock}>
+                <Bi py="jiě kāi" en="Answer to claim" />
+              </Button>
+            ) : (
+              <Button onClick={once(onTake)} disabled={busy}>
+                <Bi py="ná zǒu" en="Take it" />
+              </Button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -328,7 +353,7 @@ export function JourneyHud({ run, maxHp, speed, onSpeed, onInventory, areaName }
         <Icon name="heart" size={14} /> {run.hp}/{maxHp}
       </span>
       <span className="jh-ink" title="Ink (mò): spend at merchants">
-        墨 {run.ink}
+        🪙 {run.ink}
       </span>
       <span className="spacer" />
       {[1, 2].map((x) => (
