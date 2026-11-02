@@ -32,15 +32,29 @@ import Sprite from './Sprite.jsx';
 import SignaturePuzzle from './SignaturePuzzle.jsx';
 import SigIcon from './SigIcon.jsx';
 import { VfxSprite, SheetFrames, vfxDuration, vfxSize, preloadVfx } from './Vfx.jsx';
-import { fx, onFx, effectDef, cueDef, projDef, poseMs, throwers } from '../fx/config.js';
+import { fx, onFx, effectDef, cueDef, projDef, poseMs, enemyProjectile, flightMs } from '../fx/config.js';
 import { installPoses } from '../fx/poses.js';
+import { StatusLook, lookOf, animSpeed } from './StatusLook.jsx';
 import { SPRITES } from '../assets/manifest.js';
 import Bi from './Bi.jsx';
 import Icon from '../assets/icons/Icons.jsx';
-import { BgSky, BgFar, BgMid, BgGround, BgDecor } from '../assets/backgrounds/Backgrounds.jsx';
+import { BgSky, BgFar, BgMid, BgGround, BgDecor, BgAmbient } from '../assets/backgrounds/Backgrounds.jsx';
 
 const STATUS_GLYPH = { burn: 'flame', chill: 'snow', frozen: 'snow', wet: 'drop', shock: 'bolt', curse: 'skull', stun: 'star', dazzle: 'sun', bleed: 'drop', slow: 'turtle', weaken: 'x', mark: 'eye' };
 const FRUIT_EMOJI = Object.fromEntries(FRUITS.map((f) => [f.id, f.emoji]));
+// Xīn Yí's basic attacks: a rotating menu of snacks
+const SNACKS = ['🥟', '🍡', '🍙', '🥮', '🍊', '🥠', '🍑', '🍢'];
+/**
+ * Which projectile a shot flies as: heroes always throw their own (Xīn Yí snacks, Ruì Zhé paper
+ * talismans, Huǒ Jìn fire bolts); enemies their own when the FX config lists them (goblin
+ * spears, imp embers), otherwise their attack element's look.
+ */
+function shotType(isHero, heroFx, enemyId, element) {
+  if (isHero) return projDef(heroFx) ? heroFx : 'orb';
+  const own = enemyId && enemyProjectile(enemyId);
+  if (own) return own;
+  return element !== 'physical' && projDef(element) ? element : 'orb';
+}
 // signature buffs that show an aura on the hero and a timer under the button
 const SIG_AURA = { passion: 'aura-fire', frenzy: 'aura-frenzy', mango: 'aura-fruit', pear: 'aura-fruit', roar: 'aura-fire' };
 /** World x → stage percent (the camera). */
@@ -87,6 +101,7 @@ const Backdrop = memo(function Backdrop({ theme, worldColor }) {
         <BgGround theme={theme} />
         <BgGround theme={theme} />
       </div>
+      <BgAmbient theme={theme} />
     </div>
   );
 });
@@ -95,6 +110,37 @@ const Backdrop = memo(function Backdrop({ theme, worldColor }) {
  * `sandbox` (FX Studio only): { onReady(api) } shows the stage without simulating or any HUD; the
  * editor plays cues, projectiles and poses on it through the api.
  */
+// Which animation wins when two want to play (higher stays until it finishes).
+const POSE_PRIORITY = { cast: 5, stance: 5, windup: 5, throw: 4, eat: 4, smash: 4, attack: 4, shoot: 4, knocked: 4.5, pulled: 4.5, slammed: 4.5, block: 3, dodge: 3, hurt: 2, land: 1 };
+
+/**
+ * The engine's attack timing from the FX config: attack poses (length and contact moment) and how
+ * long each projectile flies (the same numbers the battle screen animates with).
+ */
+function battleTiming(getBattle) {
+  const { poses } = fx();
+  const pose = (p, contact) => p && { dur: p.dur / 1000, contact: p.contact ?? contact };
+  const throwCfg = projDef('fruit.throw');
+  return {
+    melee: pose(poses.attack, 0.55),
+    ranged: pose(poses.shoot, 0.3),
+    heavy: pose(poses.smash, 0.6),
+    fruitLand: ((throwCfg?.delay || 0) + (throwCfg?.minMs || 560)) / 1000,
+    flightFn(src, tgt) {
+      const b = getBattle();
+      if (!b) return null;
+      const H = b.hero;
+      const heroSide = src.side === 0;
+      const el = (heroSide ? H.attackElement : src.attackElement) || 'physical';
+      if (el === 'lightning' && !heroSide) return 60; // lightning is an instant bolt
+      const cfg = projDef(shotType(heroSide, H.hdef.attack?.fx || 'orb', src.enemyId, el));
+      if (!cfg) return null;
+      const pct = (Math.abs(tgt.x - src.x) * 100) / COMBAT.worldW;
+      return flightMs(cfg, pct);
+    },
+  };
+}
+
 export default function BattleScreen({ run: runProp, accountLevel, worldColor = 1, onResolve, onContinue, onInventory, sandbox = null }) {
   const s = useStore();
   const speed = s.settings.battleSpeed === 2 ? 2 : 1;
@@ -116,6 +162,9 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
       ascension: run.ascension || 0,
       // the signature lands on its cast animation's impact frame (FX Studio)
       sigImpact: (cueDef(`sig.${heroDef(run.heroId).signature}.cast`)?.impact || 0) / 1000,
+      // attack contact moments and projectile flight times come from the FX config, so what the
+      // engine decides and what the screen shows are the same numbers
+      timing: battleTiming(() => bRef.current),
       runState: { ...run.runState, wraithWords: wraithWords(getState()) },
     });
   }
@@ -132,7 +181,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   const lastTarget = useRef(null);
   const practiced = useRef(new Set()); // words already counted for spaced repetition this battle
   const stats = useRef({ casts: 0, fizzles: 0 });
-  const vis = useRef({ floats: [], effects: [], attached: {}, lock: {}, unitFx: {}, flash: {}, gates: {}, pend: {}, later: [], dead: {}, banner: null, stageFx: null, shake: 0 });
+  const vis = useRef({ floats: [], effects: [], attached: {}, lock: {}, hitstop: {}, unitFx: {}, flash: {}, gates: {}, pend: {}, later: [], dead: {}, banner: null, stageFx: null, shake: 0 });
   const slowRef = useRef(1);
   const alpha = useRef(1);
   const phase = useRef('fighting'); // fighting -> resolved (never back)
@@ -186,12 +235,20 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     if (v.floats.length > MAX_FLOATS) v.floats.shift();
   }
   /** Puts a unit in an animation state. `lock` (signature cast animations) keeps others out meanwhile. */
-  function unitState(id, state, ms, lock = false) {
+  /**
+   * Puts a unit in an animation state for `ms`. A lower-priority state never cuts off a higher one
+   * that is still playing (a hurt flinch doesn't cancel a swing; a knockback does). `lock`
+   * (signature cast animations) keeps everything else out. `scale` stretches the animation (an
+   * attack played faster at high attack speed).
+   */
+  function unitState(id, state, ms, lock = false, scale = 1) {
     const v = vis.current;
     const t = now();
     if (!lock && (v.lock[id] || 0) > t) return;
+    const cur = v.unitFx[id];
+    if (!lock && cur && cur.until > t && (POSE_PRIORITY[cur.state] || 0) > (POSE_PRIORITY[state] || 0)) return;
     if (lock) v.lock[id] = t + ms;
-    v.unitFx[id] = { state, until: t + ms, born: t };
+    v.unitFx[id] = { state, until: t + ms, born: t, scale };
   }
   function flash(id) {
     // one red flash per ~0.25s per unit, so rapid hits don't strobe
@@ -205,6 +262,8 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     else vis.current.later.push({ at: now() + ms, fn });
   }
   // ---- unit geometry: where a unit's body actually is on the stage (from its sprite and scale)
+  /** Chill and Slow slow a unit's animations exactly as much as they slow it in the game. */
+  const unitSpeed = (u) => (u.alive ? animSpeed(u.statuses) : 1);
   const unitOf = (id) => (id === 'hero' ? H : b.units.find((x) => x.id === id));
   const unitScale = (u) => camRef.current * (u === H ? 0.8 : u.side === 0 ? 0.64 : (u.edef?.scale || 1) * (u.boss ? 0.8 : 0.72));
   function geo(id) {
@@ -218,6 +277,24 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
   const midPx = (g) => (g.base / 100) * stageSize.current.h + g.h * 0.5;
   // FX Studio slow motion: stretches every delay and duration (always 1 in the game)
   const slow = () => slowRef.current;
+  /**
+   * Hitstop: on a heavy impact the fight freezes for a few frames (the simulation waits; the units
+   * involved hold their pose). Rate-limited so rapid multi-hits never stutter.
+   */
+  function hitstop(ids, ms) {
+    const v = vis.current;
+    const t = now();
+    if ((v.hitstopAt || 0) > t - 260 || clockRef.current !== null) return;
+    v.hitstopAt = t;
+    v.freezeUntil = t + ms;
+    for (const id of ids) if (id) v.hitstop[id] = t + ms;
+  }
+  /** Screen shake strength from Settings: 1 full, 0.5 gentle, 0 off (Reduced motion = off). */
+  const shakeLevel = () => {
+    const st = getState().settings;
+    if (st.reducedMotion || st.screenShake === 'off') return 0;
+    return st.screenShake === 'gentle' ? 0.5 : 1;
+  };
   /** Per-target rate limit for frequent effects (so rapid hits or ticks never pile up). */
   function gate(key, ms) {
     const v = vis.current;
@@ -303,15 +380,18 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         break;
       case 'pose': {
         const id = attachTo(L, ctx);
-        if (id) unitState(id, L.state, (L.dur ?? poseMs(L.state)) * slow(), Boolean(ctx.lock));
+        // an attack pose plays at the speed of the attack (the engine's animation length)
+        const base = poseMs(L.state);
+        const dur = ctx.animDur && ['attack', 'shoot', 'smash'].includes(L.state) ? ctx.animDur : (L.dur ?? base);
+        if (id) unitState(id, L.state, dur * slow(), Boolean(ctx.lock), dur / base);
         break;
       }
       case 'shake':
-        if (!calm()) v.shake = now() + L.dur * slow();
+        if (shakeLevel()) v.shake = now() + L.dur * slow();
         v.stageBorn = now();
         break;
       case 'punch':
-        if (!calm()) v.punch = now() + L.dur * slow();
+        if (shakeLevel()) v.punch = now() + L.dur * slow();
         v.stageBorn = now();
         break;
       case 'sound':
@@ -372,7 +452,8 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     const dxPx = ((toX - fromX) / 100) * W;
     // tilt along the line of travel (the art is mirrored for leftward shots, so the sign flips)
     const tilt = cfg.tilt && !cfg.arc ? Math.max(-40, Math.min(40, (Math.atan2(-dy, Math.abs(dxPx) || 1) * 180) / Math.PI)) * (dxPx < 0 ? -1 : 1) : 0;
-    const ms = Math.round(Math.max(cfg.minMs, Math.min(cfg.maxMs, Math.abs(toX - fromX) * cfg.msPerPct)) * slow());
+    // timed shots fly exactly as long as the engine says (damage lands on arrival)
+    const ms = Math.round((opts.ms ?? flightMs(cfg, Math.abs(toX - fromX))) * slow());
     const top = Math.max(36, Math.abs(dxPx) * 0.32) * (cfg.apex ?? 1);
     const look = cfg.look === 'inherit' ? opts.style || 'orb' : cfg.look;
     const size = (cfg.size || 1) * (opts.size || 1);
@@ -383,7 +464,8 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
       until: now() + ms + 30 + (cfg.trail?.count || 0) * (cfg.trail?.gap || 0) * slow(),
     });
     if (cfg.launch && !opts.small) cue(cfg.launch, { tgt: srcId, src: srcId, toward: gs.facing > 0 ? 'right' : 'left', scale: opts.big ? 1.45 : 1 });
-    vis.current.pend[tgtId] = now() + ms;
+    // untimed shots (item missiles) hit in the engine at once: hold their hit visuals until arrival
+    if (!opts.timed) vis.current.pend[tgtId] = now() + ms;
     return ms;
   }
   /** Lightning bolts run from the shooter's body height to the target's. */
@@ -417,7 +499,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           const to = xOf(e.tgt);
           const t = now();
           if (e.fruit) {
-            projectile('fruit.shot', e.src, e.tgt, { emoji: FRUIT_EMOJI[e.fruit] || '🍎', small: e.small });
+            projectile('fruit.shot', e.src, e.tgt, { emoji: FRUIT_EMOJI[e.fruit] || '🍎', small: e.small, ms: e.ms, timed: e.timed });
             break;
           }
           if (e.src === 'hero' && heroMelee && !e.spell) {
@@ -425,19 +507,27 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
             break;
           }
           const el = e.element || 'physical';
+          const heroShot = e.src === 'hero' && !e.spell;
+          if (heroShot) {
+            // the hero's own projectile, whatever element the attack carries
+            const type = shotType(true, heroFx, null, el);
+            v.snack = (v.snack || 0) + 1;
+            projectile(type, e.src, e.tgt, { style: heroFx, emoji: SNACKS[v.snack % SNACKS.length], big: e.big, small: e.small, ms: e.ms, timed: e.timed });
+            break;
+          }
           if (el === 'lightning' || e.bolt) {
             pushFx({ type: 'zap', x: from, to, pts: zapPoints(), big: e.big || e.spell, until: t + 200, ...zapHeights(e.src, e.tgt) });
             break;
           }
           const style = el !== 'physical' ? el : e.src === 'hero' ? heroFx : 'orb';
           const shooter = unitOf(e.src);
-          const thrown = shooter && shooter !== H && throwers().has(shooter.enemyId);
-          projectile(thrown ? 'thrown' : projDef(style) ? style : 'orb', e.src, e.tgt, { style, big: e.big || e.spell, small: e.small });
+          const type = e.src === 'hero' ? (projDef(style) ? style : 'orb') : shotType(false, heroFx, shooter?.enemyId, el);
+          projectile(type, e.src, e.tgt, { style, big: e.big || e.spell, small: e.small, ms: e.ms, timed: e.timed });
           break;
         }
         case 'attack': {
-          const name = e.src !== 'hero' ? 'attack.enemy' : heroFx === 'chain' ? 'attack.hero.heavy' : heroMelee ? 'attack.hero.melee' : 'attack.hero.ranged';
-          cue(name, { tgt: e.src, src: e.src });
+          const name = e.src !== 'hero' ? (e.ranged && cueDef('attack.enemy.ranged') ? 'attack.enemy.ranged' : 'attack.enemy') : heroFx === 'chain' ? 'attack.hero.heavy' : heroMelee ? 'attack.hero.melee' : 'attack.hero.ranged';
+          cue(name, { tgt: e.src, src: e.src, animDur: e.dur ? e.dur * 1000 : undefined });
           if (e.big) play('crit');
           break;
         }
@@ -457,6 +547,12 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
             }
             if (e.kind === 'attack' || e.kind === 'spell' || e.kind === 'proc') impact(e);
             if (e.kind === 'attack' || e.kind === 'spell') play(e.crit ? 'crit' : 'hit');
+            // weight: crits and big blows land with a few frames of hitstop
+            if (e.amount > 0 && (e.kind === 'attack' || e.kind === 'spell')) {
+              const tgt = unitOf(e.tgt);
+              if (e.tgt === 'hero' && e.amount >= H.maxHp * 0.08) hitstop(['hero', e.src], 90);
+              else if (e.crit && tgt) hitstop([e.tgt, e.src], e.kind === 'spell' ? 70 : 50);
+            }
           });
           break;
         }
@@ -468,6 +564,14 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         case 'status':
           if (e.isNew && cueDef(`status.${e.status}`) && gate(`st:${e.tgt}:${e.status}`, 1200)) cue(`status.${e.status}`, { tgt: e.tgt });
           break;
+        case 'statusEnd': {
+          // statuses visibly end: the ice breaks, the flames die down to smoke
+          const u = unitOf(e.tgt);
+          if (!u?.alive) break;
+          if (e.status === 'frozen') cue('status.thaw', { tgt: e.tgt });
+          else if (e.status === 'burn') cue('status.burn_out', { tgt: e.tgt });
+          break;
+        }
         case 'shield': {
           const u = unitOf(e.tgt);
           if (u && e.amount >= Math.max(8, u.maxHp * 0.05) && gate(`shield:${e.tgt}`, 1500)) cue('shield.gain', { tgt: e.tgt });
@@ -557,6 +661,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
         case 'wallHit':
           // ground-aligned: the slam bursts up from the floor at the wall, with a dust ring
           cue('wall.hit', { tgt: e.tgt });
+          hitstop([e.tgt], 80);
           if (H.heroId === 'lei' && gate('leiwall', 250)) cue('wall.hit.lei', { tgt: e.tgt });
           break;
         case 'collide':
@@ -722,7 +827,8 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
       const st = getState().settings;
       let sp = st.battleSpeed === 2 ? 2 : 1;
       if (puzzleRef.current && st.relaxedCasting) sp *= 0.4;
-      if (!b.result && !sandbox) {
+      const frozenFrame = (vis.current.freezeUntil || 0) > performance.now();
+      if (!b.result && !sandbox && !frozenFrame) {
         acc += real * sp;
         let steps = 0;
         while (acc >= dt && !b.result && steps < 8) {
@@ -862,7 +968,7 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
     <div className={`battle2 ${reduced ? 'calm' : ''}`}>
       <div
         ref={stageRef}
-        className={`stage stage2 theme-${theme} ${v.stageFx && v.stageFx.until > n ? `flash-${v.stageFx.kind}` : ''} ${v.shake > n ? 'shaking' : ''} ${(v.punch || 0) > n ? 'punch' : ''}`}
+        className={`stage stage2 theme-${theme} ${v.stageFx && v.stageFx.until > n ? `flash-${v.stageFx.kind}` : ''} ${v.shake > n ? (shakeLevel() < 1 ? 'shaking gentle' : 'shaking') : ''} ${(v.punch || 0) > n ? 'punch' : ''}`}
         style={slowRef.current !== 1 ? { '--slow': slowRef.current } : undefined}
       >
         <Backdrop theme={theme} worldColor={worldColor} />
@@ -891,23 +997,28 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
           const isHero = u === H;
           const fx = v.unitFx[u.id];
           const moving = u.alive && u.px !== undefined && Math.abs(u.x - u.px) > 0.0005;
+          // animation priority: dead > frozen (stops dead) > stunned (dazed) > a playing action >
+          // sliding from a knockback > victory > charging > walking > idle
           let state;
           if (!u.alive) state = 'dead';
-          else if (u.statuses.frozen || u.statuses.stun) state = 'still';
+          else if (u.statuses.frozen) state = 'frozen';
+          else if (u.statuses.stun) state = 'dazed';
           else if (fx && fx.until > n) state = fx.state;
+          else if (u.vx && u.kbHeavy && !u.hopping) state = 'knocked';
           else if (isHero && ended === 'win') state = 'victory';
           else if (u.charging) state = 'cast';
           else if (moving) state = 'walk';
           else state = 'idle';
           const sprite = isHero ? H.sprite : u.sprite === 'shade' ? H.sprite : u.sprite;
           const scale = cam * (isHero ? 0.8 : u.side === 0 ? 0.64 : (u.edef?.scale || 1) * (u.boss ? 0.8 : 0.72));
-          const stList = u.alive ? Object.keys(u.statuses) : [];
+          const sp = SPRITES[sprite] || { w: 90, h: 110 };
+          const look = u.alive ? lookOf(u.statuses) : { overlays: [], tint: null };
           return (
             <div
               key={u.id}
               data-unit={sandbox ? u.id : undefined}
-              className={`unit2 ${u.side === 0 ? 'side-hero' : 'side-enemy'} ${u.sprite === 'shade' ? 'is-shade' : ''} ${u.decoy ? 'is-decoy' : ''} ${u.statuses.frozen ? 'is-frozen' : ''} ${u.charging ? 'is-charging' : ''} ${(v.flash[u.id] || 0) > n ? 'hit-flash' : ''} ${isHero ? auras.join(' ') : ''}`}
-              style={{ transform: `translateX(calc(${ix(u)}cqw - 50%))`, bottom: u.flying ? '30%' : '13%' }}
+              className={`unit2 ${u.side === 0 ? 'side-hero' : 'side-enemy'} ${u.sprite === 'shade' ? 'is-shade' : ''} ${u.decoy ? 'is-decoy' : ''} ${look.tint ? `tint-${look.tint}` : ''} ${u.charging ? 'is-charging' : ''} ${(v.flash[u.id] || 0) > n ? 'hit-flash' : ''} ${(v.hitstop[u.id] || 0) > n ? 'hitstop' : ''} ${isHero ? auras.join(' ') : ''}`}
+              style={{ transform: `translateX(calc(${ix(u)}cqw - 50%))`, bottom: u.flying ? '30%' : '13%', '--anim': fx && fx.until > n ? fx.scale || 1 : 1, '--spd': unitSpeed(u) }}
               onClick={u.side === 1 && u.alive ? () => setInspect(u.id) : undefined}
             >
               {u.alive && u.momentum && <Momentum side={u.side} granted={!u.invading} />}
@@ -925,18 +1036,11 @@ export default function BattleScreen({ run: runProp, accountLevel, worldColor = 
               )}
               {/* Word Eater's wraiths carry a learned word: that label is the point, so it stays */}
               {u.side === 1 && u.alive && u.label && <span className="unit-word">{u.label}</span>}
-              {stList.length > 0 && (
-                <div className="status-pips">
-                  {stList.slice(0, 5).map((k) => (
-                    <span key={k} className="status-pip" style={{ background: STATUSES[k].color }} title={`${STATUSES[k].py} · ${STATUSES[k].name}`}>
-                      <Icon name={STATUS_GLYPH[k]} size={10} />
-                    </span>
-                  ))}
-                </div>
-              )}
               {u.shield > 0 && u.alive && isHero && <div className="shield-bubble" />}
               {u.charging && <div className="charge-ring" />}
-              <Sprite id={sprite} state={u.frozen ? 'still' : state} scale={scale} flip={Boolean(u.mirror)} className={`${u.edef?.tint ? `tint-${u.edef.tint}` : ''} ${u.frozen ? 'afterimage' : ''}`} />
+              {u.alive && <i className="ground-shadow" style={{ width: sp.w * scale * 0.62, bottom: u.flying ? -stageSize.current.h * 0.17 : -3 }} aria-hidden="true" />}
+              <Sprite id={sprite} state={u.frozen ? 'frozen' : state} scale={scale} flip={Boolean(u.mirror)} className={`${u.edef?.tint ? `tint-${u.edef.tint}` : ''} ${u.frozen ? 'afterimage' : ''}`} />
+              {look.overlays.length > 0 && <StatusLook overlays={look.overlays.join(' ')} w={sp.w * scale} h={sp.h * scale} hot={(u.statuses.burn?.dps || 0) >= 5} />}
               {v.attached[u.id]?.map((e) => (
                 <span key={e.id} data-born={e.born} style={{ display: 'contents' }}>
                   <VfxSprite e={e} />

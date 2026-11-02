@@ -17,7 +17,8 @@ function play(b, seconds) {
 const battle = (enemies, opts = {}) => new Battle({ hero: buildHero({ heroId: 'xinyi', ...opts }), enemies, seed: 3, ...opts.battle });
 
 test('victory: final enemy killed by a signature move outside a step is delivered by drain()', () => {
-  const b = battle(['slime']);
+  // the fruit lands at once here (fruitLand 0), so the kill happens inside finishCast
+  const b = battle(['slime'], { battle: { timing: { fruitLand: 0 } } });
   play(b, 1);
   const e = b.foes()[0];
   e.hp = 1;

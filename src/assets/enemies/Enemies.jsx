@@ -1,77 +1,89 @@
 // Enemy sprites. All face left (toward the hero). Feet/base at the bottom of the viewBox.
 // Each is self-contained so it can be swapped for a PNG/WebP/sprite sheet via the manifest.
-
-const Eyes = ({ x1, x2, y, r = 4.5, color = '#2a1a2e', angry = false }) => (
-  <g className="enemy-eyes">
-    <ellipse cx={x1} cy={y} rx={r} ry={r * 1.25} fill={color} />
-    <ellipse cx={x2} cy={y} rx={r} ry={r * 1.25} fill={color} />
-    <circle cx={x1 - r * 0.35} cy={y - r * 0.45} r={r * 0.4} fill="#fff" />
-    <circle cx={x2 - r * 0.35} cy={y - r * 0.45} r={r * 0.4} fill="#fff" />
-    {angry && <path d={`M${x1 - r * 1.4} ${y - r * 2} L${x1 + r} ${y - r * 1.2} M${x2 + r * 1.4} ${y - r * 2} L${x2 - r} ${y - r * 1.2}`} stroke={color} strokeWidth="2.4" strokeLinecap="round" />}
-  </g>
-);
-const Shadow = ({ cx, cy, rx }) => <ellipse cx={cx} cy={cy} rx={rx} ry={rx * 0.16} fill="#000" opacity=".18" />;
+// Drawn with the shared ink kit (ink.jsx) to match the heroes: thick outlines, cel shading.
+import { OL, Part, Stick, Eyes, GlowEyes, Blush, Gloss, ell } from './ink.jsx';
 
 export function Slime() {
+  const body = 'M14 80Q4 58 24 41Q36 22 50 23Q55 8 64 19Q86 27 92 54Q97 75 87 81Q50 89 14 80Z';
   return (
     <svg viewBox="0 0 100 90" className="sprite-svg" aria-hidden="true">
-      <defs>
-        <radialGradient id="slimeG" cx=".4" cy=".35" r=".8">
-          <stop offset="0" stopColor="#b6f58a" />
-          <stop offset=".6" stopColor="#5fcf5a" />
-          <stop offset="1" stopColor="#2f9a46" />
-        </radialGradient>
-      </defs>
-      <Shadow cx={50} cy={85} rx={36} />
-      <path d="M12 82 Q8 56 28 40 Q40 18 54 22 Q60 10 64 22 Q86 30 90 58 Q92 76 86 82 Z" fill="url(#slimeG)" />
-      <path d="M26 46 Q32 34 42 32" stroke="#e8ffd6" strokeWidth="5" strokeLinecap="round" fill="none" opacity=".8" />
-      <circle cx="24" cy="56" r="2.5" fill="#e8ffd6" opacity=".8" />
-      <Eyes x1={38} x2={58} y={56} r={5} color="#1f3b24" />
-      <path d="M42 68 Q48 73 54 68" stroke="#1f3b24" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      <ellipse cx="32" cy="66" rx="4" ry="2" fill="#ff9aa8" opacity=".5" />
-      <ellipse cx="64" cy="66" rx="4" ry="2" fill="#ff9aa8" opacity=".5" />
+      <Part id="sl-body" d={body} fill="#72dc5f" shade="#2f9a46" off={[-6, -5]}>
+        <path d="M18 76Q50 82 88 74Q86 84 50 86Q20 84 18 76Z" fill="#2f9a46" />
+        <ellipse cx="70" cy="70" rx="5" ry="4" fill="#4fbf50" />
+        <ellipse cx="78" cy="58" rx="3" ry="2.6" fill="#4fbf50" />
+        <ellipse cx="62" cy="34" rx="7" ry="5" fill="#a8f08a" />
+        <Gloss d="M24 50Q28 37 40 32" color="#e8ffd6" w={5.5} />
+        <circle cx="22" cy="60" r="2.6" fill="#e8ffd6" />
+      </Part>
+      <Eyes x1={38} x2={60} y={55} r={6.2} iris="#1f6b3a" glow="#5fd08a" />
+      <path d="M44 66Q49 74 55 66Z" fill="#7a2a3a" stroke={OL} strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M47 69Q49.5 71.5 52 69" fill="#ff8aa0" />
+      <Blush x={28} y={66} />
+      <Blush x={71} y={66} />
     </svg>
   );
 }
 
 export function Sporecap() {
+  const cap = 'M6 58Q6 18 50 12Q94 18 94 58Q80 66 50 64Q20 66 6 58Z';
   return (
     <svg viewBox="0 0 100 110" className="sprite-svg" aria-hidden="true">
-      <Shadow cx={50} cy={105} rx={28} />
-      <ellipse cx="38" cy="102" rx="9" ry="5" fill="#9b6a4a" />
-      <ellipse cx="62" cy="102" rx="9" ry="5" fill="#9b6a4a" />
-      <path d="M30 56 Q28 98 50 100 Q72 98 70 56Z" fill="#fbe8cf" />
-      <path d="M32 80 Q50 86 68 80" stroke="#e8cfae" strokeWidth="3" fill="none" />
-      <path d="M6 58 Q8 18 50 12 Q92 18 94 58 Q80 64 50 62 Q20 64 6 58Z" fill="#e5484d" />
-      <path d="M6 58 Q20 64 50 62 Q80 64 94 58 Q92 66 50 68 Q8 66 6 58Z" fill="#b8323a" />
-      <circle cx="30" cy="34" r="7" fill="#fff4e6" />
-      <circle cx="56" cy="24" r="5" fill="#fff4e6" />
-      <circle cx="74" cy="40" r="6" fill="#fff4e6" />
-      <circle cx="46" cy="46" r="3.5" fill="#fff4e6" />
-      <Eyes x1={42} x2={58} y={78} r={3.8} />
-      <path d="M45 88 Q50 85 55 88" stroke="#2a1a2e" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <g className="spores" fill="#d6f07a" opacity=".8">
-        <circle cx="16" cy="70" r="2" />
-        <circle cx="86" cy="72" r="1.6" />
-        <circle cx="10" cy="48" r="1.4" />
+      <Part id="sp-fl" d={ell(37, 101, 10, 5.5)} fill="#9b6a4a" shade="#5e3a24" off={[-2, -2]} />
+      <Part id="sp-fr" d={ell(63, 101, 10, 5.5)} fill="#9b6a4a" shade="#5e3a24" off={[-2, -2]} />
+      <Part id="sp-stem" d="M31 58Q27 98 50 100Q73 98 69 58Z" fill="#fbe8cf" shade="#d6b48c" off={[-5, -3]}>
+        <path d="M32 84Q50 92 68 84" stroke="#e6c9a2" strokeWidth="3" fill="none" />
+      </Part>
+      <Eyes x1={41} x2={59} y={77} r={5} iris="#5a3a2a" glow="#c98a5a" />
+      <path d="M46 89Q50 85.5 54 89" stroke={OL} strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <Blush x={33} y={86} rx={3.6} />
+      <Blush x={67} y={86} rx={3.6} />
+      <Part id="sp-cap" d={cap} fill="#ec4f54" shade="#a82a35" off={[-6, -6]}>
+        <Gloss d="M18 34Q26 20 42 17" color="#ff9a8a" w={5} />
+      </Part>
+      <Part id="sp-gill" d="M10 59Q50 71 90 59Q88 67 50 69Q12 67 10 59Z" fill="#f3d2b0" shade="#c9a07a" off={[0, -2]} sw={2.6} />
+      {[
+        [30, 34, 7.5],
+        [57, 25, 5.5],
+        [76, 41, 6.5],
+        [46, 47, 4],
+        [14, 48, 3.5],
+      ].map(([x, y, r]) => (
+        <Part key={x} id={`sp-dot${x}`} d={ell(x, y, r, r * 0.86)} fill="#fff7ec" shade="#efd2bd" off={[-1.6, -1.6]} sw={2.4} />
+      ))}
+      <g className="spores" fill="#d6f07a" stroke={OL} strokeWidth="1.4">
+        <circle cx="16" cy="76" r="2.4" />
+        <circle cx="87" cy="78" r="2" />
+        <circle cx="92" cy="66" r="1.6" />
       </g>
     </svg>
   );
 }
 
 export function Bat() {
+  const wingL = 'M40 40Q24 13 4 26Q12 32 9 42Q17 37 19 49Q27 42 35 53Z';
+  const wingR = 'M70 40Q86 13 106 26Q98 32 101 42Q93 37 91 49Q83 42 75 53Z';
   return (
     <svg viewBox="0 0 110 90" className="sprite-svg" aria-hidden="true">
-      <Shadow cx={55} cy={86} rx={20} />
       <g className="bat-body">
-        <path className="wing-l" d="M38 40 Q18 18 2 30 Q10 34 8 42 Q16 38 18 48 Q26 42 34 52Z" fill="#5b3f8f" />
-        <path className="wing-r" d="M72 40 Q92 18 108 30 Q100 34 102 42 Q94 38 92 48 Q84 42 76 52Z" fill="#5b3f8f" />
-        <ellipse cx="55" cy="46" rx="22" ry="20" fill="#7a58b8" />
-        <path d="M38 32 L36 14 L48 28Z M72 32 L74 14 L62 28Z" fill="#7a58b8" />
-        <path d="M40 29 L39 19 L46 27Z M70 29 L71 19 L64 27Z" fill="#f29cc8" />
-        <ellipse cx="55" cy="54" rx="12" ry="9" fill="#a88ad9" />
-        <Eyes x1={47} x2={62} y={42} r={4.4} color="#ffd84a" />
-        <path d="M49 54 L51 59 L53 54 M57 54 L59 59 L61 54" fill="#fff" stroke="#fff" strokeWidth="1" />
+        <Part id="bt-wl" className="wing-l" d={wingL} fill="#6b4aa6" shade="#3b2766" off={[0, -3]}>
+          <path d="M38 41L10 41M37 45L20 48" stroke="#3b2766" strokeWidth="2" />
+        </Part>
+        <Part id="bt-wr" className="wing-r" d={wingR} fill="#6b4aa6" shade="#3b2766" off={[0, -3]}>
+          <path d="M72 41L100 41M73 45L90 48" stroke="#3b2766" strokeWidth="2" />
+        </Part>
+        <Part id="bt-el" d="M38 33Q33 22 37 13Q46 20 49 29Z" fill="#8a66c8" shade="#5b3f8f">
+          <path d="M40 29Q38 23 39.5 18Q44 23 45 28Z" fill="#f29cc8" />
+        </Part>
+        <Part id="bt-er" d="M72 33Q77 22 73 13Q64 20 61 29Z" fill="#8a66c8" shade="#5b3f8f">
+          <path d="M70 29Q72 23 70.5 18Q66 23 65 28Z" fill="#f29cc8" />
+        </Part>
+        <Part id="bt-body" d={ell(55, 46, 22, 20)} fill="#8a66c8" shade="#5b3f8f" off={[-4, -4]}>
+          <ellipse cx="55" cy="57" rx="12" ry="9" fill="#c8b0ee" />
+          <Gloss d="M39 38Q42 31 49 28" color="#b79ae6" w={4} />
+        </Part>
+        <Eyes x1={47} x2={63} y={43} r={4.8} iris="#c98a00" glow="#ffe04a" angry />
+        <path d="M48 53Q55 57 62 53" stroke={OL} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        <path d="M50 54L51.5 59L53 54.6ZM57 54.6L58.5 59L60 54Z" fill="#fff" stroke={OL} strokeWidth="1.2" strokeLinejoin="round" />
       </g>
     </svg>
   );
@@ -80,23 +92,35 @@ export function Bat() {
 export function Goblin() {
   return (
     <svg viewBox="0 0 110 120" className="sprite-svg" aria-hidden="true">
-      <Shadow cx={55} cy={116} rx={30} />
-      <path d="M14 112 L22 30" stroke="#6b4a2b" strokeWidth="4.5" strokeLinecap="round" />
-      <path d="M22 30 Q16 18 22 8 Q28 18 22 30Z" fill="#26243b" />
-      <ellipse cx="46" cy="112" rx="9" ry="5" fill="#4a3424" />
-      <ellipse cx="66" cy="112" rx="9" ry="5" fill="#4a3424" />
-      <path d="M36 72 Q56 64 76 72 L82 110 Q56 116 30 110Z" fill="#8a6a3e" />
-      <path d="M30 110 Q56 116 82 110 L80 104 Q56 110 32 104Z" fill="#5f4628" />
-      <rect x="36" y="86" width="40" height="5" rx="2" fill="#4a3424" />
-      <circle cx="22" cy="84" r="5.5" fill="#8fd16a" />
-      <path d="M38 78 Q26 80 22 84" stroke="#8a6a3e" strokeWidth="9" strokeLinecap="round" fill="none" />
-      <path d="M12 46 Q2 38 4 30 Q16 36 28 44Z M100 46 Q110 38 108 30 Q96 36 84 44Z" fill="#8fd16a" />
-      <circle cx="56" cy="50" r="26" fill="#8fd16a" />
-      <path d="M30 46 Q32 22 56 20 Q80 22 82 46 Q70 32 56 34 Q42 32 30 46Z" fill="#5f4628" />
-      <Eyes x1={46} x2={64} y={52} r={5} color="#2a1a2e" angry />
-      <path d="M46 66 Q56 62 66 66" stroke="#2a1a2e" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      <path d="M50 64 L52 69 L54 64.5" fill="#fff" />
-      <ellipse cx="54" cy="58" rx="3" ry="2" fill="#6bb24a" />
+      <Stick d="M15 112L23 32" color="#8a5a32" w={4.5} />
+      <Part id="gb-tip" d="M23 33Q15 22 22 9Q30 22 23 33Z" fill="#b8c0d0" shade="#6f7790" off={[-2, -1]} sw={2.6} />
+      <Part id="gb-fl" d={ell(45, 111, 10, 5.5)} fill="#5a3f2a" shade="#3a2618" off={[-2, -2]} />
+      <Part id="gb-fr" d={ell(67, 111, 10, 5.5)} fill="#5a3f2a" shade="#3a2618" off={[-2, -2]} />
+      <Part id="gb-tunic" d="M36 72Q56 63 76 72L83 108Q56 116 29 108Z" fill="#a07a48" shade="#6a4c28" off={[-5, -3]}>
+        <path d="M29 102Q56 110 83 102L84 112L28 112Z" fill="#6a4c28" />
+        <path d="M44 74L48 100M64 74L62 100" stroke="#7d5c34" strokeWidth="2" />
+      </Part>
+      <Part id="gb-belt" d="M34 84Q56 89 78 84L78 91Q56 96 34 91Z" fill="#4a3424" shade="#2e1f14" off={[0, -1]} sw={2.6}>
+        <rect x="52" y="85" width="8" height="8" rx="1.5" fill="#ffcf5a" stroke={OL} strokeWidth="1.6" />
+      </Part>
+      <Stick d="M40 78Q28 80 23 85" color="#a07a48" w={8} />
+      <Part id="gb-hand" d={ell(22, 85, 6, 6)} fill="#8fd16a" shade="#5fa548" off={[-1.5, -1.5]} />
+      <Part id="gb-earl" d="M30 46Q6 44 3 30Q18 32 33 40Z" fill="#8fd16a" shade="#5fa548" off={[0, -2.5]}>
+        <path d="M27 42Q14 40 9 33Q20 35 29 40Z" fill="#e88a8a" />
+      </Part>
+      <Part id="gb-earr" d="M82 46Q106 44 109 30Q94 32 79 40Z" fill="#8fd16a" shade="#5fa548" off={[0, -2.5]}>
+        <path d="M85 42Q98 40 103 33Q92 35 83 40Z" fill="#e88a8a" />
+      </Part>
+      <Part id="gb-head" d={ell(56, 51, 26, 25)} fill="#8fd16a" shade="#5fa548" off={[-5, -4]}>
+        <Gloss d="M36 58Q35 50 38 44" color="#bff09a" w={3.5} />
+      </Part>
+      <Part id="gb-hood" d="M29 47Q30 21 56 19Q82 21 83 47Q72 31 56 34Q40 31 29 47Z" fill="#6a4a2e" shade="#45301c" off={[-3, -3]}>
+        <path d="M44 27Q50 24 58 24" stroke="#8a6a46" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+      </Part>
+      <Eyes x1={46} x2={65} y={53} r={5.4} iris="#b8322a" glow="#ff8a4a" angry />
+      <Part id="gb-nose" d="M53 58Q56 55 59 58Q60 62 56 63Q52 62 53 58Z" fill="#7cc458" shade="#5fa548" off={[-1, -1]} sw={2} />
+      <path d="M45 67Q56 63 67 67" stroke={OL} strokeWidth="2.6" fill="none" strokeLinecap="round" />
+      <path d="M50 65.3L52 70L54.2 64.6Z" fill="#fff" stroke={OL} strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -104,54 +128,54 @@ export function Goblin() {
 export function Golem() {
   return (
     <svg viewBox="0 0 120 120" className="sprite-svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="rockG" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#b9b3c8" />
-          <stop offset="1" stopColor="#7b7491" />
-        </linearGradient>
-      </defs>
-      <Shadow cx={60} cy={116} rx={40} />
-      <path d="M30 116 Q24 100 34 96 Q44 94 46 116Z M74 116 Q72 96 84 96 Q96 100 90 116Z" fill="#7b7491" />
-      <path d="M26 98 Q18 60 40 50 Q60 42 82 50 Q102 60 96 98 Q60 108 26 98Z" fill="url(#rockG)" />
-      <path d="M14 92 Q6 72 18 62 Q28 66 26 90Z M106 92 Q114 72 102 62 Q92 66 94 90Z" fill="#8f88a6" />
-      <path d="M38 34 Q36 14 60 12 Q84 14 82 34 Q84 52 60 54 Q36 52 38 34Z" fill="url(#rockG)" />
-      <path d="M40 22 Q50 10 66 13 Q58 18 54 24 Q46 20 40 22Z M70 16 Q80 18 82 28 Q76 24 70 16Z" fill="#7cc46a" />
-      <circle cx="45" cy="18" r="3" fill="#ffd1e0" />
-      <g className="enemy-eyes">
-        <ellipse cx="50" cy="34" rx="5" ry="4" fill="#5af0ff" />
-        <ellipse cx="68" cy="34" rx="5" ry="4" fill="#5af0ff" />
-        <ellipse cx="50" cy="34" rx="9" ry="7" fill="#5af0ff" opacity=".2" />
-        <ellipse cx="68" cy="34" rx="9" ry="7" fill="#5af0ff" opacity=".2" />
-      </g>
-      <path d="M50 44 L70 44" stroke="#5b5470" strokeWidth="3" strokeLinecap="round" />
-      <path d="M44 70 L54 78 L48 88 M78 66 L70 76" stroke="#6a6382" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      <path d="M58 64 l5 7 l-5 7 l-5 -7z" fill="#5af0ff" opacity=".85" />
+      <Part id="gl-ll" d="M30 116Q24 100 34 95Q46 93 47 116Z" fill="#9790ad" shade="#5f5878" off={[-3, -2]} />
+      <Part id="gl-lr" d="M73 116Q72 95 85 95Q97 100 91 116Z" fill="#9790ad" shade="#5f5878" off={[-3, -2]} />
+      <Part id="gl-ar" d="M106 92Q115 72 102 61Q91 66 93 90Z" fill="#9790ad" shade="#5f5878" off={[-3, -2]} />
+      <Part id="gl-body" d="M26 98Q17 60 40 50Q60 41 82 50Q103 60 96 98Q60 109 26 98Z" fill="#b9b3c8" shade="#736c8a" off={[-7, -6]}>
+        <path d="M36 60L48 56L46 66Z" fill="#d6d1e2" />
+        <path d="M44 70L54 78L48 88M78 66L70 76L74 84" stroke={OL} strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M58 63L64 71L58 79L52 71Z" fill="#5af0ff" stroke={OL} strokeWidth="2" strokeLinejoin="round" />
+        <path d="M56.5 67L58 65L60 68Z" fill="#e8ffff" />
+      </Part>
+      <Part id="gl-al" d="M14 92Q5 72 18 61Q29 66 27 90Z" fill="#a9a2be" shade="#5f5878" off={[-3, -2]}>
+        <path d="M12 74L20 70" stroke="#d6d1e2" strokeWidth="3" strokeLinecap="round" />
+      </Part>
+      <Part id="gl-head" d="M37 34Q35 13 60 11Q85 13 83 34Q85 53 60 55Q35 53 37 34Z" fill="#b9b3c8" shade="#736c8a" off={[-5, -4]}>
+        <path d="M44 22L52 18L50 25Z" fill="#d6d1e2" />
+      </Part>
+      <Part id="gl-moss" d="M39 22Q48 8 67 12Q59 18 55 25Q46 20 39 22ZM70 15Q82 17 83 29Q75 24 70 15Z" fill="#7cc46a" shade="#4f9a48" off={[-1.5, -1.5]} sw={2.6} />
+      <circle cx="45" cy="17" r="3" fill="#ffb0c8" stroke={OL} strokeWidth="1.5" />
+      <GlowEyes x1={50} x2={70} y={34} rx={5.4} ry={4.2} color="#5af0ff" />
+      <path d="M50 45L70 45" stroke={OL} strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
 
 export function Wisp() {
+  const body = 'M20 64Q16 24 50 10Q44 26 58 22Q66 6 76 16Q96 32 90 64Q88 86 74 96Q72 108 62 104Q56 114 48 104Q36 110 36 96Q20 86 20 64Z';
   return (
     <svg viewBox="0 0 110 120" className="sprite-svg" aria-hidden="true">
-      <defs>
-        <radialGradient id="wispG" cx=".45" cy=".4" r=".7">
-          <stop offset="0" stopColor="#e9dcff" />
-          <stop offset=".5" stopColor="#9f7bff" />
-          <stop offset="1" stopColor="#5b3fc4" />
-        </radialGradient>
-      </defs>
-      <Shadow cx={55} cy={116} rx={22} />
-      <ellipse cx="55" cy="60" rx="46" ry="46" fill="#9f7bff" opacity=".14" />
-      <path className="wisp-body" d="M20 64 Q16 24 50 10 Q44 26 58 22 Q66 6 76 16 Q96 32 90 64 Q88 86 74 96 Q72 108 62 104 Q56 114 48 104 Q36 110 36 96 Q20 86 20 64Z" fill="url(#wispG)" />
-      <ellipse cx="44" cy="58" rx="7" ry="9" fill="#1d1238" />
-      <ellipse cx="66" cy="58" rx="7" ry="9" fill="#1d1238" />
-      <circle cx="44" cy="60" r="2.4" fill="#7dfcff" />
-      <circle cx="66" cy="60" r="2.4" fill="#7dfcff" />
-      <path d="M48 78 Q55 74 62 78 Q55 84 48 78Z" fill="#1d1238" />
-      <g fill="#c7b2ff">
-        <circle cx="14" cy="40" r="3" />
-        <circle cx="96" cy="88" r="2.4" />
-        <circle cx="98" cy="30" r="2" />
+      <ellipse cx="55" cy="62" rx="48" ry="48" fill="#9f7bff" opacity=".16" />
+      <Part id="wp-body" className="wisp-body" d={body} fill="#a98aff" shade="#5b3fc4" off={[-7, -6]}>
+        <ellipse cx="50" cy="56" rx="22" ry="26" fill="#cbb6ff" />
+        <ellipse cx="46" cy="50" rx="11" ry="13" fill="#ece2ff" />
+        <Gloss d="M28 52Q28 36 40 26" color="#f4eeff" w={4.5} />
+      </Part>
+      <g className="enemy-eyes">
+        {[44, 66].map((x) => (
+          <g key={x}>
+            <ellipse cx={x} cy="60" rx="7" ry="9.5" fill="#1d1238" stroke={OL} strokeWidth="2" />
+            <ellipse cx={x} cy="64" rx="4.4" ry="3.6" fill="#38c8ff" />
+            <circle cx={x - 2.4} cy="56" r="2.6" fill="#fff" />
+            <circle cx={x + 2.2} cy="65" r="1.1" fill="#fff" />
+          </g>
+        ))}
+      </g>
+      <path d="M48 79Q55 75 62 79Q55 86 48 79Z" fill="#1d1238" stroke={OL} strokeWidth="1.8" strokeLinejoin="round" />
+      <g fill="#d9c8ff" stroke={OL} strokeWidth="1.5">
+        <circle cx="12" cy="40" r="3.2" />
+        <circle cx="98" cy="88" r="2.6" />
+        <circle cx="99" cy="30" r="2.2" />
       </g>
     </svg>
   );
@@ -160,27 +184,34 @@ export function Wisp() {
 export function Knight() {
   return (
     <svg viewBox="0 0 120 130" className="sprite-svg" aria-hidden="true">
-      <defs>
-        <linearGradient id="shellG" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3fb7a2" />
-          <stop offset="1" stopColor="#1f5f63" />
-        </linearGradient>
-      </defs>
-      <Shadow cx={60} cy={126} rx={38} />
-      <ellipse cx="46" cy="122" rx="10" ry="5" fill="#173a40" />
-      <ellipse cx="74" cy="122" rx="10" ry="5" fill="#173a40" />
-      <path d="M34 72 Q60 62 86 72 L90 118 Q60 126 30 118Z" fill="#2d7f7a" />
-      <path d="M60 30 Q100 34 104 80 Q104 110 88 118 Q92 80 60 60Z" fill="url(#shellG)" />
-      <path d="M78 40 l6 -10 l2 12z M94 56 l10 -6 l-4 12z M100 80 l10 0 l-8 8z M98 102 l8 6 l-10 2z" fill="#a6f0d9" />
-      <circle cx="56" cy="50" r="24" fill="#c9d6e0" />
-      <path d="M32 50 Q34 24 56 24 Q78 24 80 50Z" fill="#8fa3b5" />
-      <path d="M56 18 Q60 8 70 10 Q64 14 62 24Z" fill="#e5484d" />
-      <rect x="36" y="46" width="40" height="12" rx="5" fill="#1f2a3a" />
-      <ellipse cx="47" cy="52" rx="4" ry="3" fill="#ff6a5a" />
-      <ellipse cx="65" cy="52" rx="4" ry="3" fill="#ff6a5a" />
-      <path d="M8 76 Q10 64 26 62 Q40 64 40 78 Q40 100 24 108 Q8 100 8 76Z" fill="#8fa3b5" stroke="#5c6f82" strokeWidth="3" />
-      <path d="M24 70 L24 100 M14 82 L34 82" stroke="#e5484d" strokeWidth="4" strokeLinecap="round" />
+      <Part id="kn-fl" d={ell(46, 121, 11, 6)} fill="#2a4a52" shade="#132a30" off={[-2, -2]} />
+      <Part id="kn-fr" d={ell(75, 121, 11, 6)} fill="#2a4a52" shade="#132a30" off={[-2, -2]} />
+      <Part id="kn-cape" d="M60 30Q101 34 104 80Q105 110 88 118Q92 80 60 60Z" fill="#3fb7a2" shade="#1f5f63" off={[-5, -3]}>
+        <path d="M70 40Q92 50 96 80" stroke="#8fe8d2" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </Part>
+      {[
+        [86, 42],
+        [98, 60],
+        [102, 82],
+        [97, 102],
+      ].map(([x, y]) => (
+        <Part key={y} id={`kn-nub${y}`} d={ell(x, y, 4.2, 4.2)} fill="#a6f0d9" shade="#5fbfa6" off={[-1.2, -1.2]} sw={2.4} />
+      ))}
+      <Part id="kn-body" d="M34 72Q60 62 86 72L90 117Q60 126 30 117Z" fill="#35918a" shade="#1f5f63" off={[-5, -3]}>
+        <path d="M32 94Q60 102 88 94" stroke="#1f5f63" strokeWidth="3" fill="none" />
+        <path d="M44 74L42 92" stroke="#6fd0c0" strokeWidth="3" strokeLinecap="round" />
+      </Part>
+      <Part id="kn-head" d={ell(56, 50, 24, 24)} fill="#d6e2ea" shade="#8a9db0" off={[-5, -4]}>
+        <path d="M32 50Q34 24 56 24Q78 24 80 50Z" fill="#9fb3c5" />
+        <Gloss d="M38 40Q42 30 52 28" color="#f4f8fb" w={3.5} />
+      </Part>
+      <Part id="kn-plume" d="M56 25Q57 6 72 8Q80 10 76 16Q66 14 63 26Z" fill="#ec4f54" shade="#a82a35" off={[-2, -2]} sw={2.8} />
+      <Part id="kn-visor" d="M36 50Q36 44 42 44L70 44Q76 44 76 50Q76 58 70 58L42 58Q36 58 36 50Z" fill="#1f2a3a" shade="#0f1520" off={[0, 0]} sw={2.8} />
+      <GlowEyes x1={47} x2={65} y={51} rx={4.4} ry={3} color="#ff6a5a" core="#ffe0d0" />
+      <Part id="kn-shield" d="M8 76Q10 63 25 61Q41 63 41 78Q41 100 25 109Q8 100 8 76Z" fill="#a9bccc" shade="#647c92" off={[-3, -3]}>
+        <path d="M25 68L25 101M14 81L36 81" stroke="#e5484d" strokeWidth="5" strokeLinecap="round" />
+        <path d="M13 72Q16 66 22 65" stroke="#e4eef5" strokeWidth="3" fill="none" strokeLinecap="round" />
+      </Part>
     </svg>
   );
 }
-

@@ -119,8 +119,10 @@ export function scaleEnemy(id, floor, empower = 0, ascension = 0) {
 const r2 = (n) => Math.round(n * 100) / 100;
 
 export class Battle {
-  constructor({ hero, heroHp, enemies, biome = 'bamboo', floor = 1, seed = 1, empower = 0, runState = {}, extraTerrain = [], ascension = 0, sigImpact = 0 }) {
+  constructor({ hero, heroHp, enemies, biome = 'bamboo', floor = 1, seed = 1, empower = 0, runState = {}, extraTerrain = [], ascension = 0, sigImpact = 0, timing = {} }) {
     this.rng = makeRng(seed);
+    // attack animations and projectile flight (see COMBAT.timing); timing.flightFn(src, tgt) → ms
+    this.timing = { ...COMBAT.timing, ...timing };
     this.ascension = ascension;
     this.sigImpact = sigImpact;
     this.t = 0;
@@ -337,6 +339,7 @@ export class Battle {
     // block (hero)
     if (tgt === H && kind === 'attack' && this.rng() < (H.block || 0) + this.buffSum(H, 'block')) {
       ctx.mult *= 0.3;
+      H.actUntil = Math.max(H.actUntil || 0, this.t + COMBAT.blockTime);
       this.emit({ type: 'block', tgt: 'hero' });
       this.trigger('onBlock', { src });
     }
@@ -594,6 +597,27 @@ export class Battle {
   staggered(u) {
     return (Boolean(u.vx) && (u.kbHeavy || u.hopping)) || (u.recover || 0) > 0;
   }
+  /**
+   * Doing something else (sliding from a knockback or dodge, recovering, blocking, mid swing or
+   * mid signature cast): a unit can't start an attack or move until it's done.
+   */
+  busy(u) {
+    return this.staggered(u) || this.t < (u.actUntil || 0) || this.t < (u.busyUntil || 0);
+  }
+  /**
+   * Where a unit wants to stand against a foe at `foeX`: at its maximum attack range, unless
+   * there is room to step into the opposing half (Momentum) before body contact, then just
+   * past the line. Never closer than `minGap`.
+   */
+  holdX(u, foeX, minGap) {
+    const dir = u.side === 0 ? 1 : -1; // toward the foe
+    const closest = foeX - dir * minGap;
+    let atRange = foeX - dir * Math.max(0, u.range - 1);
+    if ((atRange - closest) * dir > 0) atRange = closest;
+    const line = MID + dir * (COMBAT.zoneBuffer + 1);
+    const room = (closest - line) * dir >= 0;
+    return room && (atRange - line) * dir < 0 ? line : atRange;
+  }
   /** True while the unit stands in the opposing team's half (with hysteresis). */
   inOwnZone(u) {
     return u.side === 0 ? u.x < MID : u.x > MID;
@@ -839,7 +863,7 @@ export class Battle {
    * count toward "every Nth attack" and is never copied again. opts.from: who it visibly comes from
    * (an ally id). opts.target overrides the target.
    */
-  heroAttack({ mult = 1, counter = false, copy = false, from = null, forceCrit = false, target: forced = null, kbMult = 1 } = {}) {
+  heroAttack({ mult = 1, counter = false, copy = false, from = null, forceCrit = false, target: forced = null, kbMult = 1, shown = false } = {}) {
     const H = this.hero;
     if (copy && (this.copyDepth || 0) >= COMBAT.maxCopyDepth) return;
     const target = forced?.alive ? forced : H.randomTarget ? this.randomFoe() : this.front();
@@ -847,12 +871,12 @@ export class Battle {
     if (!copy) H.attackCount += 1;
     this.copyDepth = (this.copyDepth || 0) + (copy ? 1 : 0);
     try {
-      this.attackOnce({ target, mult, counter, copy, from, forceCrit, kbMult });
+      this.attackOnce({ target, mult, counter, copy, from, forceCrit, kbMult, shown });
     } finally {
       this.copyDepth -= copy ? 1 : 0;
     }
   }
-  attackOnce({ target, mult, counter, copy, from, forceCrit, kbMult }) {
+  attackOnce({ target, mult, counter, copy, from, forceCrit, kbMult, shown = false }) {
     const H = this.hero;
     const payload = { target, count: H.attackCount, mult, extra: [], element: H.attackElement, kbMult, counter, copy, forceCrit };
     this.trigger('onAttack', payload);
@@ -868,10 +892,12 @@ export class Battle {
       if (f) hits.push({ t: f, mult: payload.mult * 0.7 });
     }
     for (const e of payload.extra) if (e.target?.alive) hits.push({ t: e.target, mult: e.mult, extra: true });
-    if (!from) this.emit({ type: 'attack', src: 'hero', tgt: payload.target.id });
-    for (const h of hits) {
-      if (!h.t.alive) continue;
-      this.emit({ type: 'shot', src: from || 'hero', tgt: h.t.id, element: payload.element, copy: copy || undefined });
+    if (!from && !shown) this.emit({ type: 'attack', src: 'hero', tgt: payload.target.id });
+    // ranged attacks are projectiles: each one lands (damage, knockback, statuses) when it arrives
+    const ranged = H.range > 20;
+    const origin = (from && this.units.find((u) => u.id === from)) || H;
+    const land = (h) => {
+      if (!h.t.alive || this.result) return;
       const dealt = this.damage(H, h.t, H.atk * h.mult, { element: payload.element, kind: 'attack', sub: !h.primary, kbMult: h.primary ? payload.kbMult : 1, forceCrit: h.primary && payload.forceCrit, counter, copy });
       if (dealt > 0 && H.split > 0 && h.primary) {
         for (let i = 0; i < H.split; i++) {
@@ -882,7 +908,106 @@ export class Battle {
           }
         }
       }
+    };
+    for (const h of hits) {
+      if (!h.t.alive) continue;
+      if (ranged) {
+        const fl = this.flightTime(origin, h.t);
+        this.emit({ type: 'shot', src: from || 'hero', tgt: h.t.id, element: payload.element, copy: copy || undefined, ms: Math.round(fl * 1000), timed: true });
+        this.schedule(fl, () => land(h));
+      } else {
+        this.emit({ type: 'shot', src: from || 'hero', tgt: h.t.id, element: payload.element, copy: copy || undefined });
+        land(h);
+      }
     }
+  }
+
+  // ---------------------------------------------------------------- attack timing
+  /** An attack animation for an attacker this fast: { dur, contact } in seconds. */
+  animFor(kind, aspd, unit = null) {
+    const a = this.timing[kind] || this.timing.melee;
+    // Chill slows the swing itself (as much as it slows the attack rate); speed-ups shorten it
+    const chill = unit?.statuses?.chill ? 0.65 : 1;
+    const dur = Math.min(a.dur / chill, this.timing.maxAnimShare / Math.max(0.2, aspd));
+    return { dur, contact: dur * a.contact };
+  }
+  /** How long a projectile from `src` takes to reach `tgt` (seconds). */
+  flightTime(src, tgt) {
+    const ms = this.timing.flightFn?.(src, tgt);
+    if (ms !== null && ms !== undefined) return ms / 1000;
+    // a constant speed: twice the distance takes twice as long
+    const f = this.timing.flight;
+    const pct = (Math.abs(tgt.x - src.x) * 100) / COMBAT.worldW;
+    return Math.max(f.min, pct * f.msPerPct) / 1000;
+  }
+  /**
+   * The hero's basic attack: the animation starts now and the attack connects at its contact
+   * moment (melee damage there; projectiles are released there and land on arrival). Stunned,
+   * frozen or knocked-out heroes don't connect.
+   */
+  heroSwing(target) {
+    const H = this.hero;
+    if (!target) return;
+    const kind = H.hdef?.attack?.fx === 'chain' ? 'heavy' : H.range <= 20 ? 'melee' : 'ranged';
+    const a = this.animFor(kind, this.attackSpeed(H), H);
+    H.actUntil = this.t + a.dur;
+    this.emit({ type: 'attack', src: 'hero', tgt: target.id, dur: r2(a.dur), kind });
+    this.schedule(a.contact, () => {
+      if (this.result || !H.alive || this.disabled(H)) return;
+      let t = target.alive ? target : this.front();
+      if (!t) return;
+      // melee: the target may have been pushed out of reach while the swing came down
+      if (kind !== 'ranged' && Math.abs(t.x - H.x) > H.range + 4) {
+        const f = this.front();
+        if (!f || Math.abs(f.x - H.x) > H.range + 4) {
+          this.emit({ type: 'miss', src: 'hero', tgt: t.id });
+          return;
+        }
+        t = f;
+      }
+      this.heroAttack({ target: t, shown: true });
+    });
+  }
+  /** An enemy's attack: windup, then contact (melee) or a projectile that hits on arrival. */
+  enemySwing(u, gap) {
+    const H = this.hero;
+    const ranged = u.range > 20;
+    const a = this.animFor(ranged ? 'ranged' : 'melee', this.attackSpeed(u), u);
+    u.actUntil = this.t + a.dur;
+    this.emit({ type: 'attack', src: u.id, tgt: 'hero', dur: r2(a.dur), ranged });
+    this.schedule(a.contact, () => {
+      // a stunned, frozen or defeated enemy never finishes its attack
+      if (this.result || !u.alive || this.disabled(u) || !H.alive) return;
+      if (!ranged) {
+        if (this.dist(u, H) > u.range + gap + 5) {
+          this.emit({ type: 'miss', src: u.id, tgt: 'hero' });
+          return;
+        }
+        this.enemyHit(u, false);
+        return;
+      }
+      const fl = this.flightTime(u, H);
+      this.emit({ type: 'shot', src: u.id, tgt: 'hero', element: u.attackElement, ms: Math.round(fl * 1000), timed: true });
+      this.schedule(fl, () => !this.result && H.alive && this.enemyHit(u, true));
+    });
+  }
+  /** An enemy attack connects with the hero (reflections and decoys first). */
+  enemyHit(u, ranged) {
+    const H = this.hero;
+    // reflective temple surfaces bounce some projectiles back
+    if (ranged && this.biome.reflect && this.rng() < this.biome.reflect) {
+      this.label(u, 'Reflected!', 'good');
+      this.damage(H, u, u.atk * 1.2, { element: 'light', kind: 'proc' });
+      return;
+    }
+    // Ghost Step decoys draw some attacks away
+    const decoy = this.allies().find((a) => a.decoy);
+    if (decoy && this.rng() < 0.6) {
+      this.emit({ type: 'decoy', tgt: decoy.id });
+      return;
+    }
+    this.damage(u, H, u.atk, { element: u.attackElement, kind: 'attack' });
+    if (u.edef.onHitStatus && H.alive) this.applyStatus(H, u.edef.onHitStatus.id, { src: u, dur: u.edef.onHitStatus.dur, dps: u.edef.onHitStatus.dps });
   }
 
   // ---------------------------------------------------------------- signature move (player input)
@@ -1214,39 +1339,43 @@ export class Battle {
     // hero
     if (H.alive && !this.disabled(H)) {
       const target = this.front();
-      // staggered, or mid signature cast animation: hold still (the swing timer keeps counting)
-      if (target && (this.staggered(H) || this.t < (H.busyUntil || 0))) {
-        // the swing timer keeps counting, so the hero strikes right after recovering
-        H.still = 0;
+      // busy (sliding, recovering, blocking, swinging, casting): hold still, no new attack;
+      // the swing timer keeps counting, so the hero strikes right after
+      if (target && this.busy(H)) {
+        // swinging or blocking still counts as holding your ground; sliding doesn't
+        if (this.staggered(H)) H.still = 0;
+        else H.still += dt;
+        H.moving = false;
         H.atkTimer = Math.max(0, H.atkTimer - dt);
       } else if (target) {
         const d = target.x - H.x;
-        const slow = this.moveSlow(H);
-        const melee = H.range <= 20;
-        // Heroes press to a line just past the midpoint (Momentum) or chase into attack range,
-        // whichever is further forward, and step back up to it after being pushed, stopping at
-        // body contact. Ranged heroes only back off when an enemy is right on top of them (never
-        // past their rear line). Hysteresis (start beyond a margin, stop on arrival) avoids jitter.
-        const tx = Math.min(Math.max(target.x - H.range * (melee ? 0.85 : 0.8), MID + 4), target.x - 9.5);
-        const err = tx - H.x;
-        let move = 0;
-        if (err > (H.moving ? 0.2 : 1.5)) move = Math.min(H.speed * slow * dt, err);
-        else if (!melee && d < 6 && H.x > COMBAT.worldW * 0.2) move = -H.speed * 0.5 * slow * dt;
-        H.moving = Boolean(move);
-        if (move) {
-          H.x = Math.max(3, Math.min(COMBAT.worldW - 10, H.x + move));
-          H.still = 0;
-          H.moved = (H.moved || 0) + Math.abs(move);
-          if (H.moved >= 4) {
-            H.moved -= 4;
-            this.trigger('onMove', { x: H.x });
-          }
-        } else H.still += dt;
         H.atkTimer -= dt;
         if (H.atkTimer <= 0 && d <= H.range + 1) {
+          // attacking and moving never overlap: the hero stops to strike
+          H.moving = false;
+          H.still += dt;
           H.atkTimer += 1 / Math.max(0.2, this.attackSpeed(H));
-          this.heroAttack();
-        } else if (H.atkTimer < 0) H.atkTimer = 0;
+          this.heroSwing(H.randomTarget ? this.randomFoe() || target : target);
+        } else {
+          if (H.atkTimer < 0) H.atkTimer = 0;
+          // between attacks: keep to max range (or just past the midpoint for Momentum when
+          // there's room), stepping back if pushed too close. Hysteresis avoids jitter.
+          const slow = this.moveSlow(H);
+          const err = this.holdX(H, target.x, 9.5) - H.x;
+          let move = 0;
+          if (err > (H.moving ? 0.2 : 1.5)) move = Math.min(H.speed * slow * dt, err);
+          else if (err < -(H.moving ? 0.2 : 3) && H.x > 3) move = Math.max(-H.speed * 0.7 * slow * dt, err, 3 - H.x);
+          H.moving = Boolean(move);
+          if (move) {
+            H.x = Math.max(3, Math.min(COMBAT.worldW - 10, H.x + move));
+            H.still = 0;
+            H.moved = (H.moved || 0) + Math.abs(move);
+            if (H.moved >= 4) {
+              H.moved -= 4;
+              this.trigger('onMove', { x: H.x });
+            }
+          } else H.still += dt;
+        }
       }
     }
 
@@ -1293,41 +1422,33 @@ export class Battle {
         }
         continue;
       }
-      let want = u.flying ? H.x + u.range : Math.max(H.x + u.range, lastGroundX + 15);
-      const gap = want - (H.x + u.range); // queued enemies can still reach (spears, reach)
-      // stance: defensive shooters hold their own half when they can still reach the hero from it;
-      // aggressive shooters press into the hero's half to gain Momentum
-      if (u.range > 20 && u.stance === 'defensive' && want < MID + 3 && MID + 3 - H.x <= u.range) want = MID + 3;
-      if (u.range > 20 && u.stance === 'aggressive') want = Math.max(H.x + 12, Math.min(want, MID - 8));
-      const spd = u.speed * this.moveSlow(u) * (u.stance === 'aggressive' ? 1.2 : 1) * dt;
-      if (u.x > want + (u.moving ? 0.2 : 1)) {
-        u.x = Math.max(want, u.x - spd);
-        u.moving = true;
-      } else if (u.range > 20 && u.x < want - 8 && u.x < COMBAT.worldW - 4) {
-        u.x = Math.min(want, u.x + spd * 0.6); // shooters back away from a hero that got too close
-        u.moving = true;
-      } else u.moving = false;
-      if (!u.flying) lastGroundX = u.x;
+      // like the hero: hold max range, or step into the hero's half (Momentum) when there's
+      // room; ground enemies queue at least a body-width apart (queued ones can still reach)
+      const base = this.holdX(u, H.x, 9.5);
+      const want = u.flying ? base : Math.max(base, lastGroundX + 15);
+      // queued ranged enemies still reach over the front line; melee ones wait their turn
+      const gap = u.range > 20 ? Math.max(0, want - (H.x + u.range)) : 0;
       u.atkTimer -= dt;
-      if (u.atkTimer <= 0 && this.dist(u, H) <= u.range + gap + 1) {
+      if (this.busy(u)) {
+        u.moving = false;
+        u.atkTimer = Math.max(0, u.atkTimer);
+      } else if (u.atkTimer <= 0 && this.dist(u, H) <= u.range + gap + 1) {
+        // attacking and moving never overlap
+        u.moving = false;
         u.atkTimer += 1 / this.attackSpeed(u);
-        this.emit({ type: 'attack', src: u.id, tgt: 'hero' });
-        if (u.range > 20) this.emit({ type: 'shot', src: u.id, tgt: 'hero', element: u.attackElement });
-        // reflective temple surfaces bounce some projectiles back
-        if (u.range > 20 && this.biome.reflect && this.rng() < this.biome.reflect) {
-          this.label(u, 'Reflected!', 'good');
-          this.damage(H, u, u.atk * 1.2, { element: 'light', kind: 'proc' });
-          continue;
-        }
-        // Ghost Step decoys draw some attacks away
-        const decoy = this.allies().find((a) => a.decoy);
-        if (decoy && this.rng() < 0.6) {
-          this.emit({ type: 'decoy', tgt: decoy.id });
-          continue;
-        }
-        this.damage(u, H, u.atk, { element: u.attackElement, kind: 'attack' });
-        if (u.edef.onHitStatus && H.alive) this.applyStatus(H, u.edef.onHitStatus.id, { src: u, dur: u.edef.onHitStatus.dur, dps: u.edef.onHitStatus.dps });
-      } else if (u.atkTimer < 0) u.atkTimer = 0;
+        this.enemySwing(u, gap);
+      } else {
+        if (u.atkTimer < 0) u.atkTimer = 0;
+        const spd = u.speed * this.moveSlow(u) * (u.stance === 'aggressive' ? 1.2 : 1) * dt;
+        if (u.x > want + (u.moving ? 0.2 : 1)) {
+          u.x = Math.max(want, u.x - spd);
+          u.moving = true;
+        } else if (u.x < want - (u.moving ? 0.2 : 3) && u.x < COMBAT.worldW - 4) {
+          u.x = Math.min(want, COMBAT.worldW - 4, u.x + spd * 0.7); // backs off to its range
+          u.moving = true;
+        } else u.moving = false;
+      }
+      if (!u.flying) lastGroundX = u.x;
     }
 
     this.separate();

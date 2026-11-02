@@ -2,7 +2,8 @@
 // Each hero has: base stats · a basic attack style · exactly one signature move (data/signatures.js,
 // with its own Mandarin minigame; it can never be replaced) · a passive (hooks run by the combat
 // engine, like items; passives are never silenced). `quizHealPct` is used for teacher/rest questions.
-// attack.fx picks the attack visuals: melee 'slash' | 'dagger' | 'chain', ranged 'orb' | 'dart' | 'fire'.
+// attack.fx picks the attack visuals: melee 'slash' | 'dagger' | 'chain', ranged: the FX config
+// projectile of that name ('food' Xīn Yí's snacks, 'scroll' Ruì Zhé's paper talismans, 'fire').
 // passive.meter { key, max, color } shows a charge meter over the hero (read from the hook state).
 // attack.kb is how far basic attacks push (world units); stats.speedPct / kbRes shape positioning.
 
@@ -11,7 +12,7 @@ export const HEROES = {
     py: 'Xīn Yí', zh: '欣怡', en: 'Xin Yi', title: 'Cheerful Wanderer', sprite: 'xinyi',
     blurb: 'Always smiling, always learning. Her good mood is contagious, and it keeps her on her feet.',
     stats: { maxHp: 135, atk: 14, def: 2, aspd: 0.9, crit: 0.05, critDmg: 1.5, dodge: 0 },
-    attack: { range: 48, element: 'physical', style: 'Ranged qi orbs', fx: 'orb', kb: 1.5 },
+    attack: { range: 48, element: 'physical', style: 'Thrown snacks (dumplings, buns, fruit)', fx: 'food', kb: 1.5 },
     signature: 'fruit_salad',
     strength: 'Versatile: every fruit does something different, and each success heals her.',
     weakness: 'Unpredictable; average damage until her build comes together.',
@@ -73,7 +74,7 @@ export const HEROES = {
     py: 'Ruì Zhé', zh: '睿哲', en: 'Ruizhe', title: 'Nervous Scholar', sprite: 'ruizhe',
     blurb: 'Has read every book and is terrified of all of them. Fights with scrolls, and panics brilliantly.',
     stats: { maxHp: 125, atk: 12, def: 2, aspd: 1.0, crit: 0.05, critDmg: 1.5, dodge: 0 },
-    attack: { range: 50, element: 'physical', style: 'Ranged paper darts', fx: 'dart', kb: 1 },
+    attack: { range: 50, element: 'physical', style: 'Paper talismans and scrolls', fx: 'scroll', kb: 1 },
     signature: 'deny_danger',
     strength: 'Controls space: shields himself and throws enemies far away; panic saves him.',
     weakness: 'Weak basic attacks; his signature deals almost no damage.',

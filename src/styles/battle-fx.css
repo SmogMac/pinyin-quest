@@ -116,7 +116,10 @@
   left: 0;
   top: 0;
   display: block;
+  /* centred on the flight point; spins, tilts, flips and squashes all pivot on the visual centre
+     (origin 0 0 + the centring translate innermost, so keyframes write it last) */
   transform: translate(-50%, -50%);
+  transform-origin: 0 0;
 }
 .fxp.dir-l > i {
   scale: -1 1;
@@ -154,8 +157,49 @@
 }
 @keyframes dart-wobble {
   to {
-    transform: translate(-50%, -60%) rotate(4deg);
+    transform: rotate(4deg) translate(-50%, -60%);
   }
+}
+/* paper talisman (Ruì Zhé): a yellow fú with a red seal, fluttering end over end */
+.p-scroll > i {
+  width: 1.1em;
+  height: 2em;
+  border: 0.14em solid #2a1a12;
+  border-radius: 0.15em;
+  background:
+    linear-gradient(#c23a35, #c23a35) 50% 22% / 0.5em 0.14em no-repeat,
+    linear-gradient(#c23a35, #c23a35) 50% 42% / 0.14em 0.6em no-repeat,
+    linear-gradient(#c23a35, #c23a35) 50% 72% / 0.5em 0.14em no-repeat,
+    linear-gradient(90deg, #f6d65a, #ffe98a 45%, #e8bf3a);
+  animation: talisman-flip 0.32s linear infinite;
+}
+@keyframes talisman-flip {
+  0% {
+    transform: rotate(0deg) scaleX(1) translate(-50%, -50%);
+  }
+  50% {
+    transform: rotate(180deg) scaleX(0.55) translate(-50%, -50%);
+  }
+  100% {
+    transform: rotate(360deg) scaleX(1) translate(-50%, -50%);
+  }
+}
+.p-scroll > i::after {
+  display: none;
+}
+/* thrown spear (goblins): wooden shaft, iron head, a little red tassel */
+.p-spear > i {
+  width: 3.6em;
+  height: 0.9em;
+  background:
+    linear-gradient(#e5484d, #e5484d) 66% 50% / 0.3em 0.55em no-repeat,
+    linear-gradient(#8a5a32, #6b4a2b) 0 50% / 72% 0.28em no-repeat,
+    linear-gradient(90deg, #dfe6f0, #8f9aae) 100% 50% / 30% 100% no-repeat;
+  clip-path: polygon(0 34%, 70% 34%, 70% 0, 100% 50%, 70% 100%, 70% 66%, 0 66%);
+  filter: drop-shadow(0 0 0.06em #22182a) drop-shadow(0 0 0.06em #22182a);
+}
+.p-spear > i::after {
+  display: none;
 }
 /* fire: flickering flame + ember trail */
 .p-fire > i {
@@ -168,7 +212,7 @@
 }
 @keyframes flicker {
   to {
-    transform: translate(-50%, -50%) scale(1.12, 0.9);
+    transform: scale(1.12, 0.9) translate(-50%, -50%);
   }
 }
 .p-fire > i::after {
@@ -223,10 +267,10 @@
 }
 @keyframes rock-arc {
   50% {
-    transform: translate(-50%, -260%) rotate(200deg);
+    transform: translate(0, -210%) rotate(200deg) translate(-50%, -50%);
   }
   100% {
-    transform: translate(-50%, -50%) rotate(400deg);
+    transform: rotate(400deg) translate(-50%, -50%);
   }
 }
 /* wind: a curved, translucent gust */
@@ -247,7 +291,7 @@
 }
 @keyframes gust-swirl {
   to {
-    transform: translate(-50%, -50%) rotate(-90deg) scale(1.3);
+    transform: rotate(-90deg) scale(1.3) translate(-50%, -50%);
     opacity: 0.4;
   }
 }
@@ -1651,4 +1695,342 @@
 .sprite.afterimage {
   filter: grayscale(0.6) brightness(1.4) hue-rotate(160deg) drop-shadow(0 0 6px #9fe8ff);
   opacity: 0.6;
+}
+
+/* ================================================================ character states
+   (BattleScreen picks one state per unit by priority; StatusLook adds what statuses look like) */
+/* grounding: a soft contact shadow on the floor under every unit */
+.ground-shadow {
+  position: absolute;
+  left: 50%;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(20, 12, 30, 0.42), rgba(20, 12, 30, 0) 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+/* frozen: everything stops (the sprite and anything animating inside it) */
+.sprite.st-frozen,
+.sprite.st-frozen * {
+  animation: none !important;
+}
+/* stunned: a dazed wobble, clearly different from frozen */
+.sprite.st-dazed {
+  transform-origin: 50% 100%;
+  animation: dazed 0.9s ease-in-out infinite;
+}
+@keyframes dazed {
+  25% {
+    transform: rotate(-5deg) translateX(-2px);
+  }
+  75% {
+    transform: rotate(5deg) translateX(2px);
+  }
+}
+/* knocked: leaning back while sliding (held until the slide ends) */
+:where(.side-enemy) .sprite.st-knocked {
+  transform: rotate(10deg) scale(0.96, 1.03);
+  transform-origin: 50% 100%;
+}
+:where(.side-hero) .sprite.st-knocked {
+  transform: rotate(-10deg) scale(0.96, 1.03);
+  transform-origin: 50% 100%;
+}
+/* Chill / Slow: idle and walk play slower by exactly the gameplay slowdown (--spd) */
+.unit2 .st-idle,
+.unit2 .st-victory {
+  animation-duration: calc(1.6s / var(--spd, 1));
+}
+.unit2 .st-walk {
+  animation-duration: calc(0.36s / var(--spd, 1));
+}
+.unit2 .flying.st-idle,
+.unit2 .flying.st-walk {
+  animation-duration: calc(1.1s / var(--spd, 1));
+}
+.unit2 .hopping.st-idle,
+.unit2 .hopping.st-walk {
+  animation-duration: calc(0.7s / var(--spd, 1));
+}
+/* hitstop: the units in a heavy impact hold their pose for a few frames */
+.unit2.hitstop .sprite,
+.unit2.hitstop .sprite * {
+  animation-play-state: paused !important;
+}
+.stage2.shaking.gentle {
+  animation: stage-shake-soft 0.3s linear;
+}
+@keyframes stage-shake-soft {
+  25% {
+    transform: translate(-2px, 1px);
+  }
+  60% {
+    transform: translate(2px, -1px);
+  }
+}
+
+/* status tints (one at a time; the red hit flash still wins) */
+.tint-frozen .sprite {
+  filter: saturate(0.35) brightness(1.22) drop-shadow(0 0 5px #9fe8ff);
+}
+.tint-burn .sprite {
+  filter: drop-shadow(0 0 6px rgba(255, 120, 40, 0.85)) sepia(0.12) brightness(1.06);
+}
+.tint-curse .sprite {
+  filter: brightness(0.82) saturate(0.85) drop-shadow(0 0 5px rgba(120, 60, 200, 0.8));
+}
+.tint-shock .sprite {
+  animation-name: none;
+  filter: drop-shadow(0 0 4px rgba(255, 230, 90, 0.9));
+}
+.tint-chill .sprite {
+  filter: saturate(0.75) brightness(1.06) drop-shadow(0 0 3px #bfe9ff);
+}
+.tint-wet .sprite {
+  filter: saturate(1.12) brightness(0.96) drop-shadow(0 3px 2px rgba(80, 160, 255, 0.55));
+}
+.tint-slow .sprite {
+  filter: saturate(0.82) drop-shadow(0 0 3px rgba(190, 220, 255, 0.6));
+}
+.tint-weaken .sprite {
+  filter: grayscale(0.35) brightness(0.92);
+}
+
+/* status overlays */
+.look-loop,
+.look-ice,
+.look-stars,
+.look-drops,
+.look-bleed,
+.look-curse {
+  position: absolute;
+  left: 50%;
+  pointer-events: none;
+}
+.look-loop {
+  overflow: hidden;
+  image-rendering: pixelated;
+  z-index: 2;
+}
+/* Frozen: a crystalline block of ice over the character */
+.look-ice {
+  bottom: -2px;
+  z-index: 3;
+  border-radius: 12px 14px 6px 6px;
+  background: linear-gradient(160deg, rgba(225, 250, 255, 0.55), rgba(140, 215, 255, 0.28) 45%, rgba(90, 170, 240, 0.4));
+  border: 1.5px solid rgba(230, 250, 255, 0.85);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.55), 0 0 10px rgba(140, 220, 255, 0.6);
+  clip-path: polygon(6% 12%, 22% 0, 48% 6%, 70% 0, 92% 10%, 100% 40%, 96% 100%, 4% 100%, 0 45%);
+  animation: ice-in 0.18s ease-out;
+}
+.look-ice i {
+  position: absolute;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  transform: rotate(28deg);
+}
+.look-ice i:nth-child(1) {
+  left: 22%;
+  top: 10%;
+  height: 34%;
+}
+.look-ice i:nth-child(2) {
+  left: 64%;
+  top: 30%;
+  height: 22%;
+}
+.look-ice i:nth-child(3) {
+  left: 40%;
+  top: 62%;
+  height: 18%;
+  transform: rotate(-20deg);
+}
+@keyframes ice-in {
+  from {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+/* Stunned: little stars circling the head */
+.look-stars {
+  height: 18px;
+  z-index: 3;
+  animation: stars-spin 0.9s linear infinite;
+  transform-style: preserve-3d;
+}
+.look-stars i {
+  position: absolute;
+  top: 0;
+  font-style: normal;
+  font-size: 17px;
+  color: #ffd84a;
+  text-shadow: 0 0 2px #7a4a00, 0 0 6px #fff3a0;
+}
+.look-stars i:nth-child(1) {
+  left: 0;
+}
+.look-stars i:nth-child(2) {
+  left: 42%;
+  top: -6px;
+}
+.look-stars i:nth-child(3) {
+  right: 0;
+}
+@keyframes stars-spin {
+  50% {
+    transform: translateX(6px) scaleX(-1);
+  }
+}
+/* Wet: droplets running off */
+.look-drops {
+  bottom: 10%;
+  z-index: 3;
+}
+.look-drops i {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 7px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: rgba(120, 200, 255, 0.85);
+  animation: drop-fall 1.1s ease-in infinite;
+}
+.look-drops i:nth-child(1) {
+  left: 15%;
+}
+.look-drops i:nth-child(2) {
+  left: 45%;
+  animation-delay: 0.35s;
+}
+.look-drops i:nth-child(3) {
+  left: 72%;
+  animation-delay: 0.7s;
+}
+.look-drops i:nth-child(4) {
+  left: 30%;
+  animation-delay: 0.9s;
+}
+@keyframes drop-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--fall, 60px));
+    opacity: 0;
+  }
+}
+/* Bleeding: restrained red slashes now and then */
+.look-bleed {
+  z-index: 3;
+}
+.look-bleed i {
+  position: absolute;
+  width: 3px;
+  height: 40%;
+  border-radius: 2px;
+  background: linear-gradient(#ff5a6a, #b0102a);
+  transform: rotate(35deg) scaleY(0);
+  animation: bleed-slash 1.6s ease-out infinite;
+}
+.look-bleed i:nth-child(1) {
+  left: 30%;
+  top: 10%;
+}
+.look-bleed i:nth-child(2) {
+  left: 62%;
+  top: 40%;
+  animation-delay: 0.8s;
+}
+@keyframes bleed-slash {
+  0% {
+    transform: rotate(35deg) scaleY(0);
+    opacity: 1;
+  }
+  15% {
+    transform: rotate(35deg) scaleY(1);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: rotate(35deg) scaleY(1);
+  }
+}
+/* Cursed: dark ink wisps and drifting characters */
+.look-curse {
+  bottom: 0;
+  z-index: 3;
+}
+.look-curse i {
+  position: absolute;
+  bottom: 20%;
+  font-style: normal;
+  font-family: serif;
+  font-size: 12px;
+  color: rgba(60, 20, 90, 0.85);
+  text-shadow: 0 0 4px rgba(160, 110, 255, 0.8);
+  animation: ink-rise 2.4s ease-out infinite;
+}
+.look-curse i:nth-child(1) {
+  left: 10%;
+}
+.look-curse i:nth-child(2) {
+  right: 8%;
+  animation-delay: 1.2s;
+}
+.look-curse b {
+  position: absolute;
+  bottom: 0;
+  width: 30%;
+  height: 50%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(40, 10, 60, 0.55), transparent 70%);
+  filter: blur(2px);
+  animation: wisp 1.8s ease-in-out infinite alternate;
+}
+.look-curse b:nth-of-type(1) {
+  left: 12%;
+}
+.look-curse b:nth-of-type(2) {
+  right: 12%;
+  animation-delay: 0.9s;
+}
+@keyframes ink-rise {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-46px) rotate(-12deg);
+    opacity: 0;
+  }
+}
+@keyframes wisp {
+  to {
+    transform: translateY(-12px) scaleY(1.3);
+    opacity: 0.4;
+  }
+}
+.reduced-motion .look-stars,
+.reduced-motion .look-drops i,
+.reduced-motion .look-curse i,
+.reduced-motion .look-curse b,
+.reduced-motion .sprite.st-dazed {
+  animation: none;
+}
+
+.look-burn-wrap {
+  display: contents;
+}
+/* behind the character's body (the unit is its own stacking context) */
+.look-loop.back {
+  z-index: -1;
+  filter: blur(0.5px);
 }

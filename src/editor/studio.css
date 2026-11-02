@@ -732,3 +732,14 @@ code {
   margin: 0 8px;
   accent-color: var(--fs-warn);
 }
+
+.fs-contact {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--fs-bad);
+  font-size: 12px;
+  line-height: 0;
+  pointer-events: none;
+}

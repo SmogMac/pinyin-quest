@@ -54,7 +54,7 @@ export function itemEffect(id, heroId, { extra = [], seeds = [3, 11], scenarios 
 }
 
 /** In which scenarios synergy `id` (with all its items held) changes the fight for `heroId`. */
-export function synergyEffect(id, heroId, { seeds = [3, 11, 19], scenarios = Object.keys(SCENARIOS) } = {}) {
+export function synergyEffect(id, heroId, { seeds = [3, 11, 19, 23], scenarios = Object.keys(SCENARIOS) } = {}) {
   const syn = SYNERGIES[id];
   const items = syn.requires.filter((r) => ITEMS[r]);
   const out = [];

@@ -75,7 +75,8 @@ export function validate(c) {
   for (const [n, p] of Object.entries(c.projectiles)) {
     if (p.sprite && !c.effects[p.sprite]) errs.push(`projectile ${n}: unknown sprite effect ${p.sprite}`);
     if (p.launch && !c.cues[p.launch]) errs.push(`projectile ${n}: unknown launch cue ${p.launch}`);
-    if (!(p.minMs > 0 && p.maxMs >= p.minMs)) errs.push(`projectile ${n}: flight time range is invalid`);
+    if (!(p.minMs > 0)) errs.push(`projectile ${n}: flight time is invalid`);
+    if (!p.fixed && !(p.msPerPct > 0)) errs.push(`projectile ${n}: speed is invalid`);
   }
   for (const [n, p] of Object.entries(c.poses)) if (!(p.dur > 0) || !Array.isArray(p.keys)) errs.push(`pose ${n}: needs a duration and keyframes`);
   return errs;

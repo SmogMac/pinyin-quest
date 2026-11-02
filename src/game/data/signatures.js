@@ -40,8 +40,20 @@ export function serveFruit(b, id, c, { bonus = false } = {}) {
   const p = c.power;
   const kind = FRUIT_ALIAS[id] || id;
   const fx = FRUIT_EFFECTS[kind] || FRUIT_EFFECTS.apple;
-  const target = b.front();
-  b.emit({ type: 'fruit', fruit: id, thrown: fx.thrown, tgt: target?.id, bonus });
+  const target0 = b.front();
+  b.emit({ type: 'fruit', fruit: id, thrown: fx.thrown, tgt: target0?.id, bonus });
+  // a thrown fruit does its work when it lands (the battle screen times its arc to match)
+  if (fx.thrown && kind !== 'grape' && b.timing?.fruitLand) {
+    b.schedule(b.timing.fruitLand, () => !b.result && fruitEffect(b, id, kind, c, b.front() && target0?.alive ? target0 : b.front(), bonus));
+    return;
+  }
+  fruitEffect(b, id, kind, c, target0, bonus);
+}
+
+function fruitEffect(b, id, kind, c, target, bonus) {
+  const H = b.hero;
+  const p = c.power;
+  const fx = FRUIT_EFFECTS[kind] || FRUIT_EFFECTS.apple;
   const dur = (s) => b.sigDur(s);
   const hit = (f, amount, opts = {}) => b.damage(H, f, amount, { kind: 'spell', element: 'physical', ...opts, fruit: id });
   switch (kind) {
@@ -72,8 +84,9 @@ export function serveFruit(b, id, c, { bonus = false } = {}) {
       for (let i = 0; i < 6; i++) {
         const f = b.randomFoe();
         if (!f) break;
-        b.emit({ type: 'shot', src: 'hero', tgt: f.id, element: 'physical', fruit: 'grape', small: true, spell: true });
-        hit(f, 8 * p);
+        const fl = b.flightTime(H, f);
+        b.emit({ type: 'shot', src: 'hero', tgt: f.id, element: 'physical', fruit: 'grape', small: true, spell: true, ms: Math.round(fl * 1000), timed: true });
+        b.schedule(fl, () => f.alive && hit(f, 8 * p));
       }
       break;
     case 'watermelon': {

@@ -23,7 +23,7 @@ const ATTACH = [['target', 'target (who it happens to)'], ['source', 'source (wh
 const MIRROR = [['auto', 'auto · point along the action'], ['reverse', 'reverse · against the action'], ['facing', 'facing · where the unit looks'], ['never', 'never mirror']];
 const LAYERS = ['ground', 'unit', 'air', 'front'];
 const BLENDS = [['', 'normal'], ['screen', 'screen (glow)'], ['lighten', 'lighten'], ['plus-lighter', 'add']];
-const LOOKS = ['orb', 'dart', 'fire', 'ice', 'water', 'earth', 'wind', 'dark', 'light', 'physical', 'fruit', 'inherit'];
+const LOOKS = ['orb', 'dart', 'scroll', 'spear', 'fire', 'ice', 'water', 'earth', 'wind', 'dark', 'light', 'physical', 'fruit', 'inherit'];
 const CLASSIC = ['spell', 'slam', 'ring', 'guard', 'whiff', 'burst'];
 const SPELL_KINDS = ['bladearc', 'bladewave', 'cheer', 'drain', 'flames', 'frenzy', 'glint', 'gust', 'iaido', 'passion', 'quake', 'repel', 'scroll', 'sparkle', 'swing', 'wave'];
 const EASES = ['ease-out', 'ease-in', 'ease-in-out', 'linear', 'cubic-bezier(0.3, 0, 0.3, 1)', 'cubic-bezier(0.2, 1.4, 0.4, 1)'];
@@ -460,7 +460,7 @@ export default function FxStudio() {
             <Pick label="Map" value={opts.biome} options={Object.keys(BIOMES).map((b) => [b, BIOMES[b].en])} onChange={(v) => setOpts({ ...opts, biome: v })} />
             <Pick label="Fight items" value={opts.items || 'none'} options={ITEM_SETS} hint="Items the hero holds in Test fight" onChange={(v) => setOpts({ ...opts, items: v })} />
           </div>
-          <Preview opts={opts} drag={dragTarget} onApi={(a) => ((api.current = a), setApiTick((x) => x + 1))} />
+          <Preview opts={opts} drag={dragTarget} onApi={(a) => ((api.current = a), (window.__fxStudio = a), setApiTick((x) => x + 1))} />
           <div className="fs-preview-bar">
             <button type="button" className="fs-btn primary" onClick={play} title="Play (Space)">
               ▶ Play
@@ -947,9 +947,21 @@ function ProjectileInspector({ c, id, edit }) {
         <Num label="Size" value={p.size ?? 1} min={0.2} max={4} step={0.05} unit="×" onChange={(v) => set('size', v)} />
       </Section>
       <Section title="Flight">
-        <Num label="Speed" value={p.msPerPct} min={1} max={20} step={0.1} unit="ms/%" hint="Milliseconds per percent of stage crossed (lower = faster)" onChange={(v) => set('msPerPct', v)} />
-        <Num label="Shortest" value={p.minMs} min={40} max={2000} step={10} unit="ms" onChange={(v) => set('minMs', v)} />
-        <Num label="Longest" value={p.maxMs} min={40} max={3000} step={10} unit="ms" onChange={(v) => set('maxMs', Math.max(v, p.minMs))} />
+        <Toggle label="Fixed flight time" value={p.fixed} onChange={(v) => set('fixed', v || undefined)} />
+        {p.fixed ? (
+          <Num label="Flight time" value={p.minMs} min={40} max={3000} step={10} unit="ms" hint="Always takes this long, however far (lobbed throws)" onChange={(v) => set('minMs', v)} />
+        ) : (
+          <Num
+            label="Speed"
+            value={Math.round(1000 / p.msPerPct)}
+            min={40}
+            max={1000}
+            step={5}
+            unit="%/s"
+            hint={`Percent of the field crossed per second: the same speed at any distance (across the whole field: ${Math.round(p.msPerPct * 100)} ms)`}
+            onChange={(v) => set('msPerPct', 1000 / Math.max(1, v))}
+          />
+        )}
         <Num label="Release delay" value={p.delay ?? 0} min={0} max={1000} step={10} unit="ms" hint="Wait after the throw animation starts (thrown fruit)" onChange={(v) => set('delay', v)} />
         <Toggle label="Arc" value={p.arc} onChange={(v) => set('arc', v)} />
         {p.arc && <Num label="Arc height" value={p.apex ?? 1} min={0} max={4} step={0.05} unit="×" onChange={(v) => set('apex', v)} />}
@@ -1041,6 +1053,11 @@ function PoseTimeline({ p, id, edit, idx, setIdx, playhead, scrubT, onScrub, slo
             title={`${Math.round(k.at * 100)}%`}
           />
         ))}
+        {p.contact !== undefined && (
+          <span className="fs-contact" style={{ left: `${p.contact * 100}%` }} title="Contact: the attack lands here (damage, knockback, statuses)">
+            💥
+          </span>
+        )}
         {ph !== null && <span className="fs-playhead" style={{ left: `${ph * 100}%` }} />}
         {scrubT !== null && <span className="fs-playhead frozen" style={{ left: `${Math.min(1, scrubT / p.dur) * 100}%` }} />}
       </div>
@@ -1077,6 +1094,14 @@ function PoseInspector({ c, id, edit, idx, setIdx }) {
         <Num label="Pivot x" value={p.origin ?? 50} min={0} max={100} step={1} unit="%" hint="Where on the feet it rotates and squashes from" onChange={(v) => setP('origin', v)} />
         <Toggle label="Hold last frame" value={p.hold} onChange={(v) => setP('hold', v || undefined)} />
         <Text label="Group" value={p.group} placeholder="e.g. Signature · Lei" onChange={(v) => setP('group', v || undefined)} />
+        {p.contact !== undefined && (
+          <>
+            <Num label="Contact" value={p.contact} min={0.05} max={1} step={0.01} hint="When the attack connects, as a share of the animation" onChange={(v) => setP('contact', v)} />
+            <p className="fs-muted small">
+              The 💥 contact is when this attack lands in the game: damage, knockback and statuses happen exactly then (projectiles are released then and land on arrival). It scales with attack speed. Applies from the next battle.
+            </p>
+          </>
+        )}
       </Section>
       {k && (
         <Section

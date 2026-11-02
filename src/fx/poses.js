@@ -26,7 +26,7 @@ export function poseCss(poses) {
       css += '}';
       const origin = sign > 0 ? num(p.origin, 50) : 100 - num(p.origin, 50);
       // :where() keeps the specificity low, so aura speed-ups (.unit2.aura-frenzy …) still apply
-      css += `:where(.side-${side}) .sprite.st-${name}{transform-origin:${origin}% 100%;animation:${kf} calc(var(--slow, 1) * ${p.dur}ms) ${p.ease || 'ease-out'} ${p.hold ? 'forwards' : 'none'};}`;
+      css += `:where(.side-${side}) .sprite.st-${name}{transform-origin:${origin}% 100%;animation:${kf} calc(var(--slow, 1) * var(--anim, 1) * ${p.dur}ms) ${p.ease || 'ease-out'} ${p.hold ? 'forwards' : 'none'};}`;
     }
   }
   // calm / reduced motion: no attack or hurt bounce (as before)

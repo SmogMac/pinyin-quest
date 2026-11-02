@@ -40,11 +40,24 @@ export const poseDef = (state) => current.poses[state];
 export const poseMs = (state, fallback = 300) => current.poses[state]?.dur ?? fallback;
 
 /** Enemy ids whose ranged attacks are thrown (arc) rather than fired. */
-export const throwers = () => new Set(current.projectiles.thrown?.enemies || []);
+/** The projectile an enemy fires when the FX config lists it under a projectile's `enemies`. */
+export function enemyProjectile(enemyId) {
+  for (const [id, p] of Object.entries(current.projectiles)) if (p.enemies?.includes(enemyId)) return id;
+  return null;
+}
 
 // Hot reload: when fx.json changes on disk (Compile), take the new file.
 if (import.meta.hot) {
   import.meta.hot.accept('./fx.json', (mod) => {
     if (mod?.default) setFx(mod.default);
   });
+}
+
+/**
+ * How long a projectile flies (ms) across `pct` percent of the field: at a constant speed, so
+ * twice the distance takes twice as long (minMs is only a floor for point-blank shots). `fixed`
+ * projectiles (lobbed fruit) always take minMs.
+ */
+export function flightMs(cfg, pct) {
+  return cfg.fixed ? cfg.minMs : Math.max(cfg.minMs ?? 50, pct * cfg.msPerPct);
 }

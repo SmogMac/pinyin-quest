@@ -334,8 +334,8 @@ export const ITEMS = {
   },
   shadow_double: {
     py: 'yǐng zi', zh: '影子', en: 'Shadow Double', element: 'dark', rarity: R.rare, category: 'movement', icon: 'moon', requires: ['黑', '夜'],
-    desc: '+6% dodge. Every dodge summons a shadow of you that copies your basic attack 4 times (45% each, with all its effects).',
-    stats: { dodge: 0.06 },
+    desc: '+9% dodge. Every dodge summons a shadow of you that copies your basic attack 4 times (45% each, with all its effects).',
+    stats: { dodge: 0.09 },
     hooks: {
       onDodge(b, p, s) {
         if (!ready(b, s, 0.5)) return;
@@ -695,8 +695,8 @@ export const ITEMS = {
   },
   four_sides: {
     py: 'sì miàn', zh: '四面', en: 'Surrounded', element: 'earth', rarity: R.common, category: 'defense', icon: 'shield',
-    desc: 'Take 6% less damage for every enemy close to you (up to 30%; at least 6% while any enemy is near).',
-    hooks: { modIncoming: (b, c) => (c.mult *= 1 - Math.min(0.3, 0.06 * Math.max(1, nearHero(b, 35).length))) },
+    desc: 'Take 8% less damage for every enemy close to you (up to 32%; at least 8% while any enemy is near).',
+    hooks: { modIncoming: (b, c) => (c.mult *= 1 - Math.min(0.32, 0.08 * Math.max(1, nearHero(b, 35).length))) },
   },
   lucky_charm: {
     py: 'hù shēn fú', zh: '护身符', en: 'Lucky Charm', element: 'light', rarity: R.common, category: 'defense', icon: 'star',
@@ -815,8 +815,8 @@ export const ITEMS = {
   },
   poised_mind: {
     py: 'jìng xīn', zh: '静心', en: 'Poised Mind', element: 'wind', rarity: R.common, category: 'signature', icon: 'wind',
-    desc: '+6% dodge. Every dodge recharges your signature 1s faster, and your next signature after a dodge also grants a 15 shield and Slows every enemy for 2s.',
-    stats: { dodge: 0.06 },
+    desc: '+9% dodge. Every dodge recharges your signature 1s faster, and your next signature after a dodge also grants a 15 shield and Slows every enemy for 2s.',
+    stats: { dodge: 0.09 },
     hooks: {
       onDodge(b, p, s) {
         s.ready = true;
@@ -1701,8 +1701,8 @@ export const ITEMS = {
   },
   blade_dance: {
     py: 'jiàn wǔ', zh: '剑舞', en: 'Blade Dance', element: 'wind', rarity: R.rare, category: 'dodge', icon: 'swords',
-    desc: '+6% dodge. Every dodge makes 2 extra attacks (70% each); with Momentum, 3.',
-    stats: { dodge: 0.06 },
+    desc: '+9% dodge. Every dodge makes 2 extra attacks (70% each); with Momentum, 3.',
+    stats: { dodge: 0.09 },
     hooks: {
       onDodge(b, p, s) {
         if (!ready(b, s, 0.4)) return;

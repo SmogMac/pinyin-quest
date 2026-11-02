@@ -78,6 +78,7 @@ test('cancel keeps the move ready; a wrong answer fizzles into cooldown; success
   b.beginCast();
   const r = b.finishCast(true, { choice: 'apple' });
   assert.ok(r.ok);
+  run(b, COMBAT.timing.fruitLand + 0.1); // the apple is thrown, then lands
   assert.ok(b.foes()[0].hp < hp, 'the apple hit');
   assert.equal(b.sig.state, 'cooldown');
 });

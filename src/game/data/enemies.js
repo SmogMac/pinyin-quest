@@ -12,8 +12,8 @@
 //   regen {every, pct, terrain?} · nuke {every, mult, element, status}
 //   onSpellHit: 'shield' | 'enrage' (reacts to your signature move)
 //   rise {pct, text} (gets back up once with pct HP unless Burning or finished by fire/light)
-// stance: 'aggressive' (moves faster; shooters push into the hero's half for Momentum) |
-//         'defensive' (shooters hold their own half) · kb: knockback dealt · kbRes: 0..1 resistance
+// stance: 'aggressive' (moves faster) | 'defensive' (positioning is the same for everyone: max
+//         range, or into the hero's half for Momentum when there's room) · kb: knockback dealt · kbRes: 0..1 resistance
 // phases: [{at: hp fraction, text, ai, aspd, terrain, shield, summon}] — boss phase changes
 
 export const ENEMIES = {
@@ -39,7 +39,7 @@ export const ENEMIES = {
     stance: 'aggressive', py: 'xiǎo yāo', zh: '小妖', name: 'Goblin', sprite: 'goblin', element: 'dark',
     stats: { maxHp: 84, atk: 6, def: 2, aspd: 0.85, crit: 0.15 },
     ai: { range: 36 },
-    blurb: 'Throws ink from range. Steals your homework.',
+    blurb: 'Throws spears from range. Steals your homework.',
   },
   golem: {
     kbRes: 0.5, kb: 4, py: 'shí tou rén', zh: '石头人', name: 'Stone Golem', sprite: 'golem', element: 'earth',

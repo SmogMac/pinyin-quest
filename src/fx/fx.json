@@ -778,6 +778,30 @@
    "dir": null,
    "layer": "front",
    "blend": "screen"
+  },
+  "look_burn": {
+   "sheet": "fire_loop",
+   "scale": 0.8,
+   "anchor": "ground",
+   "dir": null,
+   "layer": "unit"
+  },
+  "look_shock": {
+   "sheet": "zap_burst",
+   "scale": 0.55,
+   "anchor": "mid",
+   "dir": null,
+   "layer": "unit",
+   "hue": 140,
+   "blend": "screen"
+  },
+  "look_dazzle": {
+   "sheet": "status_sparkle",
+   "scale": 0.9,
+   "anchor": "head",
+   "dir": null,
+   "layer": "unit",
+   "blend": "screen"
   }
  },
  "cues": {
@@ -2915,6 +2939,39 @@
      "scale": 0.8
     }
    ]
+  },
+  "status.thaw": {
+   "label": "Freeze ends (ice breaks)",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "shatter",
+     "scale": 0.8
+    }
+   ]
+  },
+  "status.burn_out": {
+   "label": "Burn ends (smoke)",
+   "group": "Statuses",
+   "layers": [
+    {
+     "type": "effect",
+     "effect": "hop_dust",
+     "scale": 0.7
+    }
+   ]
+  },
+  "attack.enemy.ranged": {
+   "label": "Enemy shot",
+   "group": "Characters",
+   "layers": [
+    {
+     "type": "pose",
+     "state": "shoot",
+     "attach": "target"
+    }
+   ]
   }
  },
  "projectiles": {
@@ -2924,8 +2981,7 @@
    "sprite": null,
    "size": 1,
    "msPerPct": 6,
-   "minMs": 160,
-   "maxMs": 380,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -2941,8 +2997,7 @@
    "sprite": null,
    "size": 1,
    "msPerPct": 6,
-   "minMs": 160,
-   "maxMs": 380,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -2958,8 +3013,7 @@
    "sprite": null,
    "size": 1,
    "msPerPct": 6,
-   "minMs": 160,
-   "maxMs": 380,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -2974,9 +3028,8 @@
    "look": "ice",
    "sprite": null,
    "size": 1,
-   "msPerPct": 10,
-   "minMs": 160,
-   "maxMs": 380,
+   "msPerPct": 8,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -2991,9 +3044,8 @@
    "look": "water",
    "sprite": null,
    "size": 1,
-   "msPerPct": 10,
-   "minMs": 160,
-   "maxMs": 380,
+   "msPerPct": 8,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -3008,9 +3060,8 @@
    "look": "dark",
    "sprite": null,
    "size": 1,
-   "msPerPct": 13,
-   "minMs": 160,
-   "maxMs": 380,
+   "msPerPct": 9,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -3025,9 +3076,8 @@
    "look": "light",
    "sprite": null,
    "size": 1,
-   "msPerPct": 13,
-   "minMs": 160,
-   "maxMs": 380,
+   "msPerPct": 9,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -3042,9 +3092,8 @@
    "look": "physical",
    "sprite": null,
    "size": 1,
-   "msPerPct": 13,
-   "minMs": 160,
-   "maxMs": 380,
+   "msPerPct": 9,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -3059,9 +3108,8 @@
    "look": "earth",
    "sprite": null,
    "size": 1.3,
-   "msPerPct": 20,
-   "minMs": 140,
-   "maxMs": 490,
+   "msPerPct": 11,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -3077,8 +3125,7 @@
    "sprite": null,
    "size": 3.45,
    "msPerPct": 6.9,
-   "minMs": 184,
-   "maxMs": 437,
+   "minMs": 50,
    "delay": 0,
    "arc": false,
    "apex": 1,
@@ -3089,13 +3136,12 @@
    "launch": "shot.muzzle"
   },
   "thrown": {
-   "label": "Thrown by enemies (goblin ink, embers)",
+   "label": "Thrown embers (ember imp)",
    "look": "inherit",
    "sprite": null,
    "size": 1,
-   "msPerPct": 20,
-   "minMs": 250,
-   "maxMs": 730,
+   "msPerPct": 12,
+   "minMs": 50,
    "delay": 0,
    "arc": true,
    "apex": 0.25,
@@ -3105,7 +3151,6 @@
    "launchY": 0.08,
    "launch": null,
    "enemies": [
-    "goblin",
     "ember_imp"
    ]
   },
@@ -3114,17 +3159,24 @@
    "look": "fruit",
    "sprite": null,
    "size": 1.5,
-   "msPerPct": 6,
-   "minMs": 420,
-   "maxMs": 420,
+   "msPerPct": 15.384615384615385,
+   "minMs": 50,
    "delay": 0,
    "arc": true,
    "apex": 0.8,
-   "spin": 0,
+   "spin": 410,
    "tilt": true,
-   "launchX": 0.19,
+   "launchX": 0.42,
    "launchY": 0.11,
-   "launch": null
+   "launch": null,
+   "trail": {
+    "count": 24,
+    "gap": 10,
+    "size": 1.2,
+    "opacity": 0.6,
+    "color": "#ffffff",
+    "style": "echo"
+   }
   },
   "fruit.throw": {
    "label": "Xinyi’s thrown fruit",
@@ -3133,24 +3185,23 @@
    "size": 1.6,
    "msPerPct": 6,
    "minMs": 560,
-   "maxMs": 560,
    "delay": 140,
    "arc": true,
    "apex": 0.95,
-   "spin": 0,
+   "spin": 470,
    "tilt": true,
    "launchX": 0.3,
    "launchY": 0.08,
-   "launch": null
+   "launch": null,
+   "fixed": true
   },
   "Iron Ball": {
    "label": "Iron Ball",
    "look": "physical",
    "sprite": null,
    "size": 3.4,
-   "msPerPct": 1,
-   "minMs": 270,
-   "maxMs": 380,
+   "msPerPct": 12.5,
+   "minMs": 50,
    "delay": 200,
    "arc": true,
    "apex": 0.25,
@@ -3169,6 +3220,57 @@
     "blend": true
    },
    "tail": false
+  },
+  "food": {
+   "label": "Xin Yi's snacks",
+   "look": "fruit",
+   "sprite": null,
+   "size": 1.4,
+   "msPerPct": 15.384615384615385,
+   "minMs": 50,
+   "delay": 0,
+   "arc": true,
+   "apex": 0.45,
+   "spin": 540,
+   "tilt": false,
+   "launchX": 0.3,
+   "launchY": 0.05,
+   "launch": null
+  },
+  "scroll": {
+   "label": "Ruì Zhé's paper talismans",
+   "look": "scroll",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 15.384615384615385,
+   "minMs": 50,
+   "delay": 0,
+   "arc": true,
+   "tilt": true,
+   "launchX": 0.3,
+   "launchY": 0,
+   "launch": null,
+   "spin": 0,
+   "apex": 0
+  },
+  "spear": {
+   "label": "Thrown spear (goblins)",
+   "look": "spear",
+   "sprite": null,
+   "size": 1,
+   "msPerPct": 15.384615384615385,
+   "minMs": 50,
+   "delay": 0,
+   "arc": true,
+   "tilt": true,
+   "launchX": 0.25,
+   "launchY": -0.05,
+   "launch": null,
+   "enemies": [
+    "goblin"
+   ],
+   "spin": 10,
+   "apex": 0.15
   }
  },
  "poses": {
@@ -3191,7 +3293,8 @@
      "sx": 1.08,
      "sy": 0.94
     }
-   ]
+   ],
+   "contact": 0.55
   },
   "shoot": {
    "dur": 280,
@@ -3205,7 +3308,8 @@
      "sx": 1.03,
      "sy": 0.97
     }
-   ]
+   ],
+   "contact": 0.3
   },
   "smash": {
    "dur": 420,
@@ -3232,7 +3336,8 @@
      "sx": 1.04,
      "sy": 0.96
     }
-   ]
+   ],
+   "contact": 0.6
   },
   "cast": {
    "dur": 420,

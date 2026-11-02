@@ -29,7 +29,7 @@ export const SCALING = {
   defPerFloor: 0.2, // flat def added per floor
   // global knobs applied to every enemy (bosses use their own)
   enemyHp: 1.27,
-  enemyAtk: 0.44,
+  enemyAtk: 0.5,
   bossHp: 1.45,
   bossAtk: 0.74,
 };
@@ -43,6 +43,20 @@ export const COMBAT = {
   maxHookDepth: 6, // chain reactions stop recursing past this depth
   maxProcsPerStep: 400, // safety valve for absurd builds
   maxAllies: 6, // clones, illusions and spirits on the field at once
+  // Attack timing (the battle screen passes the FX Studio's values; these are the defaults, used
+  // by simulations). An attack plays its animation for `dur` seconds and connects at `contact`
+  // (a fraction of it); faster attackers play it faster (never longer than maxAnimShare of the
+  // time between attacks). Projectiles fly at a constant speed (msPerPct: ms per % of the field,
+  // so flight time grows with distance; min is only a floor for point-blank shots); damage, knockback and
+  // statuses all happen on contact or arrival.
+  timing: {
+    melee: { dur: 0.28, contact: 0.55 },
+    ranged: { dur: 0.28, contact: 0.3 },
+    heavy: { dur: 0.42, contact: 0.6 },
+    maxAnimShare: 0.85,
+    flight: { msPerPct: 6, min: 50 },
+    fruitLand: 0.7, // Xinyi's thrown fruit lands this long after the throw
+  },
   maxCopyDepth: 1, // copied attacks (clones, mirrors, afterimages) never copy themselves again
   // positioning (world units; the camera maps the world onto the stage separately)
   worldW: 130, // battlefield width; the Hero Zone is the left half, the Enemy Zone the right
@@ -52,6 +66,7 @@ export const COMBAT = {
   kbRecover: 0.18, // seconds of recovery after a heavy knockback before moving/attacking again
   heavyKb: 3, // pushes at least this far stagger; lighter taps only nudge
   dodgeHop: 7, // distance a successful dodge hops back
+  blockTime: 0.2, // a block is an action: no attacking or moving for this long
   heroSpeed: 19, // base hero move speed (units/s)
   enemySpeedMult: 1.5, // enemy data speeds were tuned for the old, smaller field
   rangedReach: 1.2, // ranged attack ranges stretch with the wider field

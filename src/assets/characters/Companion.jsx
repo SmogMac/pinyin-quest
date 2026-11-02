@@ -1,23 +1,36 @@
+import { OL, Part, ell } from '../enemies/ink.jsx';
+
 // Fox spirit companion (Fox Spirit upgrade). Faces right. viewBox 80x70.
 export default function Companion() {
   return (
     <svg viewBox="0 0 80 70" className="sprite-svg" aria-hidden="true">
-      <ellipse cx="40" cy="66" rx="16" ry="3" fill="#000" opacity=".15" />
-      <path d="M22 44 Q4 40 6 22 Q14 32 22 30 Q10 20 18 8 Q22 26 32 34Z" fill="#ffb347" />
-      <path d="M14 22 Q10 16 18 8 Q18 18 22 24Z" fill="#fff1c7" />
-      <ellipse cx="40" cy="46" rx="16" ry="12" fill="#ff9a3c" />
-      <ellipse cx="44" cy="50" rx="8" ry="6" fill="#fff1dc" />
-      <circle cx="54" cy="32" r="13" fill="#ff9a3c" />
-      <path d="M44 24 L46 10 L53 21Z M57 21 L64 9 L65 24Z" fill="#ff9a3c" />
-      <path d="M46.5 21 L47 14 L51 20Z M59 20 L63 13 L63 22Z" fill="#ffd9b0" />
-      <path d="M56 38 Q66 38 68 33 Q64 30 58 32Z" fill="#fff1dc" />
-      <circle cx="68" cy="33" r="2" fill="#3b2230" />
-      <ellipse cx="53" cy="31" rx="2.2" ry="3" fill="#3b2230" />
-      <ellipse cx="61" cy="30" rx="2" ry="2.8" fill="#3b2230" />
-      <circle cx="53.8" cy="30" r=".9" fill="#fff" />
-      <circle cx="61.7" cy="29" r=".9" fill="#fff" />
-      <ellipse cx="34" cy="58" rx="4" ry="3" fill="#e67e22" />
-      <ellipse cx="48" cy="58" rx="4" ry="3" fill="#e67e22" />
+      <Part id="cp-tail" d="M24 44Q3 41 5 21Q14 31 22 29Q10 19 18 6Q23 25 33 33Z" fill="#ffb347" shade="#d8782a" off={[2, -2]} sw={2.6}>
+        <path d="M14 22Q9 14 18 6Q19 17 23 24Z" fill="#fff1c7" />
+      </Part>
+      <Part id="cp-fl" d={ell(34, 58, 4.5, 3.4)} fill="#e67e22" shade="#b05a14" off={[1, -1]} sw={2.2} />
+      <Part id="cp-fr" d={ell(48, 58, 4.5, 3.4)} fill="#e67e22" shade="#b05a14" off={[1, -1]} sw={2.2} />
+      <Part id="cp-body" d={ell(40, 46, 16, 12)} fill="#ff9a3c" shade="#d06a1a" off={[3, -3]} sw={2.6}>
+        <ellipse cx="45" cy="50" rx="8" ry="6" fill="#fff1dc" />
+      </Part>
+      <Part id="cp-earl" d="M44 25L46 9L54 21Z" fill="#ff9a3c" shade="#d06a1a" off={[1, -1]} sw={2.4}>
+        <path d="M46.5 21L47 13.5L51.5 20Z" fill="#ffd9b0" />
+      </Part>
+      <Part id="cp-earr" d="M57 21L64 8L66 24Z" fill="#ff9a3c" shade="#d06a1a" off={[1, -1]} sw={2.4}>
+        <path d="M59 20L63 12.5L63.5 22Z" fill="#ffd9b0" />
+      </Part>
+      <Part id="cp-head" d={ell(54, 32, 13, 12.5)} fill="#ff9a3c" shade="#d06a1a" off={[3, -3]} sw={2.6}>
+        <path d="M54 38Q64 39 69 33Q63 29 56 32Z" fill="#fff1dc" />
+      </Part>
+      <circle cx="68.5" cy="33" r="2" fill={OL} />
+      <g className="enemy-eyes">
+        {[53, 61].map((x) => (
+          <g key={x}>
+            <ellipse cx={x} cy="30.5" rx="2.3" ry="3.1" fill={OL} />
+            <circle cx={x + 0.7} cy="29.4" r="1" fill="#fff" />
+          </g>
+        ))}
+      </g>
+      <ellipse cx="50" cy="36" rx="2.4" ry="1.3" fill="#ff9aae" />
     </svg>
   );
 }

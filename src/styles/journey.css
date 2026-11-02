@@ -269,29 +269,13 @@
   overflow: hidden;
   z-index: 1;
 }
-.journey-life .leaf {
-  position: absolute;
-  top: -10px;
-  left: calc(10% + var(--i) * 13%);
-  width: 8px;
-  height: 5px;
-  border-radius: 60% 0;
-  background: color-mix(in srgb, #9bd06a 70%, #f0b45a);
-  opacity: 0.8;
-  animation: leaf-fall calc(6s + var(--i) * 0.7s) linear calc(var(--i) * -1.3s) infinite;
-}
-@keyframes leaf-fall {
-  to {
-    transform: translate(-60px, 300px) rotate(540deg);
-  }
-}
 .journey-life .bird {
   position: absolute;
   top: 18%;
   left: 110%;
   width: 14px;
   height: 6px;
-  border-top: 2px solid rgba(40, 30, 60, 0.6);
+  border-top: 2px solid #4a4058;
   border-radius: 50% 50% 0 0;
   animation: bird 16s linear infinite;
 }
@@ -599,33 +583,228 @@
   }
 }
 
-/* Burning Highlands sparks and the Beyond's drifting characters */
-.ember-spark {
-  animation: ember-rise 2.4s linear infinite;
-}
-@keyframes ember-rise {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.9;
-  }
-  100% {
-    transform: translateY(-120px);
-    opacity: 0;
-  }
-}
+/* the Beyond's drifting characters */
 .drift-char {
   animation: drift-char 6s ease-in-out infinite alternate;
 }
 @keyframes drift-char {
   to {
     transform: translate(10px, -14px);
-    opacity: 0.08;
   }
 }
-.reduced-motion .ember-spark,
 .reduced-motion .drift-char {
   animation: none;
 }
+
+/* ================================================================ backdrop scenery & ambience */
+.bg-prop {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+/* atmospheric perspective: further away = paler and less saturated. Always fully opaque (the
+   tint comes from filters, not transparency), so overlapping layers never show through. */
+.bg-prop.haze-far {
+  filter: saturate(0.5) contrast(0.7) brightness(1.12);
+}
+.bg-prop.haze-near {
+  filter: saturate(0.85) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+  transform-origin: 50% 0;
+  animation: banner-sway 6s ease-in-out infinite alternate;
+}
+.bg-prop.haze-ember {
+  filter: brightness(0.5) sepia(0.7) saturate(2.2) hue-rotate(-20deg) contrast(0.85);
+}
+.bg-prop.haze-mist {
+  filter: grayscale(0.7) sepia(0.35) hue-rotate(215deg) brightness(0.62) contrast(0.6);
+}
+.bg-prop.haze-night {
+  filter: grayscale(0.4) sepia(0.4) hue-rotate(210deg) brightness(0.42) contrast(0.85);
+}
+/* the Beyond: an ink-wash drawing on paper */
+.bg-prop.haze-ink {
+  filter: grayscale(1) contrast(0.55) brightness(1.15);
+}
+@keyframes banner-sway {
+  from {
+    transform: translateX(-50%) rotate(-1.2deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(1.2deg);
+  }
+}
+
+/* Ambient particles. Each particle has its own position, duration, start, size (--s), drift
+   (--dx), sway (--sway) and spin (--rot) from Backgrounds.jsx, so none fall in step. */
+.ambient {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
+}
+.ambient i {
+  position: absolute;
+  top: -4%;
+  display: block;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.amb-leaves i {
+  width: 10px;
+  height: 5px;
+  border-radius: 0 80% 0 80%;
+  background: #6f9a5e;
+  animation-name: amb-leaf;
+}
+.amb-leaves i:nth-child(3n) {
+  background: #8fae6a;
+}
+.amb-leaves i:nth-child(4n + 1) {
+  background: #c8a04a;
+}
+@keyframes amb-leaf {
+  0% {
+    transform: translate(0, 0) rotate(0) scale(var(--s));
+  }
+  25% {
+    transform: translate(var(--sway), 28cqh) rotate(calc(var(--rot) * 0.25)) scale(var(--s));
+  }
+  50% {
+    transform: translate(calc(var(--dx) * 0.5), 56cqh) rotate(calc(var(--rot) * 0.5)) scale(var(--s));
+  }
+  75% {
+    transform: translate(calc(var(--dx) * 0.75 + var(--sway)), 82cqh) rotate(calc(var(--rot) * 0.75)) scale(var(--s));
+  }
+  100% {
+    transform: translate(var(--dx), 108cqh) rotate(var(--rot)) scale(var(--s));
+  }
+}
+.amb-snow i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  animation-name: amb-snow;
+}
+@keyframes amb-snow {
+  0% {
+    transform: translate(0, 0) scale(var(--s));
+  }
+  33% {
+    transform: translate(var(--sway), 36cqh) scale(var(--s));
+  }
+  66% {
+    transform: translate(calc(var(--dx) * 0.6), 72cqh) scale(var(--s));
+  }
+  100% {
+    transform: translate(var(--dx), 108cqh) scale(var(--s));
+  }
+}
+/* rising particles: dust, embers and fireflies start low and fade by shrinking, not by alpha */
+.amb-dust i,
+.amb-embers i,
+.amb-fireflies i {
+  top: auto;
+  bottom: calc(6% + var(--y) * 0.4);
+  border-radius: 50%;
+  animation-timing-function: ease-in-out;
+}
+.amb-dust i {
+  width: 3px;
+  height: 3px;
+  background: #ffdca0;
+  animation-name: amb-rise;
+}
+.amb-embers i {
+  width: 3px;
+  height: 3px;
+  background: #ffb24a;
+  box-shadow: 0 0 4px #ff7a2a;
+  animation-name: amb-rise;
+}
+.amb-embers i:nth-child(3n) {
+  background: #ffe08a;
+}
+.amb-fireflies i {
+  width: 4px;
+  height: 4px;
+  background: #e8ff9a;
+  box-shadow: 0 0 6px 2px #b8ff6a;
+  animation-name: amb-firefly;
+}
+@keyframes amb-rise {
+  0% {
+    transform: translate(0, 0) scale(0);
+  }
+  15% {
+    transform: translate(calc(var(--sway) * 0.3), -6cqh) scale(var(--s));
+  }
+  60% {
+    transform: translate(var(--sway), -32cqh) scale(var(--s));
+  }
+  100% {
+    transform: translate(calc(var(--sway) * -0.4), -55cqh) scale(0);
+  }
+}
+@keyframes amb-firefly {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0);
+  }
+  20% {
+    transform: translate(var(--sway), -8cqh) scale(var(--s));
+  }
+  50% {
+    transform: translate(calc(var(--sway) * -0.5), -16cqh) scale(calc(var(--s) * 0.6));
+  }
+  80% {
+    transform: translate(calc(var(--dx) * 0.4), -10cqh) scale(var(--s));
+  }
+}
+.amb-drips i {
+  width: 3px;
+  height: 9px;
+  border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+  background: #1e1032;
+  animation-name: amb-drip;
+  animation-timing-function: ease-in;
+}
+@keyframes amb-drip {
+  0% {
+    transform: translateY(0) scale(var(--s));
+  }
+  100% {
+    transform: translateY(108cqh) scale(var(--s));
+  }
+}
+.amb-spray i {
+  top: auto;
+  bottom: calc(22% + var(--y) * 0.15);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f4fbff;
+  animation-name: amb-spray;
+  animation-timing-function: ease-out;
+}
+@keyframes amb-spray {
+  0%,
+  45% {
+    transform: translate(0, 0) scale(0);
+  }
+  55% {
+    transform: translate(calc(var(--sway) * 0.3), -6cqh) scale(var(--s));
+  }
+  100% {
+    transform: translate(var(--sway), -16cqh) scale(0);
+  }
+}
+.reduced-motion .ambient {
+  display: none;
+}
+.reduced-motion .bg-prop.haze-near {
+  animation: none;
+}
+

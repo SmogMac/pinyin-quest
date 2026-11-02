@@ -86,6 +86,10 @@ Each hero's move has its own group of cues (e.g. *Lei · Knockback!*). Picking o
 
 Add any effect, animation, shake or sound to any of these.
 
+#### Statuses
+
+`status.thaw` (when Freeze ends) and `status.burn_out` (when Burn ends) are cues. The looping looks on characters (`look_burn`, `look_shock`, `look_dazzle`) are effects on the Effects tab, so you can swap their animations.
+
 #### Items
 
 The **Items** group holds one cue per passive-item visual (`item.bomb`, `item.thread`, `item.bell`, `item.swap`…). Item effects placed on the ground (seals, lanterns, pools) use the cue at that spot.
@@ -107,7 +111,7 @@ For each projectile type (each hero style and element, enemy throws, Xinyi's fru
 
 - **Look:** the built-in drawing, or a looping sprite effect flown instead.
 - **Size.**
-- **Flight time:** milliseconds per percent of stage crossed, with a shortest and a longest time.
+- **Speed:** how much of the field the projectile crosses per second (%/s). The speed is the same at any distance, so far shots take longer. **Fixed flight time** instead makes it always take the same time (used for Xin Yi's lobbed fruit, whose landing the signature waits for).
 - **Release delay:** how long after the throw animation starts the projectile leaves (for thrown fruit).
 - **Path:** arc or straight. Arcs have a height and a spin; straight shots can point along their path.
 - **Trail:** copies that fly the exact same path a little later, smaller and fainter, so a trail always follows the real route, arcs included. They are drawn separately from the projectile art.
@@ -127,6 +131,7 @@ The characters' action poses (attack, shoot, smash, cast, hurt, dodge, block, kn
 - **Direction:** values are for the hero facing right; enemies are mirrored automatically.
 - **Groups:** give poses a group (e.g. *Signature · Lei*) to keep a hero's own animations together, then use them in that hero's cast cue.
 - **Scrubbing:** the slider under the keyframe track scrubs through the animation.
+- **Contact:** attack animations (attack, shoot, smash) show a red 💥 **contact** marker, the moment the attack lands in the game. Damage, knockback and statuses happen exactly then; projectiles are released then and land when they arrive. Move it with **Contact** in the inspector; it applies from the next battle and scales with attack speed.
 
 ## Compile
 

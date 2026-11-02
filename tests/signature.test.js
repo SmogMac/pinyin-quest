@@ -146,6 +146,7 @@ test('Xinyi · Fruit Salad!: thrown fruit hurt enemies, eaten fruit help her', (
   const thrown = ready('xinyi', ['golem']);
   const hp = thrown.foes()[0].hp;
   fire(thrown, 'apple');
+  steps(thrown, COMBAT.timing.fruitLand + 0.1); // thrown, then it lands
   assert.ok(thrown.foes()[0].hp < hp, 'apple hits');
   const shield = ready('xinyi', ['golem']);
   fire(shield, 'strawberry');
@@ -155,12 +156,15 @@ test('Xinyi · Fruit Salad!: thrown fruit hurt enemies, eaten fruit help her', (
   assert.ok(fast.buffActive('mango') && fast.sigBuffActive(), 'mango speeds her up');
   const peel = ready('xinyi', ['slime']);
   fire(peel, 'banana');
-  assert.ok(peel.zones.some((z) => z.kind === 'peel'), 'banana leaves a peel');
+  steps(peel, COMBAT.timing.fruitLand + 0.1);
+  assert.ok(peel.zones.some((z) => z.kind === 'peel'), 'banana leaves a peel where it lands');
   const sour = ready('xinyi', ['slime', 'slime']);
   fire(sour, 'lemon');
+  steps(sour, COMBAT.timing.fruitLand + 0.1);
   assert.ok(sour.foes().every((f) => f.statuses.weaken), 'lemon weakens');
   const splash = ready('xinyi', ['slime', 'slime']);
   fire(splash, 'watermelon');
+  steps(splash, COMBAT.timing.fruitLand + 0.1);
   assert.ok(splash.foes().some((f) => f.statuses.wet), 'watermelon soaks');
   for (const id of ['orange', 'grape', 'pear', 'peach']) {
     const b = ready('xinyi', ['golem'], { heroHp: 40 });
@@ -215,7 +219,7 @@ test('Fuyun · Go All Out!: every hit crits and she has Momentum anywhere for ~5
   fire(b);
   assert.ok(b.hero.momentum, 'granted Momentum');
   assert.ok(!b.hero.invading, 'separate from positional Momentum');
-  const ev = steps(b, 3);
+  const ev = steps(b, 4.6); // she walks in from her own half first
   const hits = ev.filter((e) => e.type === 'hit' && e.src === 'hero' && e.kind === 'attack');
   assert.ok(hits.length >= 2 && hits.every((e) => e.crit), 'all crits');
   steps(b, 3);

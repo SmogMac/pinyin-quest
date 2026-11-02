@@ -11,7 +11,7 @@ import Sprite, { ItemIcon } from './Sprite.jsx';
 import Bi from './Bi.jsx';
 import { Button, CnName } from './ui.jsx';
 import Icon from '../assets/icons/Icons.jsx';
-import { BgSky, BgFar, BgMid, BgGround, BgDecor } from '../assets/backgrounds/Backgrounds.jsx';
+import { BgSky, BgFar, BgMid, BgGround, BgDecor, BgAmbient } from '../assets/backgrounds/Backgrounds.jsx';
 import { BIOMES } from '../game/data/biomes.js';
 import { ITEMS } from '../game/data/items.js';
 import { ELEMENTS } from '../game/data/elements.js';
@@ -54,17 +54,15 @@ const Scenery = memo(function Scenery({ theme, walking, speed }) {
       {/* ground-level details travel with the ground (same layer width, same speed) */}
       <div className="bg-layer decor">
         <BgDecor theme={theme} />
-        <BgDecor theme={theme} />
+        <BgDecor theme={theme} scenery={false} />
       </div>
       <div className="bg-layer ground">
         <BgGround theme={theme} />
         <BgGround theme={theme} />
       </div>
-      {/* a little life in the world: drifting leaves and a few birds */}
+      {/* a little life in the world: the biome's ambient particles and a few birds */}
+      <BgAmbient theme={theme} />
       <div className="journey-life" aria-hidden="true">
-        {Array.from({ length: 7 }, (_, i) => (
-          <i key={i} className="leaf" style={{ '--i': i }} />
-        ))}
         <b className="bird" />
         <b className="bird b2" />
       </div>

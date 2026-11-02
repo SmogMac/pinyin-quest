@@ -35,6 +35,7 @@ export function defaultSave() {
       music: false,
       muted: false,
       reducedMotion: prefersReducedMotion(),
+      screenShake: 'full', // full | gentle | off
       dailyGoal: 100,
       newPerDay: 15,
       voiceURI: null,
