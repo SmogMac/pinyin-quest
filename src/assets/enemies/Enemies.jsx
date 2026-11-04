@@ -164,10 +164,8 @@ export function Wisp() {
       <g className="enemy-eyes">
         {[44, 66].map((x) => (
           <g key={x}>
-            <ellipse cx={x} cy="60" rx="7" ry="9.5" fill="#1d1238" stroke={OL} strokeWidth="2" />
-            <ellipse cx={x} cy="64" rx="4.4" ry="3.6" fill="#38c8ff" />
-            <circle cx={x - 2.4} cy="56" r="2.6" fill="#fff" />
-            <circle cx={x + 2.2} cy="65" r="1.1" fill="#fff" />
+            <ellipse cx={x} cy="60" rx="6" ry="8.5" fill="#1d1238" />
+            <circle cx={x - 2} cy="56.5" r="2.4" fill="#fff" />
           </g>
         ))}
       </g>

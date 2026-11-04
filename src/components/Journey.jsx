@@ -14,13 +14,14 @@ import Icon from '../assets/icons/Icons.jsx';
 import { BgSky, BgFar, BgMid, BgGround, BgDecor, BgAmbient } from '../assets/backgrounds/Backgrounds.jsx';
 import { BIOMES } from '../game/data/biomes.js';
 import { ITEMS } from '../game/data/items.js';
+import { ENEMIES } from '../game/data/enemies.js';
+import { MerchantCart, LanternPost, TreasureChest, Shrine } from '../assets/props/RoadProps.jsx';
 import { ELEMENTS } from '../game/data/elements.js';
 import { BLESSINGS } from '../game/data/blessings.js';
 import { SYNERGIES, synergiesCompletedBy } from '../game/data/synergies.js';
 import { heroDef, HEROES } from '../game/data/heroes.js';
 import { runSignatures } from '../game/run.js';
 
-const asset = (src) => `${import.meta.env.BASE_URL}${src}`;
 // The ground layer is twice the stage width and slides by one stage width every GROUND_CYCLE
 // seconds (at 1× walking), so the ground moves at 100 / GROUND_CYCLE % of the stage per second.
 // Everything standing on the road (encounters, ground decoration) moves at exactly that speed.
@@ -54,7 +55,7 @@ const Scenery = memo(function Scenery({ theme, walking, speed }) {
       {/* ground-level details travel with the ground (same layer width, same speed) */}
       <div className="bg-layer decor">
         <BgDecor theme={theme} />
-        <BgDecor theme={theme} scenery={false} />
+        <BgDecor theme={theme} />
       </div>
       <div className="bg-layer ground">
         <BgGround theme={theme} />
@@ -90,17 +91,17 @@ function EncounterProp({ type, enemies, npc, state }) {
     case 'merchant':
       return (
         <div className="prop-merchant">
-          <img src={asset('assets/props/cart.webp')} alt="" className="prop-img cart" />
+          <MerchantCart className="prop-img cart" />
           <span className="prop-fox">
             <Sprite id="companion" scale={0.9} flip />
           </span>
-          <img src={asset('assets/props/lantern.webp')} alt="" className="prop-img lantern-post" />
+          <LanternPost className="prop-img lantern-post" />
         </div>
       );
     case 'chest':
       return (
         <div className={`prop-chest ${state === 'open' ? 'open' : ''}`}>
-          <img src={asset('assets/props/chest.webp')} alt="" className="prop-img chest" />
+          <TreasureChest className="prop-img chest" open={state === 'open'} />
           <i className="chest-glow" />
         </div>
       );
@@ -128,14 +129,14 @@ function EncounterProp({ type, enemies, npc, state }) {
       return (
         <div className="prop-shrine">
           <i className="rays" />
-          <img src={asset('assets/props/shrine.webp')} alt="" className="prop-img shrine" />
+          <Shrine className="prop-img shrine" />
         </div>
       );
     default:
       return null;
   }
 }
-const spriteOf = (enemyId) => (enemyId === 'jade_rabbit' ? 'rabbit' : enemyId === 'panda_king' ? 'panda' : enemyId === 'crab_queen' ? 'crab' : enemyId === 'stone_king' ? 'golem' : enemyId === 'frost_matriarch' ? 'snowman' : enemyId === 'thunder_qilin' ? 'thunderbird' : enemyId === 'bog_witch' ? 'shadow' : enemyId === 'lantern_king' ? 'lantern' : enemyId);
+const spriteOf = (enemyId) => ENEMIES[enemyId]?.sprite || enemyId;
 
 /**
  * The road. While `walking`, the world scrolls and the hero walks; after the encounter's walk time

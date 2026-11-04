@@ -26,10 +26,8 @@ export function Panda() {
       <g className="enemy-eyes">
         {[45, 65].map((x) => (
           <g key={x}>
-            <circle cx={x} cy="42" r="4.4" fill="#fff" />
-            <circle cx={x - 0.6} cy="42.6" r="3" fill="#5a3a2a" />
-            <circle cx={x - 0.6} cy="42.8" r="1.6" fill={OL} />
-            <circle cx={x - 1.8} cy="40.8" r="1.3" fill="#fff" />
+            <circle cx={x - 0.4} cy="42.4" r="3" fill="#2a1a22" />
+            <circle cx={x - 1.4} cy="41.2" r="1.1" fill="#fff" />
           </g>
         ))}
       </g>
@@ -235,9 +233,8 @@ export function WordEater() {
         ].map(([x, y, r]) => (
           <g key={x}>
             <circle cx={x} cy={y} r={r} fill="#fff6d0" stroke={OL} strokeWidth="3" />
-            <circle cx={x - r * 0.3} cy={y + r * 0.12} r={r * 0.5} fill="#e8a020" />
-            <circle cx={x - r * 0.3} cy={y + r * 0.12} r={r * 0.28} fill={OL} />
-            <circle cx={x - r * 0.48} cy={y - r * 0.14} r={r * 0.16} fill="#fff" />
+            <circle cx={x - r * 0.3} cy={y + r * 0.12} r={r * 0.42} fill={OL} />
+            <circle cx={x - r * 0.45} cy={y - r * 0.08} r={r * 0.14} fill="#fff" />
           </g>
         ))}
       </g>

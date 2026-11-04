@@ -4,7 +4,8 @@
 //
 // terrain: terrain states present all battle · events: periodic {kind, every, text}
 // elementMods: damage multiplier by element (both sides) · reflect: chance enemy shots bounce back
-// pools: enemy groups for battle / elite nodes · guardian: act boss · boss: final boss (acts 3, 4)
+// pools: enemy groups for battle / elite nodes · guardians: the map's three act bosses (one is met
+// per run, picked from the area's seed) · boss: final boss (acts 3, 4)
 
 export const BIOMES = {
   bamboo: {
@@ -16,7 +17,7 @@ export const BIOMES = {
       battle: [['slime'], ['panda'], ['kite', 'slime'], ['bat', 'bat'], ['panda', 'kite'], ['slime', 'slime', 'kite']],
       elite: [['wisp'], ['knight']],
     },
-    guardian: 'panda_king',
+    guardians: ['panda_king', 'mantis_master', 'bamboo_sage'],
   },
   coast: {
     py: 'hǎi biān', zh: '海边', en: 'Coastal Ruins', act: 1, theme: 'coast',
@@ -27,7 +28,7 @@ export const BIOMES = {
       battle: [['crab'], ['slime', 'slime'], ['crab', 'slime'], ['turtle'], ['bat', 'crab'], ['turtle', 'slime']],
       elite: [['knight'], ['wisp', 'crab']],
     },
-    guardian: 'crab_queen',
+    guardians: ['crab_queen', 'jellyfish_empress', 'octopus_captain'],
   },
   caves: {
     py: 'shān dòng', zh: '山洞', en: 'Earthen Caves', act: 1, theme: 'caves',
@@ -38,7 +39,7 @@ export const BIOMES = {
       battle: [['golem'], ['bat', 'bat'], ['turtle', 'bat'], ['golem', 'goblin'], ['goblin', 'goblin'], ['sporecap', 'bat'], ['zombie', 'bat']],
       elite: [['knight'], ['wisp']],
     },
-    guardian: 'stone_king',
+    guardians: ['stone_king', 'mole_miner', 'crystal_spider'],
   },
   frozen: {
     py: 'xuě shān', zh: '雪山', en: 'Frozen Mountain', act: 2, theme: 'frozen',
@@ -50,7 +51,7 @@ export const BIOMES = {
       battle: [['snowman'], ['snowman', 'bat'], ['golem', 'snowman'], ['snowman', 'snowman'], ['kite', 'snowman']],
       elite: [['knight', 'snowman'], ['wisp', 'snowman']],
     },
-    guardian: 'frost_matriarch',
+    guardians: ['frost_matriarch', 'yeti', 'frost_fox'],
   },
   thunder: {
     py: 'léi yǔ', zh: '雷雨', en: 'Thunder Highlands', act: 2, theme: 'thunder',
@@ -61,7 +62,7 @@ export const BIOMES = {
       battle: [['thunderbird'], ['thunderbird', 'goblin'], ['golem', 'thunderbird'], ['kite', 'thunderbird'], ['slime', 'slime', 'thunderbird']],
       elite: [['knight', 'thunderbird'], ['wisp', 'thunderbird']],
     },
-    guardian: 'thunder_qilin',
+    guardians: ['thunder_qilin', 'thunder_drummer', 'cloud_ram'],
   },
   marsh: {
     py: 'zhǎo zé', zh: '沼泽', en: 'Shadow Marsh', act: 2, theme: 'marsh',
@@ -73,7 +74,7 @@ export const BIOMES = {
       battle: [['shadow'], ['shadow', 'bat'], ['sporecap', 'shadow'], ['zombie', 'zombie'], ['shadow', 'goblin'], ['zombie', 'sporecap']],
       elite: [['wisp', 'shadow'], ['knight', 'shadow']],
     },
-    guardian: 'bog_witch',
+    guardians: ['bog_witch', 'money_toad', 'willow_spirit'],
   },
   // ----------------------------------------------------------- act 3: the Dragon's Dominion
   // every act-3 map ends with the Ink Dragon

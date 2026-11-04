@@ -8,7 +8,6 @@ What was audited, changed and verified, and what is still open. All 98 tests pas
 
 The art I did add uses two existing sources:
 
-- **Painted scenery:** the hand-painted artwork in `icon_asset_pack/`, the same style as the item icons and close to the hero sprites.
 - **Status and impact visuals:** sprite animations from the effects pack.
 
 The backgrounds and enemies are still SVG, but the enemies have been redrawn in the heroes' style (see section 6).
@@ -90,19 +89,9 @@ The backgrounds and enemies are still SVG, but the enemies have been redrawn in 
 
 ## 5. Backgrounds and environment
 
-**Everything is fully opaque.** Distance comes from colour (mixed toward the sky, or CSS filter tints on the painted props), never from see-through layers, so overlapping parallax layers don't show through each other. No sharp spikes: cave stalactites are rounded drips and the storm's lightning bolt is gone (the clouds are soft two-tone shapes).
+**Everything is fully opaque.** Distance comes from colour (mixed toward the sky), never from see-through layers, so overlapping parallax layers don't show through each other. No sharp spikes: cave stalactites are rounded drips and the storm's lightning bolt is gone (the clouds are soft two-tone shapes).
 
-**Painted scenery** (from the icon art, tinted by distance):
-
-| Area | Scenery |
-| --- | --- |
-| Lantern Temple | a glowing pagoda in the distance, swaying phoenix banners |
-| Ink-Corrupted Valley | a dark pagoda, a dragon banner |
-| Burning Highlands | an ember-lit pagoda on the far hills |
-| Forgotten Beyond | hanging calligraphy scrolls and an ink-wash pagoda |
-| Shadow Marsh | a misty purple pagoda |
-
-Sizes, positions and opacity were tuned in the game; each piece is drawn once in the scrolling road.
+**Scenery is all SVG.** The painted asset-pack props (pagodas, banners, hanging scrolls) were removed from the backdrops, and the road props (merchant cart, lantern post, treasure chest with an opening lid, roadside shrine) are drawn in SVG (`src/assets/props/RoadProps.jsx`) with the same outlines and shading as the characters.
 
 **Ambient motion:**
 

@@ -136,7 +136,18 @@ With the simulated player (85% puzzle success, same skill at every level) dragon
 
 - **mò lóng 墨龙 Ink Dragon** (3 phases): telegraphed ink breath (interrupt with freeze/stun or tank with shields) and bat summons → spreading ink (corrupted + misty ground, Weakening hexes) → rage (faster, ink rain curses).
 - **tūn zì shòu 吞字兽 Word Eater** (3 phases): corrupts your signature move (weaker, slower to recharge), summons **Word Wraiths** labelled with words you've learned → silences your passive items → saps your strength (Weaken) and devours your shields.
-- Biome guardians (panda king, crab queen, stone king, snow maiden, thunder qilin, bog witch, lantern king) each have a signature behaviour.
+- **Guardians:** every act 1–2 map has three, and one is met per run (picked from the area's seed; `guardians` in `data/biomes.js`). Each has its own art (`assets/enemies/Guardians.jsx`), never a reused common enemy, and its own fight. `tests/guardians.test.js` checks the pools, the art, the variety and that none beats simulated players more than 30% of the time.
+
+| Map | Guardians |
+| --- | --- |
+| Bamboo Forest | Panda King (rolling charge, kite friends) · Mantis Master (fast, slippery, Bleeding scythes) · Bamboo Sage (Slowing gales, slow healing) |
+| Coastal Ruins | Crab Queen (tide that soaks you, shell) · Jellyfish Empress (soaks you, then shocks you) · Octopus Captain (ink in the eyes, crab crew, eight-arm slam) |
+| Earthen Caves | Stone King (avalanches, tremors) · Mole Miner (burrows for cover, cave-ins) · Crystal Spider (Slowing webs, crystal shields) |
+| Frozen Mountain | Snow Maiden (Chilling hexes, snowmen) · Yeti (huge Chilling slams) · Frost Fox (quick, hard to hit, fox-fire) |
+| Thunder Highlands | Thunder Qilin (lightning, electrified ground) · Thunder Drummer (drumrolls that Shock, thunder hammer) · Cloud Ram (charges, hides in its fleece) |
+| Shadow Marsh | Bog Witch (silences passives, Curses) · Money Toad (swallows your shields, Weakens) · Willow Spirit (Curses, heals on corrupted ground) |
+
+The Lantern King (a temple elite) also has its own art. The dragon's maps and the Word Eater's map keep their single boss.
 
 ## Passive items and synergies (`data/items.js`, `data/synergies.js`)
 
@@ -162,7 +173,7 @@ Everything below is data; the engine never needs to change for normal content.
 - **Minigame**: add a template in `learn/signaturePuzzles.js` (`TEMPLATES`: pool, `generate`) and, if it needs a new interaction, a body in `components/SignaturePuzzle.jsx` (`BODIES`).
 - **Hero** (`data/heroes.js`): stats, `attack` style (`attack.fx` picks the attack visuals), `signature` move id, `passive` with hooks (passives are never silenced; optional `meter` shows a charge gauge), unlock rule, sprite key.
 - **Enemy** (`data/enemies.js`): stats, `element`, `onHitStatus`, `ai` behaviours (charge, summon, guard, hex, silence, hazard, shell, corrupt, devour, regen, nuke, onSpellHit) and boss `phases`.
-- **Biome** (`data/biomes.js`): terrain, periodic events, element modifiers, enemy pools, guardian or boss; add it to its act in `ACT_BIOMES` (three maps per act; a run rolls one per act).
+- **Biome** (`data/biomes.js`): terrain, periodic events, element modifiers, enemy pools, `guardians` (three) or `boss`; add it to its act in `ACT_BIOMES` (three maps per act; a run rolls one per act).
 - **Story / events**: `data/story.js` (beats shown once) and `data/events.js` (encounter questions and rewards).
 
 Safety: hooks run with a recursion depth limit (`COMBAT.maxHookDepth`) and a per-step proc budget (`COMBAT.maxProcsPerStep`), self-feeding items keep short internal cooldowns, ground effects are capped, and a crashing hook is logged instead of breaking the battle. `npm test` runs every item and synergy in a real battle and checks that, for every hero, a build holding *every* item at once still resolves quickly.

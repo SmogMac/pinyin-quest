@@ -63,7 +63,8 @@
 }
 .prop-img {
   display: block;
-  object-fit: contain;
+  height: auto;
+  overflow: visible;
   filter: drop-shadow(0 4px 4px rgba(20, 10, 40, 0.35));
 }
 .prop-foes {
@@ -639,45 +640,7 @@
   animation: none;
 }
 
-/* ================================================================ backdrop scenery & ambience */
-.bg-prop {
-  position: absolute;
-  transform: translateX(-50%);
-  pointer-events: none;
-  user-select: none;
-}
-/* atmospheric perspective: further away = paler and less saturated. Always fully opaque (the
-   tint comes from filters, not transparency), so overlapping layers never show through. */
-.bg-prop.haze-far {
-  filter: saturate(0.5) contrast(0.7) brightness(1.12);
-}
-.bg-prop.haze-near {
-  filter: saturate(0.85) drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
-  transform-origin: 50% 0;
-  animation: banner-sway 6s ease-in-out infinite alternate;
-}
-.bg-prop.haze-ember {
-  filter: brightness(0.5) sepia(0.7) saturate(2.2) hue-rotate(-20deg) contrast(0.85);
-}
-.bg-prop.haze-mist {
-  filter: grayscale(0.7) sepia(0.35) hue-rotate(215deg) brightness(0.62) contrast(0.6);
-}
-.bg-prop.haze-night {
-  filter: grayscale(0.4) sepia(0.4) hue-rotate(210deg) brightness(0.42) contrast(0.85);
-}
-/* the Beyond: an ink-wash drawing on paper */
-.bg-prop.haze-ink {
-  filter: grayscale(1) contrast(0.55) brightness(1.15);
-}
-@keyframes banner-sway {
-  from {
-    transform: translateX(-50%) rotate(-1.2deg);
-  }
-  to {
-    transform: translateX(-50%) rotate(1.2deg);
-  }
-}
-
+/* ================================================================ backdrop ambience */
 /* Ambient particles. Each particle has its own position, duration, start, size (--s), drift
    (--dx), sway (--sway) and spin (--rot) from Backgrounds.jsx, so none fall in step. */
 .ambient {
@@ -846,8 +809,5 @@
 }
 .reduced-motion .ambient {
   display: none;
-}
-.reduced-motion .bg-prop.haze-near {
-  animation: none;
 }
 

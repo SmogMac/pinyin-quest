@@ -38,32 +38,31 @@ export function Stick({ d, color, w = 4.5, sw = LINE }) {
   );
 }
 
-/** One anime eye: white, iris with a lighter lower half, pupil, lash line and two shines. */
-function Eye({ cx, cy, r, iris, glow, look = -0.18, lid }) {
-  const ix = cx + r * look;
+/** One simple eye: a dark oval in the creature's eye colour with a single shine. */
+function Eye({ cx, cy, r, iris }) {
   return (
     <g>
-      <ellipse cx={cx} cy={cy} rx={r} ry={r * 1.22} fill="#fff" stroke={OL} strokeWidth={r * 0.32} />
-      <ellipse cx={ix} cy={cy + r * 0.08} rx={r * 0.74} ry={r * 0.98} fill={iris} />
-      <ellipse cx={ix} cy={cy + r * 0.45} rx={r * 0.55} ry={r * 0.42} fill={glow} />
-      <ellipse cx={ix} cy={cy + r * 0.02} rx={r * 0.36} ry={r * 0.5} fill={OL} />
-      <circle cx={ix - r * 0.3} cy={cy - r * 0.38} r={r * 0.3} fill="#fff" />
-      <circle cx={ix + r * 0.28} cy={cy + r * 0.42} r={r * 0.13} fill="#fff" />
-      <path d={`M${cx - r * 1.12} ${cy - r * 0.55}Q${cx} ${cy - r * 1.62} ${cx + r * 1.12} ${cy - r * 0.55}`} stroke={OL} strokeWidth={r * 0.42} fill="none" strokeLinecap="round" />
-      {lid && <path d={lid} fill={OL} />}
+      <ellipse cx={cx} cy={cy} rx={r * 0.78} ry={r * 1.05} fill={mixDark(iris)} />
+      <circle cx={cx - r * 0.24} cy={cy - r * 0.38} r={r * 0.3} fill="#fff" />
     </g>
   );
 }
+/** Deepens an eye colour toward the outline ink, so eyes read as dark ovals. */
+function mixDark(c) {
+  const p = (i) => parseInt(c.slice(1 + i * 2, 3 + i * 2), 16);
+  const ink = [0x22, 0x18, 0x2a];
+  return `#${[0, 1, 2].map((i) => Math.round(p(i) * 0.45 + ink[i] * 0.55).toString(16).padStart(2, '0')).join('')}`;
+}
 
 /**
- * A pair of eyes (blink animation via .enemy-eyes). `angry` adds slanted brows, `glow` is the
- * iris's light lower half.
+ * A pair of eyes (blink animation via .enemy-eyes). `angry` adds slanted brows; `glow` is kept
+ * for older call sites and no longer drawn.
  */
-export function Eyes({ x1, x2, y, r = 5, iris = '#3a2a5a', glow = '#8f7ad8', angry = false, brow = OL }) {
+export function Eyes({ x1, x2, y, r = 5, iris = '#3a2a5a', angry = false, brow = OL }) {
   return (
     <g className="enemy-eyes">
-      <Eye cx={x1} cy={y} r={r} iris={iris} glow={glow} />
-      <Eye cx={x2} cy={y} r={r} iris={iris} glow={glow} />
+      <Eye cx={x1} cy={y} r={r} iris={iris} />
+      <Eye cx={x2} cy={y} r={r} iris={iris} />
       {angry && (
         <path
           d={`M${x1 - r * 1.3} ${y - r * 2.1}L${x1 + r * 0.9} ${y - r * 1.45}M${x2 + r * 1.3} ${y - r * 2.1}L${x2 - r * 0.9} ${y - r * 1.45}`}

@@ -13,6 +13,7 @@
 import Companion from './characters/Companion.jsx';
 import { Slime, Sporecap, Bat, Goblin, Golem, Wisp, Knight } from './enemies/Enemies.jsx';
 import { Panda, Kite, Turtle, Snowman, Thunderbird, ShadowSprite, Lantern, Wraith, WordEater, Rabbit } from './enemies/EnemiesExtra.jsx';
+import { PandaKing, MantisMaster, BambooSage, CrabQueen, JellyfishEmpress, OctopusCaptain, StoneKing, MoleMiner, CrystalSpider, SnowMaiden, Yeti, FrostFox, ThunderQilin, ThunderDrummer, CloudRam, BogWitch, MoneyToad, WillowSpirit, LanternKing } from './enemies/Guardians.jsx';
 
 export const SPRITES = {
   // Playable heroes (see src/game/data/heroes.js). Image art is prepared by `npm run art`.
@@ -43,6 +44,26 @@ export const SPRITES = {
   wraith: { component: Wraith, w: 76, h: 84, flying: true },
   wordeater: { component: WordEater, w: 240, h: 207 },
   rabbit: { component: Rabbit, w: 120, h: 130 },
+  // act guardians: their own art, never a reused common enemy (enemies/Guardians.jsx)
+  g_panda_king: { component: PandaKing, w: 154, h: 165 },
+  g_mantis: { component: MantisMaster, w: 154, h: 165 },
+  g_bamboo_sage: { component: BambooSage, w: 154, h: 165 },
+  g_crab_queen: { component: CrabQueen, w: 165, h: 132 },
+  g_jellyfish: { component: JellyfishEmpress, w: 154, h: 165, flying: true },
+  g_octopus: { component: OctopusCaptain, w: 154, h: 165 },
+  g_stone_king: { component: StoneKing, w: 165, h: 165 },
+  g_mole: { component: MoleMiner, w: 154, h: 154 },
+  g_crystal_spider: { component: CrystalSpider, w: 165, h: 132 },
+  g_snow_maiden: { component: SnowMaiden, w: 132, h: 165, flying: true },
+  g_yeti: { component: Yeti, w: 165, h: 165 },
+  g_frost_fox: { component: FrostFox, w: 165, h: 132 },
+  g_qilin: { component: ThunderQilin, w: 165, h: 154 },
+  g_drummer: { component: ThunderDrummer, w: 165, h: 165 },
+  g_cloud_ram: { component: CloudRam, w: 165, h: 154 },
+  g_bog_witch: { component: BogWitch, w: 143, h: 165 },
+  g_money_toad: { component: MoneyToad, w: 165, h: 143 },
+  g_willow: { component: WillowSpirit, w: 165, h: 165 },
+  g_lantern_king: { component: LanternKing, w: 132, h: 165, flying: true },
 };
 
 // Picture-puzzle illustrations: { '水': 'assets/pictures/water.png' }. Words not listed use the

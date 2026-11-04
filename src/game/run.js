@@ -111,7 +111,7 @@ export function generateArea(seed, { act, biome, secrets = {} }) {
     if (type === 'battle' || type === 'elite') {
       const pool = b.pools[type === 'elite' ? 'elite' : 'battle'];
       e.enemies = pool[Math.floor(r() * pool.length)];
-    } else if (type === 'guardian') e.enemies = [b.guardian];
+    } else if (type === 'guardian') e.enemies = [b.guardians[Math.floor(r() * b.guardians.length)]];
     else if (type === 'boss') e.enemies = [b.boss];
     else if (type === 'secretboss') e.enemies = ['jade_rabbit'];
     if (ENCOUNTERS[type]?.combat) e.seed = Math.floor(r() * 1e9);

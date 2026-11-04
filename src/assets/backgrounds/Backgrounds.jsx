@@ -28,7 +28,7 @@ export function mix(a, b, t) {
 }
 
 /** Theme-specific foreground details (bamboo stalks, waves, lanterns …). */
-export function BgDecor({ theme, scenery = true }) {
+export function BgDecor({ theme }) {
   const t = THEMES[theme];
   if (!t?.decor) return null;
   const ink = '#2a2622';
@@ -129,50 +129,10 @@ export function BgDecor({ theme, scenery = true }) {
     body = [40, 130, 220, 320].map((x, i) => <path key={i} d={`M${x} ${30 + i * 12} q20 -8 40 0`} stroke="#4a3a7a" strokeWidth="2" strokeLinecap="round" fill="none" />);
   }
   return (
-    <>
-      <svg viewBox="0 0 400 200" preserveAspectRatio="none" className="bg-layer-svg">
-        {body}
-      </svg>
-      {scenery && <Scenery theme={theme} />}
-    </>
+    <svg viewBox="0 0 400 200" preserveAspectRatio="none" className="bg-layer-svg">
+      {body}
+    </svg>
   );
-}
-
-const prop = (id) => `${import.meta.env.BASE_URL}assets/props/${id}.webp`;
-// Painted scenery (from the item icon art, so it matches the hand-painted look) placed into the
-// backdrop. Distance is shown by tinting toward the sky colour (CSS filters), never by fading,
-// so props stay fully opaque: { id, left (%), bottom or top (%), h (% of the layer height) }
-const SCENERY = {
-  temple: [
-    { id: 'pagoda', left: 62, bottom: 32, h: 48, haze: 'far' },
-    { id: 'phoenix_banner', left: 3, top: -2, h: 46, haze: 'near' },
-    { id: 'phoenix_banner', left: 92, top: -2, h: 40, haze: 'near' },
-  ],
-  inklair: [
-    { id: 'pagoda', left: 74, bottom: 34, h: 46, haze: 'night' },
-    { id: 'dragon_banner', left: 4, top: -2, h: 44, haze: 'near' },
-  ],
-  volcano: [{ id: 'pagoda', left: 18, bottom: 34, h: 42, haze: 'ember' }],
-  beyond: [
-    { id: 'hanging_scroll', left: 12, top: -4, h: 44, haze: 'near' },
-    { id: 'hanging_scroll', left: 91, top: -6, h: 34, haze: 'far' },
-    { id: 'pagoda', left: 46, bottom: 36, h: 38, haze: 'ink' },
-  ],
-  marsh: [{ id: 'pagoda', left: 70, bottom: 34, h: 42, haze: 'mist' }],
-};
-function Scenery({ theme }) {
-  const list = SCENERY[theme];
-  if (!list) return null;
-  return list.map((p, i) => (
-    <img
-      key={i}
-      src={prop(p.id)}
-      alt=""
-      draggable="false"
-      className={`bg-prop haze-${p.haze}`}
-      style={{ left: `${p.left}%`, height: `${p.h}%`, ...(p.top !== undefined ? { top: `${p.top}%` } : { bottom: `${p.bottom}%` }) }}
-    />
-  ));
 }
 
 /** Deterministic pseudo-random in [0, 1) per particle and channel: varied, but stable across renders. */
